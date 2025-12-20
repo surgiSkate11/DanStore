@@ -1,0 +1,751 @@
+{% extends 'base.html' %}
+
+{% block title %}Semáforo de Premios - {{ sorteo.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Toast Notification */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        z-index: 9999;
+        max-width: 400px;
+        width: 90%;
+        opacity: 0;
+        animation: slideDown 0.4s ease forwards;
+        overflow: hidden;
+    }
+    
+    .toast-notification::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+        animation: shrinkBorder 3s linear forwards;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -30px);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+    }
+    
+    @keyframes shrinkBorder {
+        from {
+            width: 100%;
+        }
+        to {
+            width: 0%;
+        }
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+        to {
+            opacity: 0;
+            transform: translate(-50%, -30px);
+        }
+    }
+    
+    .toast-notification.hiding {
+        animation: slideUp 0.3s ease forwards;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .toast-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+    
+    .toast-message {
+        flex: 1;
+    }
+    
+    .toast-message h6 {
+        margin: 0 0 5px 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .toast-message p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    body {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+        min-height: 100vh;
+    }
+    
+    .container-fluid {
+        background: transparent !important;
+    }
+    
+    .semaforo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        padding-bottom: 4rem;
+        min-height: calc(100vh - 100px);
+    }
+    
+    .semaforo-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 4rem;
+        margin: 3rem 0;
+    }
+    
+    .semaforo-post {
+        width: 200px;
+        height: 650px;
+        background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+        border-radius: 20px;
+        padding: 2rem 1rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .luz {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        border: 5px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .luz-roja {
+        background: radial-gradient(circle at 30% 30%, #ff4444, #cc0000);
+        box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .luz-roja.active {
+        background: radial-gradient(circle at 30% 30%, #ff6666, #ff0000);
+        box-shadow: 
+            0 0 40px rgba(255, 0, 0, 0.8),
+            0 0 80px rgba(255, 0, 0, 0.6),
+            inset 0 0 30px rgba(255, 255, 255, 0.3);
+        animation: pulse-red 0.5s ease infinite;
+    }
+    
+    @keyframes pulse-red {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .luz-amarilla {
+        background: radial-gradient(circle at 30% 30%, #ffdd44, #cc9900);
+        box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .luz-amarilla.active {
+        background: radial-gradient(circle at 30% 30%, #ffee66, #ffcc00);
+        box-shadow: 
+            0 0 40px rgba(255, 204, 0, 0.8),
+            0 0 80px rgba(255, 204, 0, 0.6),
+            inset 0 0 30px rgba(255, 255, 255, 0.3);
+        animation: pulse-yellow 0.5s ease infinite;
+    }
+    
+    @keyframes pulse-yellow {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .luz-verde {
+        background: radial-gradient(circle at 30% 30%, #44ff44, #00cc00);
+        box-shadow: inset 0 -10px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .luz-verde.active {
+        background: radial-gradient(circle at 30% 30%, #66ff66, #00ff00);
+        box-shadow: 
+            0 0 40px rgba(0, 255, 0, 0.8),
+            0 0 80px rgba(0, 255, 0, 0.6),
+            inset 0 0 30px rgba(255, 255, 255, 0.3);
+        animation: pulse-green 0.5s ease infinite;
+    }
+    
+    @keyframes pulse-green {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    
+    .premio-info {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 2rem;
+        color: white;
+        text-align: center;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .premio-info h4 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: #ffd700;
+    }
+    
+    .premio-info.rojo {
+        border: 3px solid #ff0000;
+        background: rgba(255, 0, 0, 0.1);
+    }
+    
+    .premio-info.amarillo {
+        border: 3px solid #ffcc00;
+        background: rgba(255, 204, 0, 0.1);
+    }
+    
+    .premio-info.verde {
+        border: 3px solid #00ff00;
+        background: rgba(0, 255, 0, 0.1);
+    }
+    
+    .ganador-panel {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 25px;
+        padding: 3rem;
+        text-align: center;
+        color: white;
+        margin-bottom: 2rem;
+        display: none;
+        box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+    }
+    
+    .ganador-panel.show {
+        display: block;
+        animation: slideIn 0.5s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .ganador-panel h3 {
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+        font-weight: 800;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .ganador-panel .nombre {
+        font-size: 4.5rem;
+        font-weight: 900;
+        color: #ffd700;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 0 4px 15px rgba(0,0,0,0.5);
+        animation: pulse-glow 2s ease-in-out infinite;
+        margin: 1.5rem 0;
+    }
+    
+    .estado-panel {
+        text-align: center;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .estado-panel h2 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-action {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        padding: 1rem 3rem;
+        border-radius: 50px;
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+        transition: all 0.3s ease;
+        font-weight: 700;
+    }
+    
+    .btn-action:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.7);
+    }
+    
+    .btn-action:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .cycling {
+        animation: blink-all 0.3s ease infinite;
+    }
+    
+    @keyframes blink-all {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+    }
+    
+    .resultado-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .resultado-content {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        border-radius: 30px;
+        padding: 4rem;
+        text-align: center;
+        color: #1a1a1a;
+        animation: zoomIn 0.5s ease;
+        max-width: 600px;
+    }
+    
+    @keyframes zoomIn {
+        from {
+            transform: scale(0) rotate(180deg);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+        }
+    }
+    
+    .resultado-content .premio-icon {
+        font-size: 10rem;
+        margin-bottom: 1rem;
+    }
+    
+    .resultado-content .premio-nombre {
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="semaforo-container">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="text-white mb-3" style="font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 30px rgba(239,68,68,0.7), 0 4px 20px rgba(0,0,0,0.6);">
+            🚦 {{ sorteo.nombre }}
+        </h1>
+        <p class="text-white" style="font-size: 1.3rem; opacity: 0.95; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">¡El semáforo decidirá tu premio!</p>
+        {% if sorteo.descripcion %}
+        <p class="text-white-50" style="font-size: 1.1rem; margin-top: 0.5rem;">{{ sorteo.descripcion }}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Estado -->
+    <div class="estado-panel">
+        <div id="estadoInicial">
+            <h2>🎯 Paso 1: Sortear Ganador</h2>
+            <button class="btn-action" onclick="sortearGanador()">
+                <i class="bi bi-shuffle"></i> SORTEAR
+            </button>
+        </div>
+        
+        <div id="estadoSemaforo" style="display: none;">
+            <h2>🚦 Paso 2: Activar Semáforo</h2>
+            <button class="btn-action" onclick="activarSemaforo()">
+                <i class="bi bi-play-fill"></i> ACTIVAR SEMÁFORO
+            </button>
+        </div>
+        
+        <div id="estadoCiclando" style="display: none;">
+            <h2>⏱️ Ciclando colores...</h2>
+            <p style="font-size: 1.2rem;">El semáforo está decidiendo...</p>
+        </div>
+    </div>
+    
+    <!-- Ganador Panel -->
+    <div class="ganador-panel" id="ganadorPanel">
+        <h3>🏆 ¡GANADOR!</h3>
+        <div class="nombre" id="nombreGanador"></div>
+        <p style="font-size: 1.8rem; margin-top: 1rem; font-weight: 600;" id="telefonoGanador"></p>
+    </div>
+    
+    <!-- Semáforo y Premios -->
+    <div class="semaforo-wrapper">
+        <!-- Premios -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div class="premio-info rojo" id="premioRojo">
+                <h4>🔴 Luz Roja</h4>
+                <p id="textoRojo">Premio Pequeño</p>
+            </div>
+            <div class="premio-info amarillo" id="premioAmarillo">
+                <h4>🟡 Luz Amarilla</h4>
+                <p id="textoAmarillo">Premio Mediano</p>
+            </div>
+            <div class="premio-info verde" id="premioVerde">
+                <h4>🟢 Luz Verde</h4>
+                <p id="textoVerde">¡GRAN PREMIO!</p>
+            </div>
+        </div>
+        
+        <!-- Semáforo -->
+        <div class="semaforo-post" id="semaforo">
+            <div class="luz luz-roja" id="luzRoja">
+                <span>🛑</span>
+            </div>
+            <div class="luz luz-amarilla" id="luzAmarilla">
+                <span>⚠️</span>
+            </div>
+            <div class="luz luz-verde" id="luzVerde">
+                <span>✅</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation -->
+    <div class="text-center mt-5">
+        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg me-3" style="min-width: 150px; padding: 0.75rem 2rem; font-weight: 600; border-width: 2px;">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <button class="btn btn-danger btn-lg" onclick="finalizarSorteo()" style="min-width: 180px; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
+            <i class="bi bi-stop-circle"></i> Finalizar Sorteo
+        </button>
+    </div>
+</div>
+
+<!-- Modal de Resultado -->
+<div class="resultado-modal" id="resultadoModal">
+    <div class="resultado-content">
+        <div class="premio-icon" id="resultadoIcon"></div>
+        <div class="premio-nombre" id="resultadoNombre"></div>
+        <p style="font-size: 1.5rem; margin-bottom: 2rem;" id="resultadoDescripcion"></p>
+        
+        <button class="btn btn-success btn-lg" onclick="registrarResultado()">
+            <i class="bi bi-check-circle"></i> Registrar y Continuar
+        </button>
+        <button class="btn btn-outline-dark btn-lg ms-3" onclick="nuevoSorteo()">
+            <i class="bi bi-arrow-repeat"></i> Nuevo Sorteo
+        </button>
+    </div>
+</div>
+
+<script>
+const sorteoId = {{ sorteo.id }};
+const participantes = {{ participantes|safe }};
+// Nota: La función showToast está definida en base.html
+
+const premios = {{ premios|safe }};
+
+let ganadorActual = null;
+let colorGanador = null;
+let premioGanador = null;
+let ciclando = false;
+
+// Cargar premios por color
+function cargarPremios() {
+    const premiosRojo = premios.filter(p => p.color === 'rojo');
+    const premiosAmarillo = premios.filter(p => p.color === 'amarillo');
+    const premiosVerde = premios.filter(p => p.color === 'verde');
+    
+    if (premiosRojo.length > 0) {
+        document.getElementById('textoRojo').textContent = premiosRojo.map(p => p.nombre).join(' / ');
+    }
+    if (premiosAmarillo.length > 0) {
+        document.getElementById('textoAmarillo').textContent = premiosAmarillo.map(p => p.nombre).join(' / ');
+    }
+    if (premiosVerde.length > 0) {
+        document.getElementById('textoVerde').textContent = premiosVerde.map(p => p.nombre).join(' / ');
+    }
+}
+
+// Sortear ganador
+function sortearGanador() {
+    if (participantes.length === 0) {
+        showToast('No hay participantes elegibles para este sorteo', 'warning');
+        return;
+    }
+    
+    fetch(`/sorteos/${sorteoId}/sortear/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        ganadorActual = data.ganador;
+        mostrarGanador();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('No se pudo sortear. Intenta nuevamente.', 'error');
+    });
+}
+
+// Mostrar ganador
+function mostrarGanador() {
+    document.getElementById('nombreGanador').textContent = ganadorActual.nombre || 'Ganador';
+    document.getElementById('telefonoGanador').textContent = `📞 ${ganadorActual.telefono || 'N/A'}`;
+    document.getElementById('ganadorPanel').classList.add('show');
+    console.log('Ganador mostrado:', ganadorActual);
+    
+    // Cambiar estado
+    document.getElementById('estadoInicial').style.display = 'none';
+    document.getElementById('estadoSemaforo').style.display = 'block';
+}
+
+// Activar semáforo
+function activarSemaforo() {
+    if (ciclando) return;
+    
+    ciclando = true;
+    document.getElementById('estadoSemaforo').style.display = 'none';
+    document.getElementById('estadoCiclando').style.display = 'block';
+    
+    const luces = ['luzRoja', 'luzAmarilla', 'luzVerde'];
+    let ciclos = 0;
+    const maxCiclos = 10 + Math.floor(Math.random() * 10); // 10-20 ciclos
+    let intervalo;
+    let indiceActual = 0;
+    
+    intervalo = setInterval(() => {
+        // Apagar todas
+        luces.forEach(id => {
+            document.getElementById(id).classList.remove('active');
+        });
+        
+        // Encender actual
+        document.getElementById(luces[indiceActual]).classList.add('active');
+        
+        indiceActual = (indiceActual + 1) % luces.length;
+        ciclos++;
+        
+        if (ciclos >= maxCiclos) {
+            clearInterval(intervalo);
+            seleccionarColorFinal();
+        }
+    }, 200);
+}
+
+// Seleccionar color final
+function seleccionarColorFinal() {
+    const luces = ['luzRoja', 'luzAmarilla', 'luzVerde'];
+    const colores = ['rojo', 'amarillo', 'verde'];
+    
+    // Apagar todas
+    luces.forEach(id => {
+        document.getElementById(id).classList.remove('active');
+    });
+    
+    // Seleccionar color aleatorio
+    const indiceGanador = Math.floor(Math.random() * luces.length);
+    colorGanador = colores[indiceGanador];
+    
+    // Encender luz ganadora
+    setTimeout(() => {
+        document.getElementById(luces[indiceGanador]).classList.add('active');
+        document.getElementById('estadoCiclando').style.display = 'none';
+        
+        // Seleccionar premio de ese color
+        const premiosColor = premios.filter(p => p.color === colorGanador);
+        premioGanador = premiosColor.length > 0 
+            ? premiosColor[Math.floor(Math.random() * premiosColor.length)]
+            : { nombre: 'Premio Sorpresa', tipo: 'gracias' };
+        
+        setTimeout(() => {
+            mostrarResultado();
+        }, 1500);
+    }, 500);
+}
+
+// Mostrar resultado
+function mostrarResultado() {
+    const iconos = {
+        'descuento_porcentaje': '💰',
+        'descuento_fijo': '💵',
+        'producto_gratis': '🎁',
+        'envio_gratis': '🚚',
+        'cupon': '🎟️',
+        'combo': '📦'
+    };
+    
+    const emojisColor = {
+        'rojo': '🔴',
+        'amarillo': '🟡',
+        'verde': '🟢'
+    };
+    
+    document.getElementById('resultadoIcon').textContent = emojisColor[colorGanador];
+    document.getElementById('resultadoNombre').textContent = premioGanador.nombre;
+    document.getElementById('resultadoDescripcion').textContent = 
+        premioGanador.descripcion || `¡Felicidades! Ganaste en la luz ${colorGanador}`;
+    
+    document.getElementById('resultadoModal').style.display = 'flex';
+    
+    // Confetti
+    generarConfetti();
+    
+    ciclando = false;
+}
+
+// Generar confetti
+function generarConfetti() {
+    const coloresConfetti = {
+        'rojo': ['#ff0000', '#ff6666', '#cc0000'],
+        'amarillo': ['#ffcc00', '#ffee66', '#cc9900'],
+        'verde': ['#00ff00', '#66ff66', '#00cc00']
+    };
+    
+    const colores = coloresConfetti[colorGanador];
+    
+    for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.style.position = 'fixed';
+        confetti.style.width = '10px';
+        confetti.style.height = '10px';
+        confetti.style.background = colores[Math.floor(Math.random() * colores.length)];
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = '-10px';
+        confetti.style.borderRadius = '50%';
+        confetti.style.zIndex = '999';
+        confetti.style.animation = `fall-${i} ${2 + Math.random() * 2}s linear`;
+        
+        document.body.appendChild(confetti);
+        
+        // Crear animación única
+        const keyframes = `
+            @keyframes fall-${i} {
+                to {
+                    transform: translateY(110vh) translateX(${Math.random() * 200 - 100}px) rotate(${Math.random() * 720}deg);
+                    opacity: 0;
+                }
+            }
+        `;
+        const style = document.createElement('style');
+        style.textContent = keyframes;
+        document.head.appendChild(style);
+        
+        setTimeout(() => {
+            confetti.remove();
+            style.remove();
+        }, 4000);
+    }
+}
+
+// Registrar resultado
+function registrarResultado() {
+    if (!ganadorActual || !premioGanador) return;
+    
+    const formData = new FormData();
+    formData.append('cliente_id', ganadorActual.id);
+    formData.append('premio_id', premioGanador.id);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`/sorteos/${sorteoId}/registrar/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.mensaje, 'success', '¡Registrado!');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('No se pudo registrar. Intenta nuevamente.', 'error');
+    });
+}
+
+// Nuevo sorteo
+function nuevoSorteo() {
+    location.reload();
+}
+
+// Finalizar sorteo
+function finalizarSorteo() {
+    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarSorteo'));
+    modal.show();
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    cargarPremios();
+});
+</script>
+
+<!-- Modal Finalizar Sorteo -->
+<div class="modal fade" id="modalFinalizarSorteo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-stop-circle-fill"></i> Finalizar Sorteo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #dc3545;"></i>
+                <h5 class="mt-3">¿Finalizar sorteo?</h5>
+                <p class="text-muted">No se podrán realizar más sorteos después de finalizarlo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmarFinalizarSorteo()">
+                    <i class="bi bi-stop-circle"></i> Sí, Finalizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmarFinalizarSorteo() {
+    window.location.href = `/sorteos/${sorteoId}/finalizar/`;
+}
+</script>
+{% endblock %}

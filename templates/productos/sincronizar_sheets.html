@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Sincronizar Google Sheets{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2>
+                <i class="bi bi-cloud-download"></i> Sincronizar con Google Sheets
+            </h2>
+            <p class="text-muted">Importa productos automáticamente desde tu hoja de cálculo</p>
+        </div>
+    </div>
+
+    <!-- Estado de credenciales -->
+    {% if not tiene_credentials %}
+    <div class="alert alert-danger">
+        <h5><i class="bi bi-exclamation-triangle"></i> ⚙️ Configuración requerida</h5>
+        <p><strong>No se encontró el archivo <code>credentials.json</code></strong></p>
+        
+        <div class="mt-3">
+            <h6>Pasos rápidos para configurar:</h6>
+            <ol class="mb-2">
+                <li>Ve a <a href="https://console.cloud.google.com/" target="_blank" class="alert-link">Google Cloud Console</a></li>
+                <li>Crea un proyecto y activa <strong>Google Sheets API</strong></li>
+                <li>Crea una <strong>Service Account</strong> (cuenta de servicio)</li>
+                <li>Descarga el archivo <code>.json</code> de credenciales</li>
+                <li>Renómbralo a <code>credentials.json</code></li>
+                <li>Colócalo en: <code>c:\Users\daybu\Downloads\Tiendita\credentials.json</code></li>
+            </ol>
+        </div>
+        
+        <div class="alert alert-info mt-3 mb-0">
+            <small><i class="bi bi-info-circle"></i> <strong>Archivo de ejemplo:</strong> Hay un archivo <code>credentials.json.example</code> en la raíz del proyecto que muestra la estructura esperada.</small><br>
+            <small><i class="bi bi-book"></i> <strong>Guía completa:</strong> Consulta <code>GOOGLE_SHEETS.md</code> en la raíz del proyecto para instrucciones detalladas.</small>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <i class="bi bi-check-circle"></i> <strong>Credenciales configuradas correctamente</strong> - Listo para sincronizar
+    </div>
+    
+    {% endif %}
+
+    <!-- Estadísticas -->
+    <div class="row mb-4 justify-content-center">
+        <div class="col-6 col-sm-4 col-md-4 col-lg-3 mb-3">
+            <div class="card shadow-sm border-0 h-100 stats-card stats-card-primary">
+                <div class="card-body text-center py-3 py-md-4">
+                    <div class="stats-icon mb-2 mb-md-3">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-2 small" style="letter-spacing: 1px;">Total Productos</h6>
+                    <h1 class="display-4 fw-bold mb-2" style="color: #4A5568;">{{ total_productos }}</h1>
+                    <p class="text-muted mb-0 small">Sincronizados desde Sheets</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-4 col-lg-3 mb-3">
+            <div class="card shadow-sm border-0 h-100 stats-card stats-card-success">
+                <div class="card-body text-center py-3 py-md-4">
+                    <div class="stats-icon mb-2 mb-md-3">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-2 small" style="letter-spacing: 1px;">Con Foto</h6>
+                    <h1 class="display-4 fw-bold mb-2" style="color: #059669;">{{ productos_con_foto }}</h1>
+                    <p class="text-muted mb-0 small">Listos para catálogo</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-4 col-lg-3 mb-3">
+            <div class="card shadow-sm border-0 h-100 stats-card stats-card-warning">
+                <div class="card-body text-center py-3 py-md-4">
+                    <div class="stats-icon mb-2 mb-md-3">
+                        <i class="bi bi-camera"></i>
+                    </div>
+                    <h6 class="text-muted text-uppercase fw-bold mb-2 small" style="letter-spacing: 1px;">Sin Foto</h6>
+                    <h1 class="display-4 fw-bold mb-2" style="color: #D97706;">{{ productos_sin_foto }}</h1>
+                    <p class="text-muted mb-0 small">Falta subir imagen</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de sincronización -->
+    <div class="row">
+        <div class="col-12 col-md-10 col-lg-8 offset-md-1 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-cloud-arrow-down"></i> Sincronizar Productos</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="sheet_url" class="form-label">
+                                <strong>URL de Google Sheets:</strong>
+                            </label>
+                            <input 
+                                type="url" 
+                                class="form-control" 
+                                id="sheet_url" 
+                                name="sheet_url" 
+                                placeholder="https://docs.google.com/spreadsheets/d/..." 
+                                required>
+                            <small class="form-text text-muted">
+                                Pega la URL completa de tu Google Sheets
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rango_celdas" class="form-label">
+                                <strong>Rango de celdas (opcional):</strong>
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="rango_celdas" 
+                                name="rango_celdas" 
+                                placeholder="Ejemplo: A1:H201 (incluye cabecera + datos)">
+                            <small class="form-text text-muted">
+                                Define el rango exacto para evitar columnas de totales. <strong>Siempre incluye la fila 1</strong> (cabecera). Si lo dejas vacío, se leerá toda la hoja.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-info-circle"></i> Columnas que se leerán (solo estas):</h6>
+                            <div class="row">
+                                <div class="col-12 col-md-6">
+                                    <ul class="mb-0 small">
+                                        <li><strong>Tipo:</strong> Tipo de prenda (obligatorio)</li>
+                                        <li><strong>Categoría:</strong> Bebé, Niña, Niño, Joven, Mujer, Hombre (obligatorio)</li>
+                                        <li><strong>Marca:</strong> Marca del producto</li>
+                                        <li><strong>Color:</strong> Color del producto</li>
+                                        <li><strong>Talla:</strong> Talla o edad (obligatorio)</li>
+                                    </ul>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <ul class="mb-0 small">
+                                        <li><strong>Precio Venta:</strong> Precio de venta (obligatorio)</li>
+                                        <li><strong>Estado:</strong> Disponible, Separado, Vendido (dropdown)</li>
+                                        <li><strong>Observación:</strong> Descripción adicional</li>
+                                        <li><strong>Vendido A:</strong> Cliente (uso interno)</li>
+                                        <li><strong>Precio Real:</strong> Costo real pagado (uso interno)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="alert alert-warning mt-2 mb-0">
+                                <small><i class="bi bi-exclamation-triangle"></i> <strong>Importante:</strong> 
+                                <br>• Siempre incluye la fila 1 (cabecera) en el rango
+                                <br>• Excluye columnas de totales especificando hasta qué columna leer
+                                <br>• Ejemplo: <code>A1:J201</code> lee 10 columnas (A-J), 1 cabecera + 200 productos</small>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100" {% if not tiene_credentials %}disabled{% endif %}>
+                            <i class="bi bi-cloud-download"></i> Sincronizar Ahora
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instrucciones -->
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb"></i> ¿Cómo funciona?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li class="mb-2">
+                            <strong>Comparte tu Sheet:</strong> Da acceso de lectura a la cuenta de servicio de Google
+                        </li>
+                        <li class="mb-2">
+                            <strong>Define el rango:</strong> Si tienes columnas de totales, especifica el rango (ej: A1:H200)
+                        </li>
+                        <li class="mb-2">
+                            <strong>Sincroniza:</strong> Pega la URL y haz clic en "Sincronizar"
+                        </li>
+                        <li class="mb-2">
+                            <strong>Sube fotos:</strong> Los productos se crearán sin imagen, luego sube las fotos
+                        </li>
+                    </ol>
+                    
+                    <div class="alert alert-success mt-3 mb-2">
+                        <strong><i class="bi bi-lightning"></i> Sincronización inteligente:</strong> 
+                        Los productos se identifican por <strong>Tipo + Marca + Color + Talla</strong>, evitando duplicados aunque cambies el orden de las filas.
+                    </div>
+                    
+                    <div class="alert alert-info mt-2">
+                        <strong><i class="bi bi-shield-check"></i> Privacidad:</strong> 
+                        Los campos internos como "Vendido A" y "Precio Real" NO se mostrarán en el catálogo PDF.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .card-header {
+        font-weight: 500;
+    }
+    
+    /* Tarjetas de estadísticas mejoradas */
+    .stats-card {
+        transition: all 0.3s ease;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
+    }
+    
+    .stats-card-primary {
+        background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+    }
+    
+    .stats-card-success {
+        background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+    }
+    
+    .stats-card-warning {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.3;
+    }
+    
+    .stats-card-primary .stats-icon {
+        color: #4F46E5;
+    }
+    
+    .stats-card-success .stats-icon {
+        color: #059669;
+    }
+    
+    .stats-card-warning .stats-icon {
+        color: #D97706;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-card .display-4 {
+            font-size: 2.5rem;
+        }
+    }
+</style>
+{% endblock %}

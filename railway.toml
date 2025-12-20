@@ -1,0 +1,10 @@
+# Railway Configuration
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "gunicorn tiendita_project.wsgi:application"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10

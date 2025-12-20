@@ -1,0 +1,569 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario de Productos - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
+    .filter-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .filter-card:hover {
+        box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+    }
+    
+    .product-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        height: 100%;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+    
+    .product-image-container {
+        position: relative;
+        height: 280px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+    }
+    
+    .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .product-card:hover .product-image {
+        transform: scale(1.05);
+    }
+    
+    .photo-upload-btn {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        border: none;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+    
+    .photo-upload-btn:hover {
+        background: #667eea;
+        color: white;
+        transform: scale(1.1);
+    }
+    
+    .photo-upload-btn i {
+        font-size: 1.2rem;
+    }
+    
+    .product-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .badge-disponible { color: #10b981; border: 2px solid #10b981; }
+    .badge-vendido { color: #ef4444; border: 2px solid #ef4444; }
+    .badge-reservado { color: #f59e0b; border: 2px solid #f59e0b; }
+    
+    .product-body {
+        padding: 1.5rem;
+        background: white;
+    }
+    
+    /* Estilos para badges mejorados */
+    .badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    
+    .filter-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .pagination .page-link {
+        border-radius: 8px;
+        margin: 0 4px;
+        border: 2px solid #e5e7eb;
+        color: #667eea;
+        font-weight: 600;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white !important;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 4px solid #667eea;
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+    
+    .stats-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="gradient-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-2">
+                        <i class="bi bi-box-seam"></i> Inventario de Productos
+                    </h1>
+                    <p class="mb-0 opacity-90">Gestiona tu catálogo de productos</p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'sincronizar_sheets' %}" class="btn btn-light btn-lg shadow-sm">
+                        <i class="bi bi-cloud-download"></i> Sincronizar desde Sheets
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card filter-card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-funnel"></i> Filtros de Búsqueda
+            </h5>
+            <form method="get" class="row g-3">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-people"></i> Categoría
+                    </label>
+                    {{ filtro_form.categoria_grupo }}
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-tags"></i> Tipo de Prenda
+                    </label>
+                    {{ filtro_form.tipo_prenda }}
+                </div>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-circle-fill"></i> Estado
+                    </label>
+                    {{ filtro_form.estado }}
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-search"></i> Buscar
+                    </label>
+                    {{ filtro_form.busqueda }}
+                </div>
+                <div class="col-12 col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100" style="border-radius: 8px;">
+                        <i class="bi bi-search"></i> <span class="d-inline d-md-none">Buscar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Lista de productos -->
+    {% if page_obj %}
+    <div class="row g-4 mb-4">
+        {% for producto in page_obj %}
+        <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+            <div class="card product-card">
+                <!-- Imagen del producto -->
+                <div class="product-image-container">
+                    {% if producto.imagen %}
+                    <img src="{{ producto.imagen.url }}" class="product-image" alt="{{ producto.tipo_prenda }}" id="img-{{ producto.id }}">
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <i class="bi bi-image" style="font-size: 4rem; color: #d1d5db;"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Botón para subir/tomar foto -->
+                    <button type="button" class="photo-upload-btn" onclick="abrirModalFoto({{ producto.id }})" title="Subir/Tomar foto">
+                        <i class="bi bi-camera"></i>
+                    </button>
+                    
+                    <!-- Badge de estado -->
+                    <span class="product-badge badge-{{ producto.estado }}">
+                        {% if producto.estado == 'disponible' %}
+                            <i class="bi bi-check-circle"></i>
+                        {% elif producto.estado == 'vendido' %}
+                            <i class="bi bi-x-circle"></i>
+                        {% else %}
+                            <i class="bi bi-clock"></i>
+                        {% endif %}
+                        {{ producto.get_estado_display }}
+                    </span>
+                </div>
+                
+                <!-- Cuerpo del producto -->
+                <div class="product-body">
+                    <!-- Título del producto -->
+                    <h5 class="mb-2" style="color: #1f2937; font-weight: 700; font-size: 1rem;">
+                        {% if producto.marca %}
+                            <strong style="color: #667eea;">{{ producto.marca }}</strong>
+                        {% endif %}
+                        {{ producto.tipo_prenda }}
+                    </h5>
+                    
+                    <!-- Badges -->
+                    <div class="mb-3">
+                        <span class="badge bg-primary" style="font-size: 0.75rem;">
+                            <i class="bi bi-people-fill"></i> {{ producto.get_categoria_grupo_display }}
+                        </span>
+                        {% if producto.rango_edad %}
+                            <span class="badge bg-info text-dark" style="font-size: 0.75rem;">
+                                <i class="bi bi-arrows-angle-expand"></i> {{ producto.rango_edad }}
+                            </span>
+                        {% endif %}
+                        {% if producto.color %}
+                            <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                                <i class="bi bi-palette-fill"></i> {{ producto.color }}
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Info del producto -->
+                    <ul class="list-unstyled small mb-3" style="color: #6b7280;">
+                        {% if producto.precio %}
+                        <li class="mb-1">
+                            <i class="bi bi-tag-fill text-success"></i> 
+                            <strong style="color: #059669; font-size: 1.1rem;">${{ producto.precio }}</strong>
+                        </li>
+                        {% endif %}
+                        {% if producto.descripcion %}
+                        <li class="mb-1">
+                            <i class="bi bi-info-circle"></i> 
+                            <span style="font-size: 0.85rem;">{{ producto.descripcion|truncatewords:8 }}</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    
+                    <!-- Estado (solo lectura) -->
+                    <div class="d-grid">
+                        <span class="badge 
+                            {% if producto.estado == 'disponible' %}bg-success
+                            {% elif producto.estado == 'separado' %}bg-warning text-dark
+                            {% elif producto.estado == 'vendido' %}bg-danger
+                            {% else %}bg-secondary
+                            {% endif %}" 
+                            style="font-size: 0.9rem; padding: 0.6rem; border-radius: 8px; font-weight: 600;">
+                            <i class="bi 
+                                {% if producto.estado == 'disponible' %}bi-check-circle
+                                {% elif producto.estado == 'separado' %}bi-clock-history
+                                {% elif producto.estado == 'vendido' %}bi-bag-check-fill
+                                {% else %}bi-question-circle
+                                {% endif %}"></i>
+                            {{ producto.get_estado_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Paginación -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Paginación de productos" class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">
+                    <i class="bi bi-chevron-double-left"></i> Primera
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </a>
+            </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                    Última <i class="bi bi-chevron-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div class="text-center py-5">
+        <div class="card mx-auto" style="max-width: 500px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px;">
+            <div class="card-body p-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #667eea;"></i>
+                <h4 class="mt-3 mb-2" style="color: #1f2937;">No hay productos</h4>
+                <p class="text-muted mb-4">Tu inventario está vacío. ¡Sincroniza desde Google Sheets para cargar productos!</p>
+                <a href="{% url 'sincronizar_sheets' %}" class="btn btn-primary btn-lg" style="border-radius: 8px;">
+                    <i class="bi bi-cloud-download"></i> Sincronizar Google Sheets
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal para subir/tomar foto -->
+<div class="modal fade" id="modalFoto" tabindex="-1" aria-labelledby="modalFotoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" id="modalFotoLabel">
+                    <i class="bi bi-camera-fill"></i> Subir/Tomar Foto
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4">
+                <form id="formFoto" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" id="productoIdFoto" name="producto_id">
+                    
+                    <!-- Vista previa de la imagen -->
+                    <div class="text-center mb-3 mb-md-4">
+                        <div id="vistaPrevia" style="display: none; max-height: 250px; overflow: hidden; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <img id="imagenPrevia" src="" alt="Vista previa" style="max-width: 100%; max-height: 250px; object-fit: contain;">
+                        </div>
+                        <div id="iconoInicial" class="py-4 py-md-5">
+                            <i class="bi bi-image" style="font-size: 3rem; color: #d1d5db;"></i>
+                            <p class="text-muted mt-2 mb-0 small">Selecciona o toma una foto</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Botones de acción -->
+                    <div class="row g-2 g-md-3">
+                        <!-- Subir desde dispositivo -->
+                        <div class="col-12">
+                            <label for="inputFotoArchivo" class="btn btn-outline-primary w-100 py-2 py-md-3" style="border-radius: 8px; border-width: 2px;">
+                                <i class="bi bi-upload"></i> Subir desde dispositivo
+                            </label>
+                            <input type="file" id="inputFotoArchivo" name="imagen" accept="image/*" style="display: none;" onchange="previsualizarImagen(this)">
+                        </div>
+                        
+                        <!-- Tomar foto (solo dispositivos con cámara) -->
+                        <div class="col-12">
+                            <label for="inputFotoCamara" class="btn btn-outline-success w-100 py-2 py-md-3" style="border-radius: 8px; border-width: 2px;">
+                                <i class="bi bi-camera"></i> Tomar foto con cámara
+                            </label>
+                            <input type="file" id="inputFotoCamara" name="imagen" accept="image/*" capture="environment" style="display: none;" onchange="previsualizarImagen(this)">
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3 mb-0 small" style="border-radius: 8px;">
+                        <i class="bi bi-info-circle"></i> <strong>Tip:</strong> En celulares, "Tomar foto" abrirá la cámara directamente
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top: 2px solid #f3f4f6;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="guardarFoto()" id="btnGuardarFoto" style="border-radius: 8px;" disabled>
+                    <i class="bi bi-check-circle"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============================================
+// GESTIÓN DE ESTADO DE PRODUCTOS
+// ============================================
+
+// Event listener para DOMContentLoaded eliminado (estado ahora es solo lectura)
+
+// ============================================
+// SUBIR/TOMAR FOTOS
+// ============================================
+
+let productoActualId = null;
+let modalFoto = null;
+
+// Inicializar modal al cargar página
+document.addEventListener('DOMContentLoaded', function() {
+    modalFoto = new bootstrap.Modal(document.getElementById('modalFoto'));
+});
+
+// Abrir modal para subir foto
+function abrirModalFoto(productoId) {
+    productoActualId = productoId;
+    document.getElementById('productoIdFoto').value = productoId;
+    
+    // Resetear formulario
+    document.getElementById('formFoto').reset();
+    document.getElementById('vistaPrevia').style.display = 'none';
+    document.getElementById('iconoInicial').style.display = 'block';
+    document.getElementById('btnGuardarFoto').disabled = true;
+    
+    // Abrir modal
+    modalFoto.show();
+}
+
+// Previsualizar imagen seleccionada
+function previsualizarImagen(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            document.getElementById('imagenPrevia').src = e.target.result;
+            document.getElementById('vistaPrevia').style.display = 'block';
+            document.getElementById('iconoInicial').style.display = 'none';
+            document.getElementById('btnGuardarFoto').disabled = false;
+        };
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// Guardar foto mediante AJAX
+function guardarFoto() {
+    const formData = new FormData();
+    const inputArchivo = document.getElementById('inputFotoArchivo');
+    const inputCamara = document.getElementById('inputFotoCamara');
+    
+    // Determinar qué input tiene el archivo
+    let archivo = null;
+    if (inputArchivo.files && inputArchivo.files[0]) {
+        archivo = inputArchivo.files[0];
+    } else if (inputCamara.files && inputCamara.files[0]) {
+        archivo = inputCamara.files[0];
+    }
+    
+    if (!archivo) {
+        mostrarToast('Selecciona una imagen', 'warning');
+        return;
+    }
+    
+    // Agregar archivo al FormData
+    formData.append('imagen', archivo);
+    
+    // Obtener CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    // Deshabilitar botón mientras se sube
+    const btnGuardar = document.getElementById('btnGuardarFoto');
+    btnGuardar.disabled = true;
+    btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subiendo...';
+    
+    // Enviar mediante AJAX
+    fetch(`/productos/${productoActualId}/subir-foto/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Actualizar imagen en la tarjeta
+            const imgElement = document.getElementById(`img-${productoActualId}`);
+            if (imgElement) {
+                imgElement.src = data.imagen_url + '?t=' + new Date().getTime(); // Cache bust
+            } else {
+                // Si no había imagen, recargar la página para mostrarla
+                location.reload();
+            }
+            
+            mostrarToast('Foto actualizada exitosamente', 'success');
+            modalFoto.hide();
+        } else {
+            mostrarToast(data.message || 'Error al subir foto', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarToast('Error al subir foto', 'error');
+    })
+    .finally(() => {
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = '<i class="bi bi-check-circle"></i> Guardar Foto';
+    });
+}
+
+// Función para mostrar toast (usa el sistema global de base.html)
+function mostrarToast(mensaje, tipo) {
+    if (typeof showToast === 'function') {
+        showToast(mensaje, tipo);
+    } else {
+        alert(mensaje);
+    }
+}
+</script>
+{% endblock %}

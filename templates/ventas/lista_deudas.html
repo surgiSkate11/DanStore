@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+
+{% block title %}Deudas Pendientes - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
+    .deuda-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .deuda-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    }
+    
+    .cliente-header {
+        background: linear-gradient(135deg, #f8f9ff 0%, #ede9fe 100%);
+        padding: 1.5rem;
+        border-radius: 12px 12px 0 0;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .producto-item {
+        padding: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+        transition: background 0.2s ease;
+    }
+    
+    .producto-item:last-child {
+        border-bottom: none;
+    }
+    
+    .producto-item:hover {
+        background: #f8f9ff;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        border-left: 4px solid #667eea;
+    }
+    
+    .badge-separado {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .btn-outline-primary {
+        border-color: #667eea;
+        color: #667eea;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="gradient-header">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-7 mb-3 mb-md-0">
+                <h1 class="mb-2 h3 h2-md">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Deudas Pendientes
+                </h1>
+                <p class="mb-0 opacity-90 small">Detalle de productos separados por cliente (pendientes de pago)</p>
+            </div>
+            <div class="col-12 col-md-5 text-md-end">
+                <a href="{% url 'lista_ventas' %}" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-arrow-left"></i> <span class="d-none d-sm-inline">Volver a Ventas</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="stats-card">
+                <i class="bi bi-cash-coin" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h3 class="mt-3 mb-0" style="color: #667eea;">${{ total_deudas|floatformat:2 }}</h3>
+                <p class="text-muted mb-0 small">Total en Deudas</p>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="stats-card">
+                <i class="bi bi-people-fill" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h3 class="mt-3 mb-0" style="color: #667eea;">{{ total_clientes }}</h3>
+                <p class="text-muted mb-0 small">Clientes con Deuda</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista de Deudas por Cliente -->
+    {% if deudas %}
+    <div class="row">
+        {% for deuda in deudas %}
+        <div class="col-12">
+            <div class="deuda-card">
+                <!-- Header del Cliente -->
+                <div class="cliente-header">
+                    <div class="row align-items-center">
+                        <div class="col-12 col-md-6">
+                            <h4 class="mb-2" style="color: #4c1d95;">
+                                <i class="bi bi-person-fill"></i> {{ deuda.cliente }}
+                            </h4>
+                            <p class="mb-0 small" style="color: #5b21b6;">
+                                <strong>{{ deuda.cantidad }}</strong> producto{{ deuda.cantidad|pluralize }} pendiente{{ deuda.cantidad|pluralize }}
+                            </p>
+                        </div>
+                        <div class="col-12 col-md-6 text-md-end mt-3 mt-md-0">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-md-end gap-3">
+                                <!-- Total de Deuda -->
+                                <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid #667eea;">
+                                    <small class="text-muted d-block mb-1">Deuda Total:</small>
+                                    <h3 class="mb-0" style="color: #667eea;">${{ deuda.total|floatformat:2 }}</h3>
+                                </div>
+                                <!-- Botón de Imprimir -->
+                                <a href="{% url 'generar_comprobante_deuda_pdf' deuda.cliente %}" 
+                                   class="btn btn-outline-primary d-flex align-items-center gap-2"
+                                   style="white-space: nowrap;">
+                                    <i class="bi bi-printer-fill"></i>
+                                    <span class="d-none d-sm-inline">Imprimir Comprobante</span>
+                                    <span class="d-inline d-sm-none">Imprimir</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lista de Productos -->
+                <div class="card-body p-0">
+                    {% for producto in deuda.productos %}
+                    <div class="producto-item">
+                        <div class="row align-items-center">
+                            <div class="col-12 col-md-1 text-center mb-2 mb-md-0">
+                                {% if producto.imagen %}
+                                <img src="{{ producto.imagen.url }}" class="rounded" 
+                                     style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="bi bi-image text-muted"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 col-md-5 mb-2 mb-md-0">
+                                <h6 class="mb-1">{{ producto.tipo_prenda }}</h6>
+                                {% if producto.marca %}
+                                <small class="text-muted">{{ producto.marca }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-6 col-md-2 mb-2 mb-md-0">
+                                <span class="badge bg-secondary">{{ producto.get_categoria_grupo_display }}</span>
+                            </div>
+                            <div class="col-6 col-md-2 mb-2 mb-md-0">
+                                <small class="text-muted d-block">Fecha:</small>
+                                <strong>{{ producto.creado_en|date:"d/m/Y" }}</strong>
+                            </div>
+                            <div class="col-12 col-md-2 text-md-end">
+                                <span class="badge-separado">
+                                    <i class="bi bi-clock-history"></i> ${{ producto.precio|floatformat:2 }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Sin deudas -->
+    <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-check-circle-fill" style="font-size: 4rem; color: #10b981;"></i>
+            <h3 class="mt-3 mb-2">¡Sin Deudas Pendientes!</h3>
+            <p class="text-muted mb-4">
+                No hay productos separados pendientes de pago.
+            </p>
+            <a href="{% url 'lista_ventas' %}" class="btn btn-primary">
+                <i class="bi bi-arrow-left"></i> Volver a Ventas
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

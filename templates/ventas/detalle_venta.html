@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}Factura {{ venta.numero_factura }} - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bg-purple {
+        background-color: #8b5cf6 !important;
+    }
+    
+    .factura-container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        padding: 2rem;
+    }
+    
+    .factura-header {
+        border-left: 6px solid #667eea;
+        padding-left: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-section {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .producto-item {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 1rem 0;
+    }
+    
+    .producto-item:last-child {
+        border-bottom: none;
+    }
+    
+    .totales-section {
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Botones de acción -->
+    <div class="row mb-4">
+        <div class="col">
+            <a href="{% url 'lista_ventas' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a Ventas
+            </a>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'generar_factura_pdf' venta.id %}" class="btn btn-success">
+                <i class="bi bi-file-pdf"></i> Descargar PDF
+            </a>
+            <a href="{% url 'detalle_cliente' venta.cliente.id %}" class="btn btn-primary">
+                <i class="bi bi-person"></i> Ver Cliente
+            </a>
+        </div>
+    </div>
+    
+    <div class="factura-container">
+        <!-- Header -->
+        <div class="factura-header">
+            <h2 class="mb-2">
+                <i class="bi bi-receipt"></i> {{ venta.numero_factura }}
+            </h2>
+            <p class="text-muted mb-0">Detalle de la venta</p>
+        </div>
+        
+        <!-- Información General -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h6 class="mb-3">
+                        <i class="bi bi-calendar" style="color: #667eea;"></i> Información de la Venta
+                    </h6>
+                    <p class="mb-2">
+                        <strong>Fecha:</strong> {{ venta.fecha|date:"d/m/Y H:i" }}
+                    </p>
+                    <p class="mb-0">
+                        <strong>Creado:</strong> {{ venta.creado_en|date:"d/m/Y H:i" }}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h6 class="mb-3">
+                        <i class="bi bi-person-circle" style="color: #667eea;"></i> Cliente
+                    </h6>
+                    <p class="mb-2">
+                        <strong>Nombre:</strong> {{ venta.cliente.nombre }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Teléfono:</strong> {{ venta.cliente.telefono|default:"N/A" }}
+                    </p>
+                    <p class="mb-0">
+                        <strong>Email:</strong> {{ venta.cliente.email|default:"N/A" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Productos -->
+        <div class="mb-4">
+            <h5 class="mb-3">
+                <i class="bi bi-bag" style="color: #667eea;"></i> Productos
+            </h5>
+            
+            {% for detalle in venta.detalles.all %}
+            <div class="producto-item">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        {% if detalle.producto.imagen %}
+                        <img src="{{ detalle.producto.imagen.url }}" alt="{{ detalle.producto.tipo_prenda }}"
+                             style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                        {% else %}
+                        <div class="bg-light rounded d-flex align-items-center justify-content-center"
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-image text-muted"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col">
+                        <h6 class="mb-1">{{ detalle.producto.tipo_prenda }}</h6>
+                        <p class="mb-0 text-muted">
+                            <small>
+                                {{ detalle.producto.get_categoria_grupo_display }} | 
+                                Talla: {{ detalle.producto.rango_edad|default:"N/A" }}
+                            </small>
+                        </p>
+                    </div>
+                    <div class="col-auto">
+                        <h5 class="mb-0" style="color: #10b981;">
+                            ${{ detalle.precio_unitario|floatformat:2 }}
+                        </h5>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Totales -->
+        <div class="totales-section">
+            <h5 class="mb-3">
+                <i class="bi bi-calculator" style="color: #667eea;"></i> Resumen de Pago
+            </h5>
+            
+            <div class="row mb-3 pb-3" style="border-bottom: 2px dashed #e5e7eb;">
+                <div class="col text-end">
+                    <span style="font-size: 1.05rem; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif;">Subtotal ({{ venta.detalles.count }} producto{{ venta.detalles.count|pluralize }}):</span>
+                </div>
+                <div class="col-auto" style="min-width: 140px; text-align: right;">
+                    <span style="font-size: 1.15rem; font-weight: 700; color: #374151; font-family: 'Courier New', monospace;">${{ venta.subtotal|floatformat:2 }}</span>
+                </div>
+            </div>
+            
+            {% if venta.descuento > 0 %}
+            <div class="row mb-3">
+                <div class="col text-end">
+                    <span style="font-size: 1rem; color: #dc2626; font-family: 'Segoe UI', system-ui, sans-serif;">
+                        <i class="bi bi-percent"></i> Descuento:
+                    </span>
+                </div>
+                <div class="col-auto" style="min-width: 140px; text-align: right;">
+                    <span style="font-size: 1.1rem; font-weight: 700; color: #dc2626; font-family: 'Courier New', monospace;">-${{ venta.descuento|floatformat:2 }}</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if venta.envio > 0 %}
+            <div class="row mb-3">
+                <div class="col text-end">
+                    <span style="font-size: 1rem; color: #3b82f6; font-family: 'Segoe UI', system-ui, sans-serif;">
+                        <i class="bi bi-truck"></i> Envío:
+                    </span>
+                </div>
+                <div class="col-auto" style="min-width: 140px; text-align: right;">
+                    <span style="font-size: 1.1rem; font-weight: 700; color: #3b82f6; font-family: 'Courier New', monospace;">+${{ venta.envio|floatformat:2 }}</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if venta.otros_gastos > 0 %}
+            <div class="row mb-3">
+                <div class="col text-end">
+                    <span style="font-size: 1rem; color: #8b5cf6; font-family: 'Segoe UI', system-ui, sans-serif;">
+                        <i class="bi bi-plus-circle"></i> {{ venta.descripcion_otros|default:"Otros gastos" }}:
+                    </span>
+                </div>
+                <div class="col-auto" style="min-width: 140px; text-align: right;">
+                    <span style="font-size: 1.1rem; font-weight: 700; color: #8b5cf6; font-family: 'Courier New', monospace;">+${{ venta.otros_gastos|floatformat:2 }}</span>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="row mt-4 pt-4" style="border-top: 3px solid #667eea; background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 100%); margin: 0 -1.5rem -1.5rem -1.5rem; padding: 1.5rem 1.5rem !important; border-radius: 0 0 8px 8px;">
+                <div class="col text-end">
+                    <span style="font-size: 1.3rem; font-weight: 700; color: #1e293b; font-family: 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.5px;">TOTAL A PAGAR:</span>
+                </div>
+                <div class="col-auto" style="min-width: 140px; text-align: right;">
+                    <span style="font-size: 1.8rem; font-weight: 900; color: #10b981; font-family: 'Courier New', monospace; text-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);">${{ venta.total|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notas -->
+        {% if venta.notas %}
+        <div class="mt-4 p-3" style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
+            <h6 class="mb-2">
+                <i class="bi bi-sticky"></i> Notas
+            </h6>
+            <p class="mb-0">{{ venta.notas }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

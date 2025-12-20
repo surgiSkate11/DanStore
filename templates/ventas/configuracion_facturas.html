@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración de Facturas - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .config-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .color-input {
+        width: 80px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        cursor: pointer;
+    }
+    
+    .preview-section {
+        background: #f9fafb;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-top: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-gear-fill"></i> Configuración de Facturas
+            </h2>
+            <p class="text-muted">Personaliza el diseño de tus facturas</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'lista_ventas' %}" class="btn btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Volver a Ventas
+            </a>
+        </div>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Información de la Empresa -->
+            <div class="col-md-6">
+                <div class="config-card">
+                    <div class="config-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-building"></i> Información de la Empresa
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nombre de la Empresa</label>
+                            <input type="text" name="nombre_empresa" class="form-control" 
+                                   value="{{ config.nombre_empresa }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Dirección</label>
+                            <textarea name="direccion_empresa" class="form-control" rows="2">{{ config.direccion_empresa }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <input type="text" name="telefono_empresa" class="form-control" 
+                                   value="{{ config.telefono_empresa }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" name="email_empresa" class="form-control" 
+                                   value="{{ config.email_empresa }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mensaje en Factura</label>
+                            <textarea name="mensaje_factura" class="form-control" rows="3" 
+                                      placeholder="Ej: Gracias por su compra. ¡Vuelva pronto!">{{ config.mensaje_factura }}</textarea>
+                            <small class="text-muted">Mensaje que aparece al pie de la factura</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logo y Colores -->
+            <div class="col-md-6">
+                <div class="config-card">
+                    <div class="config-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-palette-fill"></i> Diseño y Colores
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-image"></i> Logo de la Empresa
+                            </label>
+                            {% if config.logo %}
+                            <div class="mb-3">
+                                <img src="{{ config.logo.url }}" alt="Logo" 
+                                     style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            </div>
+                            {% endif %}
+                            <input type="file" name="logo" class="form-control" accept="image/*">
+                            <small class="text-muted">Formatos: JPG, PNG. Tamaño recomendado: 500x500px</small>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6 class="mb-3 fw-semibold">Colores Personalizados</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Color del Borde Lateral</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <input type="color" name="color_borde" class="color-input" 
+                                       value="{{ config.color_borde }}" id="colorBorde">
+                                <input type="text" class="form-control" value="{{ config.color_borde }}" 
+                                       readonly style="max-width: 100px;">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Color Principal</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <input type="color" name="color_principal" class="color-input" 
+                                       value="{{ config.color_principal }}" id="colorPrincipal">
+                                <input type="text" class="form-control" value="{{ config.color_principal }}" 
+                                       readonly style="max-width: 100px;">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Color del Texto</label>
+                            <div class="d-flex align-items-center gap-3">
+                                <input type="color" name="color_texto" class="color-input" 
+                                       value="{{ config.color_texto }}" id="colorTexto">
+                                <input type="text" class="form-control" value="{{ config.color_texto }}" 
+                                       readonly style="max-width: 100px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botón Guardar -->
+        <div class="text-center mb-4">
+            <button type="submit" class="btn btn-primary btn-lg px-5" style="border-radius: 8px;">
+                <i class="bi bi-save"></i> Guardar Configuración
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Actualizar campos de texto al cambiar colores
+document.querySelectorAll('.color-input').forEach(input => {
+    input.addEventListener('input', function() {
+        this.nextElementSibling.nextElementSibling.value = this.value;
+    });
+});
+</script>
+{% endblock %}

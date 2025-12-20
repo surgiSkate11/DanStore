@@ -1,0 +1,665 @@
+{% extends 'base.html' %}
+
+{% block title %}Cofre Sorpresa - {{ sorteo.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Toast Notification */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        z-index: 9999;
+        max-width: 400px;
+        width: 90%;
+        opacity: 0;
+        animation: slideDown 0.4s ease forwards;
+        overflow: hidden;
+    }
+    
+    .toast-notification::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+        animation: shrinkBorder 3s linear forwards;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -30px);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+    }
+    
+    @keyframes shrinkBorder {
+        from {
+            width: 100%;
+        }
+        to {
+            width: 0%;
+        }
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+        to {
+            opacity: 0;
+            transform: translate(-50%, -30px);
+        }
+    }
+    
+    .toast-notification.hiding {
+        animation: slideUp 0.3s ease forwards;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .toast-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+    
+    .toast-message {
+        flex: 1;
+    }
+    
+    .toast-message h6 {
+        margin: 0 0 5px 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .toast-message p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    body {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+        min-height: 100vh;
+    }
+    
+    .container-fluid {
+        background: transparent !important;
+    }
+    
+    .cofre-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        padding-bottom: 4rem;
+        min-height: calc(100vh - 100px);
+    }
+    
+    .cofres-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin: 3rem 0;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .cofre-item {
+        position: relative;
+        cursor: pointer;
+        transform-style: preserve-3d;
+        transition: all 0.3s ease;
+    }
+    
+    .cofre-item:hover:not(.disabled) {
+        transform: translateY(-10px) scale(1.05);
+    }
+    
+    .cofre-item.disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .cofre-box {
+        background: linear-gradient(135deg, #8b5a3c 0%, #5d3922 100%);
+        border: 5px solid #d4af37;
+        border-radius: 20px;
+        padding: 2.5rem 2rem;
+        text-align: center;
+        box-shadow: 
+            0 15px 40px rgba(212, 175, 55, 0.4),
+            inset 0 -10px 20px rgba(0, 0, 0, 0.3),
+            0 0 0 2px rgba(212, 175, 55, 0.2);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .cofre-item:hover:not(.disabled) .cofre-box {
+        border-color: #ffd700;
+        box-shadow: 
+            0 20px 50px rgba(212, 175, 55, 0.6),
+            inset 0 -10px 20px rgba(0, 0, 0, 0.3),
+            0 0 0 3px rgba(255, 215, 0, 0.4);
+    }
+    
+    .cofre-box::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 10%;
+        right: 10%;
+        height: 8px;
+        background: #d4af37;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(212, 175, 55, 0.5);
+    }
+    
+    .cofre-icon {
+        font-size: 5rem;
+        animation: pulse 2s infinite;
+        display: block;
+        margin-bottom: 1rem;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .cofre-numero {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #ffd700;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        margin-top: 1rem;
+    }
+    
+    .cofre-lock {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 1.5rem;
+        opacity: 0.7;
+    }
+    
+    .stage-indicator {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+        backdrop-filter: blur(15px);
+        border-radius: 25px;
+        padding: 2.5rem;
+        text-align: center;
+        color: white;
+        margin-bottom: 3rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .stage-indicator h2 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .stage-indicator p {
+        font-size: 1.2rem;
+        opacity: 0.95;
+    }
+    
+    .ganador-display {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        margin: 2rem auto;
+        max-width: 600px;
+        box-shadow: 0 10px 40px rgba(16, 185, 129, 0.5);
+    }
+    
+    .ganador-display h3 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .ganador-display .nombre {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #ffd700;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    }
+    
+    .premio-reveal {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%);
+        backdrop-filter: blur(15px);
+        border-radius: 25px;
+        padding: 3.5rem;
+        text-align: center;
+        margin: 2rem auto;
+        max-width: 700px;
+        animation: slideUp 0.5s ease;
+        border: 2px solid rgba(139, 92, 246, 0.3);
+        box-shadow: 0 15px 50px rgba(139, 92, 246, 0.4);
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .premio-reveal .premio-icon {
+        font-size: 8rem;
+        margin-bottom: 1rem;
+    }
+    
+    .premio-reveal .premio-nombre {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #ffd700;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+    }
+    
+    .premio-reveal .premio-descripcion {
+        font-size: 1.3rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .btn-accion {
+        font-size: 1.4rem;
+        padding: 1.2rem 3.5rem;
+        border-radius: 50px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .btn-sortear {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5), 0 0 0 0 rgba(245, 158, 11, 0.4);
+        animation: pulse-button 2s ease-in-out infinite;
+    }
+    
+    .btn-sortear:hover:not(:disabled) {
+        transform: scale(1.08) translateY(-2px);
+        box-shadow: 0 15px 40px rgba(245, 158, 11, 0.7);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .btn-continuar {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
+    }
+    
+    .btn-continuar:hover {
+        transform: scale(1.08) translateY(-2px);
+        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.7);
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .cofre-glow {
+        animation: glow 1.5s infinite alternate;
+    }
+    
+    @keyframes glow {
+        from {
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+        }
+        to {
+            box-shadow: 0 10px 50px rgba(212, 175, 55, 0.8),
+                        0 0 30px rgba(255, 215, 0, 0.6);
+        }
+    }
+    
+    .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background: #ffd700;
+        position: absolute;
+        animation: confetti-fall 3s linear;
+    }
+    
+    @keyframes confetti-fall {
+        0% {
+            top: -10%;
+            transform: translateX(0) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            top: 110%;
+            transform: translateX(100px) rotate(720deg);
+            opacity: 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cofre-container">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="text-white mb-3" style="font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 30px rgba(212,175,55,0.7), 0 4px 20px rgba(0,0,0,0.6);">
+            🎁 {{ sorteo.nombre }}
+        </h1>
+        <p class="text-white" style="font-size: 1.3rem; opacity: 0.95; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">¡El ganador elige su cofre sorpresa!</p>
+        {% if sorteo.descripcion %}
+        <p class="text-white-50" style="font-size: 1.1rem; margin-top: 0.5rem;">{{ sorteo.descripcion }}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Stage Indicator -->
+    <div class="stage-indicator">
+        <div id="stage1" style="display: block;">
+            <h2>🎯 Etapa 1: Sortear Ganador</h2>
+            <button class="btn-accion btn-sortear" onclick="sortearGanador()">
+                <i class="bi bi-shuffle"></i> SORTEAR GANADOR
+            </button>
+        </div>
+        
+        <div id="stage2" style="display: none;">
+            <h2>🎁 Etapa 2: Elegir Cofre</h2>
+            <p style="font-size: 1.2rem;">¡El ganador debe elegir su cofre!</p>
+        </div>
+        
+        <div id="stage3" style="display: none;">
+            <h2>🎉 ¡Premio Revelado!</h2>
+        </div>
+    </div>
+    
+    <!-- Ganador Display -->
+    <div class="ganador-display" id="ganadorDisplay" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3rem; border-radius: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.5); margin: 2rem auto; max-width: 600px;">
+        <h3 style="font-size: 2.5rem; font-weight: 800; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom: 1.5rem;">🏆 ¡GANADOR!</h3>
+        <div class="nombre" id="nombreGanador" style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 4px 15px rgba(0,0,0,0.5); animation: pulse-glow 2s ease-in-out infinite;"></div>
+        <p style="font-size: 1.8rem; margin-top: 1.5rem; color: white; font-weight: 600;" id="telefonoGanador"></p>
+    </div>
+    
+    <!-- Cofres Grid -->
+    <div class="cofres-grid" id="cofresGrid">
+        <!-- Los cofres se generan dinámicamente -->
+    </div>
+    
+    <!-- Premio Reveal -->
+    <div class="premio-reveal" id="premioReveal" style="display: none;">
+        <div class="premio-icon" id="premioIcon"></div>
+        <div class="premio-nombre" id="premioNombre"></div>
+        <div class="premio-descripcion" id="premioDescripcion"></div>
+        
+        <button class="btn-accion btn-continuar" onclick="registrarYContinuar()">
+            <i class="bi bi-check-circle"></i> Registrar y Continuar
+        </button>
+        <button class="btn-accion btn-outline-light ms-3" onclick="nuevoSorteo()">
+            <i class="bi bi-arrow-repeat"></i> Otro Sorteo
+        </button>
+    </div>
+    
+    <!-- Botones de Control -->
+    <div class="text-center mt-5">
+        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg me-3" style="min-width: 150px; padding: 0.75rem 2rem; font-weight: 600; border-width: 2px;">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <button class="btn btn-danger btn-lg" onclick="finalizarSorteo()" style="min-width: 180px; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
+            <i class="bi bi-stop-circle"></i> Finalizar Sorteo
+        </button>
+    </div>
+</div>
+
+<script>
+const sorteoId = {{ sorteo.id }};
+const participantes = {{ participantes|safe }};
+const premios = {{ premios|safe }};
+const cantidadCofres = {{ sorteo.cantidad_cofres }};
+
+let ganadorActual = null;
+let premioSeleccionado = null;
+
+// Nota: La función showToast está definida en base.html
+
+// Inicializar cofres
+function inicializarCofres() {
+    const grid = document.getElementById('cofresGrid');
+    grid.innerHTML = '';
+    
+    for (let i = 1; i <= cantidadCofres; i++) {
+        const cofreDiv = document.createElement('div');
+        cofreDiv.className = 'cofre-item disabled';
+        cofreDiv.id = `cofre-${i}`;
+        cofreDiv.onclick = () => abrirCofre(i);
+        
+        cofreDiv.innerHTML = `
+            <div class="cofre-box">
+                <div class="cofre-lock">🔒</div>
+                <span class="cofre-icon">🎁</span>
+                <div class="cofre-numero">Cofre ${i}</div>
+            </div>
+        `;
+        
+        grid.appendChild(cofreDiv);
+    }
+}
+
+// Sortear ganador
+function sortearGanador() {
+    // Validar que hay participantes
+    if (participantes.length === 0) {
+        showToast('No hay participantes elegibles para este sorteo', 'error');
+        return;
+    }
+    
+    fetch(`/sorteos/${sorteoId}/sortear/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        ganadorActual = data.ganador;
+        mostrarGanador();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('No se pudo sortear el ganador. Intenta nuevamente.', 'error');
+    });
+}
+
+// Mostrar ganador
+function mostrarGanador() {
+    const ganadorDisplay = document.getElementById('ganadorDisplay');
+    document.getElementById('nombreGanador').textContent = ganadorActual.nombre || 'Ganador';
+    document.getElementById('telefonoGanador').textContent = `📞 ${ganadorActual.telefono || 'N/A'}`;
+    ganadorDisplay.style.display = 'block';
+    console.log('Ganador mostrado:', ganadorActual);
+    
+    // Cambiar a etapa 2
+    document.getElementById('stage1').style.display = 'none';
+    document.getElementById('stage2').style.display = 'block';
+    
+    // Habilitar cofres
+    document.querySelectorAll('.cofre-item').forEach(item => {
+        item.classList.remove('disabled');
+        item.querySelector('.cofre-box').classList.add('cofre-glow');
+        item.querySelector('.cofre-lock').textContent = '✨';
+    });
+}
+
+// Abrir cofre
+function abrirCofre(numeroCofre) {
+    if (!ganadorActual) return;
+    
+    // Deshabilitar otros cofres
+    document.querySelectorAll('.cofre-item').forEach(item => {
+        item.classList.add('disabled');
+    });
+    
+    // Animación del cofre seleccionado
+    const cofreSeleccionado = document.getElementById(`cofre-${numeroCofre}`);
+    cofreSeleccionado.style.transform = 'scale(1.2)';
+    cofreSeleccionado.querySelector('.cofre-icon').textContent = '📦';
+    
+    // Buscar premio para este cofre
+    const premio = premios.find(p => p.numero_cofre === numeroCofre);
+    
+    if (!premio) {
+        showToast('Este cofre no tiene premio asignado. Configura premios primero.', 'error');
+        document.querySelectorAll('.cofre-item').forEach(c => c.classList.remove('disabled'));
+        return;
+    }
+    
+    setTimeout(() => {
+        revelarPremio(premio);
+    }, 1000);
+}
+
+// Revelar premio
+function revelarPremio(premio) {
+    premioSeleccionado = premio;
+    
+    // Iconos según tipo de premio
+    const iconos = {
+        'descuento_porcentaje': '💰',
+        'descuento_fijo': '💵',
+        'producto_gratis': '🎁',
+        'envio_gratis': '🚚',
+        'cupon': '🎟️',
+        'combo': '📦'
+    };
+    
+    // Mostrar premio
+    document.getElementById('premioIcon').textContent = iconos[premio.tipo] || '🎁';
+    document.getElementById('premioNombre').textContent = premio.nombre;
+    document.getElementById('premioDescripcion').textContent = premio.descripcion || '¡Felicidades por tu premio!';
+    
+    // Cambiar a etapa 3
+    document.getElementById('stage2').style.display = 'none';
+    document.getElementById('stage3').style.display = 'block';
+    document.getElementById('premioReveal').style.display = 'block';
+    
+    // Generar confetti
+    generarConfetti();
+}
+
+// Generar confetti
+function generarConfetti() {
+    const colores = ['#ffd700', '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8dadc', '#f1a7f5'];
+    
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = '-10%';
+        confetti.style.background = colores[Math.floor(Math.random() * colores.length)];
+        confetti.style.animationDelay = Math.random() * 2 + 's';
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 3000);
+    }
+}
+
+// Registrar y continuar
+function registrarYContinuar() {
+    if (!ganadorActual || !premioSeleccionado) return;
+    
+    const formData = new FormData();
+    formData.append('cliente_id', ganadorActual.id);
+    formData.append('premio_id', premioSeleccionado.id);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`/sorteos/${sorteoId}/registrar/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.mensaje, 'success', '¡Registrado!');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('No se pudo registrar el resultado. Intenta nuevamente.', 'error');
+    });
+}
+
+// Nuevo sorteo
+function nuevoSorteo() {
+    location.reload();
+}
+
+// Finalizar sorteo
+function finalizarSorteo() {
+    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarSorteo'));
+    modal.show();
+}
+
+// Confirmar finalizar sorteo
+function confirmarFinalizarSorteo() {
+    window.location.href = `/sorteos/${sorteoId}/finalizar/`;
+}
+
+// Inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarCofres();
+});
+</script>
+
+<!-- Modal Finalizar Sorteo -->
+<div class="modal fade" id="modalFinalizarSorteo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-stop-circle-fill"></i> Finalizar Sorteo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #dc3545;"></i>
+                <h5 class="mt-3">¿Finalizar este sorteo?</h5>
+                <p class="text-muted">No podrás abrir más cofres después de finalizarlo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmarFinalizarSorteo()">
+                    <i class="bi bi-stop-circle"></i> Sí, Finalizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

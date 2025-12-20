@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Editar Info Cliente - {{ nombre_cliente }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-person-vcard"></i> Información de Cliente
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'top_clientes' %}">Clientes</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'detalle_cliente' nombre_cliente %}">{{ nombre_cliente }}</a></li>
+                    <li class="breadcrumb-item active">Editar Información</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil-square"></i> Editar Información de {{ nombre_cliente }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-person-fill"></i> Nombre del Cliente
+                            </label>
+                            <input type="text" class="form-control" value="{{ nombre_cliente }}" disabled>
+                            <small class="text-muted">Este nombre viene de Google Sheets (vendido_a)</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="telefono" class="form-label fw-semibold">
+                                <i class="bi bi-telephone-fill"></i> Teléfono
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="telefono" 
+                                   name="telefono" 
+                                   value="{{ cliente.telefono|default:'' }}"
+                                   placeholder="Ej: 3001234567">
+                            <small class="text-muted">Solo se guarda en la página web, no en Google Sheets</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-semibold">
+                                <i class="bi bi-envelope-fill"></i> Email
+                            </label>
+                            <input type="email" 
+                                   class="form-control" 
+                                   id="email" 
+                                   name="email" 
+                                   value="{{ cliente.email|default:'' }}"
+                                   placeholder="Ej: cliente@email.com">
+                            <small class="text-muted">Solo se guarda en la página web, no en Google Sheets</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="direccion" class="form-label fw-semibold">
+                                <i class="bi bi-geo-alt-fill"></i> Dirección
+                            </label>
+                            <textarea class="form-control" 
+                                      id="direccion" 
+                                      name="direccion" 
+                                      rows="2" 
+                                      placeholder="Ej: Calle 123 #45-67, Bogotá">{{ cliente.direccion|default:'' }}</textarea>
+                            <small class="text-muted">Solo se guarda en la página web, no en Google Sheets</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notas" class="form-label fw-semibold">
+                                <i class="bi bi-journal-text"></i> Notas
+                            </label>
+                            <textarea class="form-control" 
+                                      id="notas" 
+                                      name="notas" 
+                                      rows="3" 
+                                      placeholder="Notas adicionales sobre el cliente...">{{ cliente.notas|default:'' }}</textarea>
+                            <small class="text-muted">Información adicional (preferencias, observaciones, etc.)</small>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'detalle_cliente' nombre_cliente %}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Guardar Información
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

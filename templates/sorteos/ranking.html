@@ -1,0 +1,792 @@
+{% extends 'base.html' %}
+
+{% block title %}Ranking del Día - {{ sorteo.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Toast Notification */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        z-index: 9999;
+        max-width: 400px;
+        width: 90%;
+        opacity: 0;
+        animation: slideDown 0.4s ease forwards;
+        overflow: hidden;
+    }
+    
+    .toast-notification::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+        animation: shrinkBorder 3s linear forwards;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -30px);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+    }
+    
+    @keyframes shrinkBorder {
+        from {
+            width: 100%;
+        }
+        to {
+            width: 0%;
+        }
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+        to {
+            opacity: 0;
+            transform: translate(-50%, -30px);
+        }
+    }
+    
+    .toast-notification.hiding {
+        animation: slideUp 0.3s ease forwards;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .toast-icon {
+        font-size: 2rem;
+        flex-shrink: 0;
+    }
+    
+    .toast-message {
+        flex: 1;
+    }
+    
+    .toast-message h6 {
+        margin: 0 0 5px 0;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .toast-message p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    body {
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%) !important;
+        min-height: 100vh;
+    }
+    
+    .container-fluid {
+        background: transparent !important;
+    }
+    
+    .ranking-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        padding-bottom: 4rem;
+        min-height: calc(100vh - 100px);
+    }
+    
+    .podio-section {
+        margin: 3rem 0;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 2rem;
+        min-height: 500px;
+    }
+    
+    .podio-puesto {
+        text-align: center;
+        position: relative;
+        animation: slideUp 0.8s ease;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+    
+    .podio-puesto:hover {
+        transform: translateY(-10px);
+    }
+    
+    @keyframes slideUp {
+        from {
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    .puesto-1 {
+        animation-delay: 0.6s;
+        order: 2;
+    }
+    
+    .puesto-2 {
+        animation-delay: 0.3s;
+        order: 1;
+    }
+    
+    .puesto-3 {
+        animation-delay: 0s;
+        order: 3;
+    }
+    
+    .pedestal {
+        width: 200px;
+        border-radius: 10px 10px 0 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .pedestal-1 {
+        height: 350px;
+        background: linear-gradient(180deg, #ffd700 0%, #ffed4e 100%);
+    }
+    
+    .pedestal-2 {
+        height: 250px;
+        background: linear-gradient(180deg, #c0c0c0 0%, #d4d4d4 100%);
+    }
+    
+    .pedestal-3 {
+        height: 200px;
+        background: linear-gradient(180deg, #cd7f32 0%, #e89465 100%);
+    }
+    
+    .medalla {
+        font-size: 6rem;
+        margin-bottom: 1rem;
+        animation: rotate 3s ease-in-out infinite;
+    }
+    
+    @keyframes rotate {
+        0%, 100% { transform: rotate(-5deg); }
+        50% { transform: rotate(5deg); }
+    }
+    
+    .puesto-numero {
+        font-size: 3rem;
+        font-weight: 900;
+        color: rgba(0, 0, 0, 0.3);
+        margin-bottom: 0.5rem;
+    }
+    
+    .competidor-info {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .competidor-nombre {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #1a1a1a;
+        margin-bottom: 0.5rem;
+    }
+    
+    .competidor-stats {
+        font-size: 1rem;
+        color: #666;
+    }
+    
+    .competidor-monto {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #10b981;
+        margin-top: 0.5rem;
+    }
+    
+    .premio-badge {
+        background: rgba(16, 185, 129, 0.2);
+        border: 2px solid #10b981;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        margin-top: 1rem;
+        font-weight: 600;
+        color: #10b981;
+    }
+    
+    .lista-competidores {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-top: 3rem;
+    }
+    
+    .competidor-item {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        transition: all 0.3s ease;
+        color: white;
+    }
+    
+    .competidor-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(10px);
+    }
+    
+    .competidor-posicion {
+        font-size: 2rem;
+        font-weight: 900;
+        color: #ffd700;
+        min-width: 50px;
+        text-align: center;
+    }
+    
+    .competidor-datos {
+        flex: 1;
+    }
+    
+    .competidor-datos .nombre {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 0.3rem;
+    }
+    
+    .competidor-datos .stats {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .control-panel {
+        text-align: center;
+        margin: 2rem 0;
+    }
+    
+    .btn-revelar {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        border: none;
+        color: white;
+        font-size: 1.8rem;
+        padding: 1.2rem 4rem;
+        border-radius: 50px;
+        box-shadow: 0 10px 40px rgba(245, 158, 11, 0.6);
+        transition: all 0.3s ease;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    
+    .btn-revelar:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 15px 50px rgba(245, 158, 11, 0.8);
+    }
+    
+    .btn-revelar:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .confetti-explosion {
+        position: fixed;
+        pointer-events: none;
+        z-index: 999;
+    }
+    
+    .titulo-animado {
+        animation: titleGlow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes titleGlow {
+        from {
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+        to {
+            text-shadow: 0 0 40px rgba(255, 215, 0, 1);
+        }
+    }
+    
+    .premio-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    
+    .premio-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 30px;
+        padding: 4rem;
+        text-align: center;
+        color: white;
+        animation: modalZoom 0.5s ease;
+        max-width: 700px;
+    }
+    
+    @keyframes modalZoom {
+        from {
+            transform: scale(0) rotate(180deg);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+        }
+    }
+    
+    .premio-content h2 {
+        font-size: 3rem;
+        margin-bottom: 2rem;
+    }
+    
+    .ganadores-lista {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 2rem 0;
+    }
+    
+    .ganador-final {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .ganador-final .medal {
+        font-size: 3rem;
+    }
+    
+    .ganador-final .info {
+        flex: 1;
+        margin-left: 1.5rem;
+        text-align: left;
+    }
+    
+    .ganador-final .info .nombre {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    
+    .ganador-final .info .premio {
+        font-size: 1.2rem;
+        color: #ffd700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ranking-container">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="text-white mb-3 titulo-animado" style="font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 30px rgba(245,158,11,0.7), 0 4px 20px rgba(0,0,0,0.6);">
+            🏆 {{ sorteo.nombre }}
+        </h1>
+        <p class="text-white" style="font-size: 1.3rem; opacity: 0.95; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">¡Los mejores compradores del día!</p>
+        {% if sorteo.descripcion %}
+        <p class="text-white-50" style="font-size: 1.1rem; margin-top: 0.5rem;">{{ sorteo.descripcion }}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div id="estadoInicial">
+            <button class="btn-revelar" onclick="calcularRanking()">
+                <i class="bi bi-trophy"></i> REVELAR RANKING
+            </button>
+        </div>
+        
+        <div id="estadoRevelado" style="display: none;">
+            <p class="text-white" style="font-size: 1.3rem; margin-bottom: 1rem;">
+                ¡Top 3 revelado! 🎉
+            </p>
+            <button class="btn btn-success btn-lg" onclick="asignarPremios()">
+                <i class="bi bi-gift"></i> Asignar Premios y Registrar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Podio -->
+    <div class="podio-section" id="podioSection" style="display: none;">
+        <!-- Segundo Lugar -->
+        <div class="podio-puesto puesto-2" id="puesto2">
+            <div class="medalla">🥈</div>
+            <div class="competidor-info">
+                <div class="competidor-nombre" id="nombre2">---</div>
+                <div class="competidor-stats">
+                    <span id="productos2">0</span> productos
+                </div>
+                <div class="competidor-monto" id="monto2">$0</div>
+                <div class="premio-badge" id="premio2">2do Lugar</div>
+            </div>
+            <div class="pedestal pedestal-2">
+                <div class="puesto-numero">2</div>
+            </div>
+        </div>
+        
+        <!-- Primer Lugar -->
+        <div class="podio-puesto puesto-1" id="puesto1">
+            <div class="medalla">🥇</div>
+            <div class="competidor-info">
+                <div class="competidor-nombre" id="nombre1">---</div>
+                <div class="competidor-stats">
+                    <span id="productos1">0</span> productos
+                </div>
+                <div class="competidor-monto" id="monto1">$0</div>
+                <div class="premio-badge" id="premio1">CAMPEÓN</div>
+            </div>
+            <div class="pedestal pedestal-1">
+                <div class="puesto-numero">1</div>
+            </div>
+        </div>
+        
+        <!-- Tercer Lugar -->
+        <div class="podio-puesto puesto-3" id="puesto3">
+            <div class="medalla">🥉</div>
+            <div class="competidor-info">
+                <div class="competidor-nombre" id="nombre3">---</div>
+                <div class="competidor-stats">
+                    <span id="productos3">0</span> productos
+                </div>
+                <div class="competidor-monto" id="monto3">$0</div>
+                <div class="premio-badge" id="premio3">3er Lugar</div>
+            </div>
+            <div class="pedestal pedestal-3">
+                <div class="puesto-numero">3</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Lista Completa -->
+    <div class="lista-competidores" id="listaCompleta" style="display: none;">
+        <h3 class="text-white text-center mb-4" style="font-size: 2rem;">
+            📊 Ranking Completo
+        </h3>
+        <div id="listaContainer"></div>
+    </div>
+    
+    <!-- Navigation -->
+    <div class="text-center mt-5">
+        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg me-3" style="min-width: 150px; padding: 0.75rem 2rem; font-weight: 600; border-width: 2px;">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+        <button class="btn btn-danger btn-lg" onclick="finalizarSorteo()" style="min-width: 180px; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
+            <i class="bi bi-stop-circle"></i> Finalizar Sorteo
+        </button>
+    </div>
+</div>
+
+<!-- Modal de Premios -->
+<div class="premio-modal" id="premioModal">
+    <div class="premio-content">
+        <h2>🎊 ¡GANADORES REGISTRADOS!</h2>
+        
+        <div class="ganadores-lista" id="ganadoresLista"></div>
+        
+        <button class="btn btn-light btn-lg" onclick="cerrarModal()">
+            <i class="bi bi-check-circle"></i> Aceptar
+        </button>
+    </div>
+</div>
+
+<script>
+const sorteoId = {{ sorteo.id }};
+const participantes = {{ participantes|safe }};
+// Nota: La función showToast está definida en base.html
+
+const premios = {{ premios|safe }};
+
+let rankingData = [];
+let top3 = [];
+
+// Calcular ranking
+async function calcularRanking() {
+    if (participantes.length === 0) {
+        showToast('No hay participantes elegibles para este sorteo', 'warning');
+        return;
+    }
+    
+    // Preparar datos de participantes (sin exponer información sensible)
+    rankingData = participantes.map(p => ({
+        ...p,
+        puntos: Math.floor(Math.random() * 100) + 50 // Puntos aleatorios para el sorteo
+    }));
+    
+    // Ordenar por puntos descendente
+    rankingData.sort((a, b) => b.puntos - a.puntos);
+    
+    // Obtener top 3
+    top3 = rankingData.slice(0, 3);
+    
+    // Revelar podio
+    revelarPodio();
+}
+
+// Revelar podio
+function revelarPodio() {
+    document.getElementById('estadoInicial').style.display = 'none';
+    document.getElementById('podioSection').style.display = 'flex';
+    
+    // Llenar datos del podio
+    if (top3.length >= 1) {
+        document.getElementById('nombre1').textContent = top3[0].nombre;
+        document.getElementById('monto1').textContent = `${top3[0].puntos} pts`;
+    }
+    
+    if (top3.length >= 2) {
+        document.getElementById('nombre2').textContent = top3[1].nombre;
+        document.getElementById('monto2').textContent = `${top3[1].puntos} pts`;
+    }
+    
+    if (top3.length >= 3) {
+        document.getElementById('nombre3').textContent = top3[2].nombre;
+        document.getElementById('monto3').textContent = `${top3[2].puntos} pts`;
+    }
+    
+    // Mostrar lista completa
+    setTimeout(() => {
+        mostrarListaCompleta();
+    }, 2000);
+    
+    // Mostrar controles
+    setTimeout(() => {
+        document.getElementById('estadoRevelado').style.display = 'block';
+    }, 3000);
+    
+    // Confetti para el ganador
+    setTimeout(() => {
+        generarConfetti();
+    }, 2500);
+}
+
+// Mostrar lista completa
+function mostrarListaCompleta() {
+    const container = document.getElementById('listaContainer');
+    container.innerHTML = '';
+    
+    rankingData.forEach((competidor, index) => {
+        const posicion = index + 1;
+        const emojis = ['🥇', '🥈', '🥉'];
+        const emoji = posicion <= 3 ? emojis[posicion - 1] : `${posicion}°`;
+        
+        const item = document.createElement('div');
+        item.className = 'competidor-item';
+        item.innerHTML = `
+            <div class="competidor-posicion">${emoji}</div>
+            <div class="competidor-datos">
+                <div class="nombre">${competidor.nombre}</div>
+                <div class="stats">
+                    ${competidor.puntos} puntos
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(item);
+    });
+    
+    document.getElementById('listaCompleta').style.display = 'block';
+}
+
+// Asignar premios y registrar
+async function asignarPremios() {
+    if (top3.length === 0) return;
+    
+    // Ordenar premios por valor/importancia (asumiendo que existen premios para ranking)
+    const premiosOrdenados = [...premios].sort((a, b) => {
+        // Ordenar por tipo de premio (mejores primero)
+        const orden = {
+            'descuento_porcentaje': 1,
+            'descuento_fijo': 2,
+            'producto_gratis': 3,
+            'envio_gratis': 4,
+            'cupon': 5,
+            'combo': 9
+        };
+        return (orden[a.tipo] || 99) - (orden[b.tipo] || 99);
+    });
+    
+    const ganadoresHTML = [];
+    
+    // Registrar cada ganador
+    for (let i = 0; i < top3.length && i < 3; i++) {
+        const ganador = top3[i];
+        const posicion = i + 1;
+        const premio = premiosOrdenados[i] || premiosOrdenados[0];
+        const medallas = ['🥇', '🥈', '🥉'];
+        
+        const formData = new FormData();
+        formData.append('cliente_id', ganador.id);
+        formData.append('premio_id', premio.id);
+        formData.append('posicion', posicion);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        try {
+            const response = await fetch(`/sorteos/${sorteoId}/registrar/`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                ganadoresHTML.push(`
+                    <div class="ganador-final">
+                        <div class="medal">${medallas[i]}</div>
+                        <div class="info">
+                            <div class="nombre">${ganador.nombre}</div>
+                            <div class="premio">${premio.nombre}</div>
+                        </div>
+                    </div>
+                `);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+    
+    // Mostrar modal con resultados
+    document.getElementById('ganadoresLista').innerHTML = ganadoresHTML.join('');
+    document.getElementById('premioModal').style.display = 'flex';
+    
+    // Confetti masivo
+    generarConfettiMasivo();
+}
+
+// Generar confetti
+function generarConfetti() {
+    const colores = ['#ffd700', '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8dadc', '#f1a7f5'];
+    
+    for (let i = 0; i < 100; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'fixed';
+            confetti.style.width = '10px';
+            confetti.style.height = '10px';
+            confetti.style.background = colores[Math.floor(Math.random() * colores.length)];
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = '-10px';
+            confetti.style.borderRadius = '50%';
+            confetti.style.zIndex = '998';
+            confetti.style.pointerEvents = 'none';
+            
+            const duration = 2 + Math.random() * 2;
+            const xMovement = Math.random() * 200 - 100;
+            const rotation = Math.random() * 720;
+            
+            confetti.style.animation = `confetti-drop-${i} ${duration}s linear`;
+            
+            const keyframes = `
+                @keyframes confetti-drop-${i} {
+                    to {
+                        transform: translateY(110vh) translateX(${xMovement}px) rotate(${rotation}deg);
+                        opacity: 0;
+                    }
+                }
+            `;
+            
+            const style = document.createElement('style');
+            style.textContent = keyframes;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(confetti);
+            
+            setTimeout(() => {
+                confetti.remove();
+                style.remove();
+            }, duration * 1000);
+        }, i * 30);
+    }
+}
+
+// Confetti masivo
+function generarConfettiMasivo() {
+    for (let burst = 0; burst < 5; burst++) {
+        setTimeout(() => {
+            generarConfetti();
+        }, burst * 500);
+    }
+}
+
+// Cerrar modal
+function cerrarModal() {
+    document.getElementById('premioModal').style.display = 'none';
+    location.reload();
+}
+
+// Finalizar sorteo
+function finalizarSorteo() {
+    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarSorteo'));
+    modal.show();
+}
+</script>
+
+<!-- Modal Finalizar Sorteo -->
+<div class="modal fade" id="modalFinalizarSorteo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-stop-circle-fill"></i> Finalizar Sorteo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #dc3545;"></i>
+                <h5 class="mt-3">¿Finalizar sorteo?</h5>
+                <p class="text-muted">No se podrán realizar más sorteos después de finalizarlo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmarFinalizarSorteo()">
+                    <i class="bi bi-stop-circle"></i> Sí, Finalizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmarFinalizarSorteo() {
+    window.location.href = `/sorteos/${sorteoId}/finalizar/`;
+}
+</script>
+{% endblock %}

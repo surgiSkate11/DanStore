@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestionar Participantes - {{ sorteo.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .participantes-container {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+    
+    .lista-clientes {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    .cliente-item {
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.2s ease;
+    }
+    
+    .cliente-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .participante-badge {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'lista_sorteos' %}">Sorteos</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'detalle_sorteo' sorteo.id %}">{{ sorteo.nombre }}</a></li>
+                    <li class="breadcrumb-item active">Gestionar Participantes</li>
+                </ol>
+            </nav>
+            <h2><i class="bi bi-people-fill text-primary"></i> Gestionar Participantes</h2>
+            <p class="text-muted">Selecciona manualmente los clientes que participarán en este sorteo</p>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Participantes Actuales -->
+        <div class="col-lg-6">
+            <div class="participantes-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-check-circle text-success"></i> Participantes Seleccionados
+                    <span class="badge bg-success ms-2">{{ participantes_actuales.count }}</span>
+                </h5>
+                
+                <div id="listaParticipantes" class="lista-clientes">
+                    {% if participantes_actuales %}
+                        {% for participante in participantes_actuales %}
+                        <div class="cliente-item" id="participante-{{ participante.id }}">
+                            <div>
+                                <strong>{{ participante.cliente.nombre }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="bi bi-telephone"></i> {{ participante.cliente.telefono|default:"N/A" }}
+                                </small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarParticipante({{ participante.id }})">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted" id="emptyState">
+                            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No hay participantes seleccionados</p>
+                            <p class="small">Agrega clientes desde la lista de la derecha</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Todos los Clientes -->
+        <div class="col-lg-6">
+            <div class="participantes-container">
+                <h5 class="mb-3">
+                    <i class="bi bi-person-plus text-primary"></i> Todos los Clientes
+                </h5>
+                
+                <input type="text" class="form-control mb-3" id="buscarCliente" placeholder="Buscar cliente...">
+                
+                <div id="listaClientes" class="lista-clientes">
+                    {% for cliente in todos_clientes %}
+                    <div class="cliente-item" data-nombre="{{ cliente.nombre|lower }}">
+                        <div>
+                            <strong>{{ cliente.nombre }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                <i class="bi bi-telephone"></i> {{ cliente.telefono|default:"N/A" }}
+                            </small>
+                        </div>
+                        <button class="btn btn-sm btn-success" onclick="agregarParticipante({{ cliente.id }}, '{{ cliente.nombre|escapejs }}')">
+                            <i class="bi bi-plus-circle"></i> Agregar
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-circle"></i> Guardar y Volver
+        </a>
+    </div>
+</div>
+
+<script>
+// Buscar cliente
+document.getElementById('buscarCliente').addEventListener('input', function(e) {
+    const busqueda = e.target.value.toLowerCase();
+    const items = document.querySelectorAll('#listaClientes .cliente-item');
+    
+    items.forEach(item => {
+        const nombre = item.dataset.nombre;
+        if (nombre.includes(busqueda)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+
+// Agregar participante
+function agregarParticipante(clienteId, nombre) {
+    const formData = new FormData();
+    formData.append('cliente_id', clienteId);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`/sorteos/{{ sorteo.id }}/participantes/agregar/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.mensaje, 'success');
+            location.reload(); // Recargar para actualizar la lista
+        } else {
+            showToast(data.mensaje, 'warning');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al agregar participante', 'error');
+    });
+}
+
+// Eliminar participante
+function eliminarParticipante(participanteId) {
+    if (!confirm('¿Eliminar este participante del sorteo?')) return;
+    
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch(`/sorteos/{{ sorteo.id }}/participantes/${participanteId}/eliminar/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.mensaje, 'success');
+            // Remover elemento del DOM
+            document.getElementById(`participante-${participanteId}`).remove();
+            
+            // Verificar si quedaron participantes
+            const listaParticipantes = document.getElementById('listaParticipantes');
+            if (listaParticipantes.querySelectorAll('.cliente-item').length === 0) {
+                listaParticipantes.innerHTML = `
+                    <div class="text-center py-5 text-muted" id="emptyState">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-2">No hay participantes seleccionados</p>
+                        <p class="small">Agrega clientes desde la lista de la derecha</p>
+                    </div>
+                `;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al eliminar participante', 'error');
+    });
+}
+</script>
+{% endblock %}

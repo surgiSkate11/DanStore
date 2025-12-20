@@ -1,0 +1,1196 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Personalizar Catálogo{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header mejorado -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg bg-gradient-primary text-white">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h1 class="mb-2">
+                                <i class="bi bi-palette-fill"></i> Personalizar Diseño del Catálogo
+                            </h1>
+                            <p class="mb-0 opacity-75">Control completo: Layout, Colores, Imágenes y Posiciones</p>
+                        </div>
+                        <div class="d-none d-lg-block">
+                            <i class="bi bi-gear-fill" style="font-size: 5rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Resumen de Funcionalidades -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-success border-0 shadow">
+                <div class="row g-3 text-center">
+                    <div class="col-6 col-md-3">
+                        <i class="bi bi-grid-3x3-gap-fill text-primary" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2"><strong>Layout</strong><br><small>Productos por página y posiciones</small></p>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <i class="bi bi-palette2 text-warning" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2"><strong>Colores</strong><br><small>Paleta personalizada completa</small></p>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <i class="bi bi-stars text-success" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2"><strong>Fondo Precio</strong><br><small>Banner decorativo detrás del precio</small></p>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <i class="bi bi-images text-info" style="font-size: 2rem;"></i>
+                        <p class="mb-0 mt-2"><strong>Fondos</strong><br><small>Portada y bordes a tu gusto</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instrucciones mejoradas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-white border-0 pt-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle-fill text-info"></i> Especificaciones Técnicas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-rulers text-primary me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>Tamaño:</strong><br>
+                                    <small class="text-muted">A4 (2480 x 3508 px @ 300 DPI)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-file-earmark text-success me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>Formato:</strong><br>
+                                    <small class="text-muted">JPG, PNG o PDF</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-file-earmark-image text-warning me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>Portada:</strong><br>
+                                    <small class="text-muted">Primera página del catálogo</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-border-all text-danger me-2" style="font-size: 1.5rem;"></i>
+                                <div>
+                                    <strong>Bordes:</strong><br>
+                                    <small class="text-muted">Fondo de páginas internas</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-lightbulb"></i> <strong>Recomendación:</strong> Los archivos PDF mantienen la máxima calidad y se integran perfectamente con el catálogo.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Portada -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-lg">
+                <div class="card-header bg-gradient-primary text-white border-0 py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0">
+                            <i class="bi bi-file-earmark-image-fill"></i> Portada del Catálogo
+                        </h5>
+                        <span class="badge bg-light text-primary">Página 1</span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    {% if portada_existe %}
+                        <div class="preview-container mb-3">
+                            <div class="text-center position-relative">
+                                {% if portada_es_pdf %}
+                                    <div class="pdf-preview-box border rounded shadow p-4 bg-light" 
+                                         style="cursor: pointer;" 
+                                         data-bs-toggle="modal" data-bs-target="#previewPortadaModal">
+                                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 5rem;"></i>
+                                        <p class="mt-3 mb-0"><strong>{{ portada_formato }}</strong></p>
+                                        <small class="text-muted">Click para vista ampliada</small>
+                                    </div>
+                                {% else %}
+                                    <img src="{{ portada_url }}" alt="Portada" class="img-fluid border rounded shadow" 
+                                         style="max-height: 450px; cursor: pointer;" 
+                                         data-bs-toggle="modal" data-bs-target="#previewPortadaModal">
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> {{ portada_formato }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-success border-0 shadow-sm">
+                            <i class="bi bi-check-circle-fill"></i> Portada personalizada activa ({{ portada_formato|upper }})
+                        </div>
+                        <form method="post" class="mb-3">
+                            {% csrf_token %}
+                            <button type="button" name="eliminar_portada" class="btn btn-danger w-100" 
+                                    data-bs-toggle="modal" data-bs-target="#deletePortadaModal">
+                                <i class="bi bi-trash3"></i> Eliminar Portada
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="empty-state text-center py-5">
+                            <i class="bi bi-image text-muted" style="font-size: 5rem; opacity: 0.3;"></i>
+                            <h5 class="text-muted mt-3">Sin portada personalizada</h5>
+                            <p class="text-muted">Se usará el diseño predeterminado</p>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="formPortada">
+                        {% csrf_token %}
+                        <div class="upload-area border-2 border-dashed rounded p-4 text-center mb-3" 
+                             style="border-color: #0d6efd; background: #f8f9fa;">
+                            <i class="bi bi-cloud-upload text-primary" style="font-size: 3rem;"></i>
+                            <h6 class="mt-2 mb-3">Subir Nueva Portada</h6>
+                            <input type="file" class="form-control" id="portada" name="portada" 
+                                   accept=".jpg,.jpeg,.png,.pdf" required onchange="previewFile(this, 'portadaPreview')">
+                            <small class="text-muted d-block mt-2">
+                                <i class="bi bi-file-image"></i> JPG, PNG • 
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </small>
+                        </div>
+                        <div id="portadaPreview" class="preview-upload mb-3" style="display: none;">
+                            <img class="img-fluid border rounded shadow" style="max-height: 300px;">
+                            <embed class="border rounded shadow w-100" style="height: 400px; display: none;">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 btn-lg">
+                            <i class="bi bi-upload"></i> Confirmar y Subir Portada
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bordes -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-lg">
+                <div class="card-header bg-gradient-success text-white border-0 py-3">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0">
+                            <i class="bi bi-bounding-box"></i> Bordes Decorativos
+                        </h5>
+                        <span class="badge bg-light text-success">Páginas Internas</span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    {% if bordes_existe %}
+                        <div class="preview-container mb-3">
+                            <div class="text-center position-relative">
+                                {% if bordes_es_pdf %}
+                                    <div class="pdf-preview-box border rounded shadow p-4 bg-light" 
+                                         style="cursor: pointer;" 
+                                         data-bs-toggle="modal" data-bs-target="#previewBordesModal">
+                                        <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 5rem;"></i>
+                                        <p class="mt-3 mb-0"><strong>{{ bordes_formato }}</strong></p>
+                                        <small class="text-muted">Click para vista ampliada</small>
+                                    </div>
+                                {% else %}
+                                    <img src="{{ bordes_url }}" alt="Bordes" class="img-fluid border rounded shadow" 
+                                         style="max-height: 450px; cursor: pointer;" 
+                                         data-bs-toggle="modal" data-bs-target="#previewBordesModal">
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> {{ bordes_formato }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-success border-0 shadow-sm">
+                            <i class="bi bi-check-circle-fill"></i> Bordes personalizados activos ({{ bordes_formato|upper }})
+                        </div>
+                        <form method="post" class="mb-3">
+                            {% csrf_token %}
+                            <button type="button" name="eliminar_bordes" class="btn btn-danger w-100"
+                                    data-bs-toggle="modal" data-bs-target="#deleteBordesModal">
+                                <i class="bi bi-trash3"></i> Eliminar Bordes
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="empty-state text-center py-5">
+                            <i class="bi bi-border text-muted" style="font-size: 5rem; opacity: 0.3;"></i>
+                            <h5 class="text-muted mt-3">Sin bordes personalizados</h5>
+                            <p class="text-muted">Se usará fondo blanco simple</p>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="formBordes">
+                        {% csrf_token %}
+                        <div class="upload-area border-2 border-dashed rounded p-4 text-center mb-3" 
+                             style="border-color: #198754; background: #f8f9fa;">
+                            <i class="bi bi-cloud-upload text-success" style="font-size: 3rem;"></i>
+                            <h6 class="mt-2 mb-3">Subir Nuevos Bordes</h6>
+                            <input type="file" class="form-control" id="bordes" name="bordes" 
+                                   accept=".jpg,.jpeg,.png,.pdf" required onchange="previewFile(this, 'bordesPreview')">
+                            <small class="text-muted d-block mt-2">
+                                <i class="bi bi-file-image"></i> JPG, PNG • 
+                                <i class="bi bi-file-pdf"></i> PDF
+                            </small>
+                        </div>
+                        <div id="bordesPreview" class="preview-upload mb-3" style="display: none;">
+                            <img class="img-fluid border rounded shadow" style="max-height: 300px;">
+                            <embed class="border rounded shadow w-100" style="height: 400px; display: none;">
+                        </div>
+                        <div class="alert alert-warning border-0 mb-3">
+                            <small><i class="bi bi-exclamation-triangle"></i> Deja espacio central (≈5cm) para los productos</small>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 btn-lg">
+                            <i class="bi bi-upload"></i> Confirmar y Subir Bordes
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración de Layout y Posicionamiento -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient-primary text-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-grid-3x3-gap-fill"></i> Layout y Posicionamiento de Productos
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="formLayout">
+                        {% csrf_token %}
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-collection"></i> Productos por Página
+                                </label>
+                                <select class="form-select form-select-lg" name="productos_por_pagina" required>
+                                    <option value="2" {% if config_diseno.productos_por_pagina|default:3 == 2 %}selected{% endif %}>2 productos por página</option>
+                                    <option value="3" {% if config_diseno.productos_por_pagina|default:3 == 3 %}selected{% endif %}>3 productos por página ⭐</option>
+                                    <option value="4" {% if config_diseno.productos_por_pagina|default:3 == 4 %}selected{% endif %}>4 productos por página</option>
+                                </select>
+                                <small class="text-muted">Cantidad de productos que aparecerán en cada página</small>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-aspect-ratio"></i> Alineación de Imágenes
+                                </label>
+                                <select class="form-select form-select-lg" name="alineacion_imagen" required>
+                                    <option value="izquierda" {% if config_diseno.alineacion_imagen|default:'alternada' == 'izquierda' %}selected{% endif %}>Siempre a la izquierda</option>
+                                    <option value="derecha" {% if config_diseno.alineacion_imagen|default:'alternada' == 'derecha' %}selected{% endif %}>Siempre a la derecha</option>
+                                    <option value="alternada" {% if config_diseno.alineacion_imagen|default:'alternada' == 'alternada' %}selected{% endif %}>Alternada (izq-der-izq) ⭐</option>
+                                </select>
+                                <small class="text-muted">Posición de las imágenes en relación al texto</small>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-4 mb-3">
+                            <i class="bi bi-magic"></i> <strong>Cálculo Automático:</strong> Los tamaños, espaciados y alturas se ajustan automáticamente según la cantidad de productos por página que elijas. ¡Todo perfectamente optimizado!
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" name="guardar_layout" class="btn btn-primary btn-lg w-100">
+                                <i class="bi bi-check-circle-fill"></i> Guardar Configuración de Layout
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personalización de Colores y Estilos -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient-warning text-dark border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-palette-fill"></i> Paleta de Colores Personalizados
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="formColores">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-paint-bucket"></i> Color Principal
+                                </label>
+                                <input type="color" class="form-control form-control-color" 
+                                       name="color_principal" value="{{ config_diseno.color_principal }}" required>
+                                <small class="text-muted">Para categoría</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-cash"></i> Color del Precio
+                                </label>
+                                <input type="color" class="form-control form-control-color" 
+                                       name="color_precio" value="{{ config_diseno.color_precio }}" required>
+                                <small class="text-muted">Color destacado para precios</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-type"></i> Color del Título
+                                </label>
+                                <input type="color" class="form-control form-control-color" 
+                                       name="color_titulo" value="{{ config_diseno.color_titulo }}" required>
+                                <small class="text-muted">Color del nombre del producto</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-fonts"></i> Color del Texto
+                                </label>
+                                <input type="color" class="form-control form-control-color" 
+                                       name="color_texto" value="{{ config_diseno.color_texto }}" required>
+                                <small class="text-muted">Descripción y detalles</small>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-border-style"></i> Color del Borde
+                                </label>
+                                <input type="color" class="form-control form-control-color" 
+                                       name="color_borde" value="{{ config_diseno.color_borde }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">
+                                    <i class="bi bi-border-width"></i> Grosor del Borde
+                                </label>
+                                <select class="form-select" name="grosor_borde" required>
+                                    <option value="1" {% if config_diseno.grosor_borde == 1 %}selected{% endif %}>Fino (1px)</option>
+                                    <option value="2" {% if config_diseno.grosor_borde == 2 %}selected{% endif %}>Medio (2px)</option>
+                                    <option value="3" {% if config_diseno.grosor_borde == 3 %}selected{% endif %}>Grueso (3px)</option>
+                                    <option value="4" {% if config_diseno.grosor_borde == 4 %}selected{% endif %}>Muy Grueso (4px)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        
+                        <div class="mt-4">
+                            <div class="row g-2">
+                                <div class="col-md-8">
+                                    <button type="submit" name="guardar_colores" class="btn btn-success btn-lg w-100">
+                                        <i class="bi bi-check-circle-fill"></i> Guardar Configuración de Colores
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-outline-secondary btn-lg w-100" onclick="resetearColores()">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logo/Icono del Precio y Tipografías -->
+    <div class="row mt-4 g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg h-100">
+                <div class="card-header bg-gradient-success text-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-stars"></i> Fondo Decorativo del Precio
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if fondo_precio_existe %}
+                        <div class="preview-container mb-3">
+                            <div class="text-center">
+                                <img src="{{ fondo_precio_url }}" alt="Fondo Precio" 
+                                     class="img-fluid border rounded shadow" 
+                                     style="max-height: 150px; background: #f8f9fa; padding: 20px;">
+                            </div>
+                        </div>
+                        <div class="alert alert-success border-0 shadow-sm">
+                            <i class="bi bi-check-circle-fill"></i> Fondo decorativo activo
+                        </div>
+                        <form method="post" class="mb-3">
+                            {% csrf_token %}
+                            <button type="button" name="eliminar_fondo_precio" class="btn btn-danger w-100" 
+                                    data-bs-toggle="modal" data-bs-target="#deleteFondoPrecioModal">
+                                <i class="bi bi-trash3"></i> Eliminar Fondo
+                            </button>
+                        </form>
+                    {% else %}
+                        <div class="empty-state text-center py-3">
+                            <i class="bi bi-stars text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="text-muted mt-2">Sin fondo decorativo • Precio simple</p>
+                        </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="formFondoPrecio">
+                        {% csrf_token %}
+                        <div class="upload-area border-2 border-dashed rounded p-4 text-center" 
+                             style="border-color: #198754; background: #f8f9fa;">
+                            <i class="bi bi-cloud-upload text-success" style="font-size: 2rem;"></i>
+                            <h6 class="mt-2 mb-3">Subir Imagen Decorativa</h6>
+                            <input type="file" class="form-control" id="fondo_precio" name="fondo_precio" 
+                                   accept=".jpg,.jpeg,.png" required>
+                            <small class="text-muted d-block mt-2">
+                                Banner o highlight • Recomendado: 500x150px aprox.
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100 mt-3">
+                            <i class="bi bi-upload"></i> Subir Fondo
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg h-100">
+                <div class="card-header text-white border-0 py-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="mb-0">
+                        <i class="bi bi-fonts"></i> Tipografías Personalizadas
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    {% if fuente_titulo_existe or fuente_texto_existe %}
+                        <div class="alert alert-success border-0 mb-3">
+                            <i class="bi bi-check-circle-fill"></i> 
+                            <strong>Fuentes personalizadas activas</strong>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info border-0 mb-3">
+                            <i class="bi bi-info-circle-fill"></i> 
+                            Sube tus archivos .TTF o .OTF para personalizar la tipografía del catálogo
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Fuente de Títulos -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-file-earmark-font"></i> Fuente para Títulos
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                {% if fuente_titulo_existe %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-dash-circle text-muted"></i>
+                                {% endif %}
+                            </span>
+                            <input type="text" class="form-control" value="{{ fuente_titulo_nombre }}" readonly>
+                        </div>
+                        <small class="text-muted">Nombres de productos, categorías y precios</small>
+                    </div>
+                    
+                    <form method="post" enctype="multipart/form-data" class="mb-3">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <input type="file" class="form-control" name="fuente_titulo" accept=".ttf,.otf" id="inputFuenteTitulo">
+                            <button type="submit" class="btn btn-dark">
+                                <i class="bi bi-upload"></i> Subir Fuente de Títulos
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <!-- Fuente de Texto -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-file-earmark-text"></i> Fuente para Texto
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                {% if fuente_texto_existe %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-dash-circle text-muted"></i>
+                                {% endif %}
+                            </span>
+                            <input type="text" class="form-control" value="{{ fuente_texto_nombre }}" readonly>
+                        </div>
+                        <small class="text-muted">Descripciones y detalles de productos</small>
+                    </div>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <input type="file" class="form-control" name="fuente_texto" accept=".ttf,.otf" id="inputFuenteTexto">
+                            <button type="submit" class="btn btn-dark">
+                                <i class="bi bi-upload"></i> Subir Fuente de Texto
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <small>
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            <strong>Nota:</strong> Solo se admiten formatos TTF y OTF. Asegúrate de tener licencia para uso comercial.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista Previa en Tiempo Real -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-gradient-info text-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-eye-fill"></i> Vista Previa del Diseño
+                    </h5>
+                </div>
+                <div class="card-body p-4" style="background: #f0f0f0;">
+                    <div class="text-center mb-3">
+                        <button class="btn btn-primary" onclick="actualizarVistaPrevia()">
+                            <i class="bi bi-arrow-clockwise"></i> Actualizar Vista Previa
+                        </button>
+                    </div>
+                    
+                    <div id="vistaPrevia" class="bg-white border rounded p-4 shadow-lg" style="max-width: 850px; margin: 0 auto;">
+                        <!-- Simulación de producto -->
+                        <div class="d-flex align-items-center gap-4">
+                            <div class="flex-shrink-0">
+                                <div class="bg-light border rounded-3 d-flex align-items-center justify-content-center shadow-sm" 
+                                     style="width: 180px; height: 180px;">
+                                    <div class="text-center">
+                                        <i class="bi bi-image text-muted" style="font-size: 3.5rem;"></i>
+                                        <p class="text-muted small mb-0 mt-2">Imagen<br>del producto</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 py-3">
+                                <p class="mb-2 text-center" id="preview-categoria" style="font-size: 12px; font-weight: bold; letter-spacing: 1px;">
+                                    ★ ADULTO MUJER ★
+                                </p>
+                                <h4 class="mb-3 text-center" id="preview-titulo" style="font-size: 20px; font-weight: bold; line-height: 1.3;">
+                                    BLUSA CASUAL ELEGANTE
+                                </h4>
+                                <!-- Layout horizontal: Detalles a la izquierda, Precio a la derecha -->
+                                <div class="row align-items-center mt-3">
+                                    <div class="col-6">
+                                        <p class="mb-0 text-center lh-lg" id="preview-detalles" style="font-size: 12px;">
+                                            <b>✦ Marca:</b> Fashion Style<br>
+                                            <b>◆ Color:</b> Azul Marino<br>
+                                            <b>◈ Talla:</b> M
+                                        </p>
+                                    </div>
+                                    <div class="col-6 d-flex align-items-center justify-content-center">
+                                        <div id="preview-precio-container" style="position: relative; display: flex; align-items: center; justify-content: center; min-width: 250px; min-height: 120px; padding: 30px 50px; background-size: contain; background-repeat: no-repeat; background-position: center;">
+                                            <span id="preview-precio" style="font-size: 28px; font-weight: bold; position: relative; z-index: 1;">$25.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <div class="alert alert-success border-0 mb-0">
+                                <i class="bi bi-check-circle-fill"></i> 
+                                <strong>Vista previa actualizada</strong><br>
+                                <small>Los cambios se reflejan en tiempo real</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-info border-0 mb-0">
+                                <i class="bi bi-info-circle-fill"></i> 
+                                <strong>No olvides guardar</strong><br>
+                                <small>Guarda cada sección para aplicar cambios</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-warning border-0 mb-0">
+                                <i class="bi bi-lightbulb-fill"></i> 
+                                <strong>Genera tu catálogo</strong><br>
+                                <small>Ve a Generar Catálogo para descargar PDF</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consejos y herramientas -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-gradient-info text-white border-0 py-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightbulb-fill"></i> Consejos Profesionales
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="tool-card p-3 border rounded h-100">
+                                <h6 class="text-primary">
+                                    <i class="bi bi-tools"></i> Herramientas Recomendadas
+                                </h6>
+                                <ul class="list-unstyled mt-3">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle text-success"></i> 
+                                        <strong>Canva:</strong> Fácil y gratuito
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle text-success"></i> 
+                                        <strong>Adobe Express:</strong> Online y potente
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle text-success"></i> 
+                                        <strong>GIMP:</strong> Gratuito y profesional
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check-circle text-success"></i> 
+                                        <strong>Photoshop:</strong> Nivel profesional
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tool-card p-3 border rounded h-100">
+                                <h6 class="text-success">
+                                    <i class="bi bi-palette2"></i> Tips de Diseño
+                                </h6>
+                                <ul class="list-unstyled mt-3">
+                                    <li class="mb-2">
+                                        <i class="bi bi-star-fill text-warning"></i> 
+                                        Usa colores de tu marca
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-star-fill text-warning"></i> 
+                                        Alta calidad (300 DPI mínimo)
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-star-fill text-warning"></i> 
+                                        Bordes: 5cm de margen central
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-star-fill text-warning"></i> 
+                                        Mantén la legibilidad
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="tool-card p-3 border rounded h-100">
+                                <h6 class="text-danger">
+                                    <i class="bi bi-file-earmark-pdf"></i> Ventajas del PDF
+                                </h6>
+                                <ul class="list-unstyled mt-3">
+                                    <li class="mb-2">
+                                        <i class="bi bi-check2 text-primary"></i> 
+                                        Máxima calidad profesional
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check2 text-primary"></i> 
+                                        Integración perfecta
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="bi bi-check2 text-primary"></i> 
+                                        Sin pérdida de resolución
+                                    </li>
+                                    <li>
+                                        <i class="bi bi-check2 text-primary"></i> 
+                                        Colores exactos (CMYK)
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="row mt-4 mb-5">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                <a href="{% url 'generar_catalogo' %}" class="btn btn-primary btn-lg shadow">
+                    <i class="bi bi-file-earmark-pdf-fill"></i> Generar Catálogo Completo
+                </a>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-house-door"></i> Volver al Inicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para confirmar eliminar portada -->
+<div class="modal fade" id="deletePortadaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-trash3 text-danger" style="font-size: 4rem;"></i>
+                <h5 class="mt-3">¿Eliminar portada personalizada?</h5>
+                <p class="text-muted">Se volverá al diseño predeterminado del catálogo.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="eliminar_portada" class="btn btn-danger">
+                        <i class="bi bi-trash3"></i> Sí, Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para confirmar eliminar bordes -->
+<div class="modal fade" id="deleteBordesModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-trash3 text-danger" style="font-size: 4rem;"></i>
+                <h5 class="mt-3">¿Eliminar bordes personalizados?</h5>
+                <p class="text-muted">Las páginas internas tendrán fondo blanco.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="eliminar_bordes" class="btn btn-danger">
+                        <i class="bi bi-trash3"></i> Sí, Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para vista previa de portada -->
+<div class="modal fade" id="previewPortadaModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-zoom-in"></i> Vista Ampliada - Portada
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-dark">
+                {% if portada_existe %}
+                    {% if portada_es_pdf %}
+                        <div class="d-flex flex-column align-items-center justify-content-center text-white" style="height: calc(100vh - 120px);">
+                            <i class="bi bi-file-earmark-pdf text-danger mb-4" style="font-size: 6rem;"></i>
+                            <h4 class="mb-3">Vista Previa PDF - Portada</h4>
+                            <p class="text-muted mb-4">Los PDFs no se pueden previsualizar en el navegador</p>
+                            <div class="d-flex gap-3">
+                                <a href="{{ portada_url }}" target="_blank" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-box-arrow-up-right"></i> Abrir en Nueva Pestaña
+                                </a>
+                                <a href="{{ portada_url }}" download class="btn btn-success btn-lg">
+                                    <i class="bi bi-download"></i> Descargar
+                                </a>
+                            </div>
+                            <div class="alert alert-info mt-4 mx-4 text-center">
+                                <small>
+                                    <i class="bi bi-info-circle"></i> 
+                                    Por seguridad del navegador, los PDFs deben abrirse en nueva pestaña o descargarse
+                                </small>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center" style="height: calc(100vh - 120px);">
+                            <img src="{{ portada_url }}" alt="Portada" 
+                                 style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="modal-footer bg-dark border-top-0">
+                <a href="{{ portada_url }}" download class="btn btn-success">
+                    <i class="bi bi-download"></i> Descargar
+                </a>
+                <a href="{{ portada_url }}" target="_blank" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-up-right"></i> Abrir en Nueva Pestaña
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para vista previa de bordes -->
+<div class="modal fade" id="previewBordesModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-zoom-in"></i> Vista Ampliada - Bordes
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-dark">
+                {% if bordes_existe %}
+                    {% if bordes_es_pdf %}
+                        <div class="d-flex flex-column align-items-center justify-content-center text-white" style="height: calc(100vh - 120px);">
+                            <i class="bi bi-file-earmark-pdf text-danger mb-4" style="font-size: 6rem;"></i>
+                            <h4 class="mb-3">Vista Previa PDF - Bordes</h4>
+                            <p class="text-muted mb-4">Los PDFs no se pueden previsualizar en el navegador</p>
+                            <div class="d-flex gap-3">
+                                <a href="{{ bordes_url }}" target="_blank" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-box-arrow-up-right"></i> Abrir en Nueva Pestaña
+                                </a>
+                                <a href="{{ bordes_url }}" download class="btn btn-success btn-lg">
+                                    <i class="bi bi-download"></i> Descargar
+                                </a>
+                            </div>
+                            <div class="alert alert-info mt-4 mx-4 text-center">
+                                <small>
+                                    <i class="bi bi-info-circle"></i> 
+                                    Por seguridad del navegador, los PDFs deben abrirse en nueva pestaña o descargarse
+                                </small>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-center" style="height: calc(100vh - 120px);">
+                            <img src="{{ bordes_url }}" alt="Bordes" 
+                                 style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="modal-footer bg-dark border-top-0">
+                <a href="{{ bordes_url }}" download class="btn btn-success">
+                    <i class="bi bi-download"></i> Descargar
+                </a>
+                <a href="{{ bordes_url }}" target="_blank" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-up-right"></i> Abrir en Nueva Pestaña
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    }
+    
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    }
+    
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #0dcaf0 0%, #087990 100%);
+    }
+    
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .btn {
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+    
+    .upload-area {
+        transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+        background: #e9ecef !important;
+        transform: scale(1.02);
+    }
+    
+    .preview-container img:hover,
+    .pdf-preview-box:hover {
+        transform: scale(1.02);
+        transition: transform 0.3s ease;
+    }
+    
+    .tool-card {
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+    
+    .tool-card:hover {
+        background: #e9ecef;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .preview-upload {
+        text-align: center;
+    }
+    
+    .preview-upload img,
+    .preview-upload embed {
+        margin: 0 auto;
+    }
+    
+    .empty-state {
+        opacity: 0.7;
+    }
+</style>
+
+<!-- Modal confirmación eliminar fondo precio -->
+<div class="modal fade" id="deleteFondoPrecioModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-0">¿Estás seguro de que deseas eliminar el fondo decorativo del precio? Se mostrará el precio simple.</p>
+            </div>
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" name="eliminar_fondo_precio" class="btn btn-danger">
+                        <i class="bi bi-trash3-fill"></i> Sí, Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewFile(input, previewId) {
+    const preview = document.getElementById(previewId);
+    const imgElement = preview.querySelector('img');
+    const embedElement = preview.querySelector('embed');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.style.display = 'block';
+            
+            if (file.type === 'application/pdf') {
+                // Mostrar embed para PDF
+                imgElement.style.display = 'none';
+                embedElement.style.display = 'block';
+                embedElement.src = e.target.result;
+            } else {
+                // Mostrar imagen para JPG/PNG
+                imgElement.style.display = 'block';
+                embedElement.style.display = 'none';
+                imgElement.src = e.target.result;
+            }
+        };
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function actualizarVistaPrevia() {
+    // Obtener valores de colores
+    const colorPrincipal = document.querySelector('input[name="color_principal"]')?.value || '{{ config_diseno.color_principal|default:"#e94560" }}';
+    const colorPrecio = document.querySelector('input[name="color_precio"]')?.value || '{{ config_diseno.color_precio|default:"#27ae60" }}';
+    const colorTexto = document.querySelector('input[name="color_texto"]')?.value || '{{ config_diseno.color_texto|default:"#555555" }}';
+    const colorTitulo = document.querySelector('input[name="color_titulo"]')?.value || '{{ config_diseno.color_titulo|default:"#1a1a2e" }}';
+    const colorBorde = document.querySelector('input[name="color_borde"]')?.value || '{{ config_diseno.color_borde|default:"#e94560" }}';
+    const grosorBorde = document.querySelector('select[name="grosor_borde"]')?.value || '{{ config_diseno.grosor_borde|default:2 }}';
+    
+    // Obtener alineación
+    const alineacion = document.querySelector('select[name="alineacion_imagen"]')?.value || '{{ config_diseno.alineacion_imagen|default:"alternada" }}';
+    
+    // Aplicar colores a la vista previa
+    const previewCategoria = document.getElementById('preview-categoria');
+    const previewTitulo = document.getElementById('preview-titulo');
+    const previewDetalles = document.getElementById('preview-detalles');
+    const previewPrecio = document.getElementById('preview-precio');
+    const vistaPrevia = document.getElementById('vistaPrevia');
+    
+    if (previewCategoria) previewCategoria.style.color = colorPrincipal;
+    if (previewTitulo) previewTitulo.style.color = colorTitulo;
+    if (previewDetalles) previewDetalles.style.color = colorTexto;
+    if (previewPrecio) previewPrecio.style.color = colorPrecio;
+    if (vistaPrevia) {
+        vistaPrevia.style.borderColor = colorBorde;
+        vistaPrevia.style.borderWidth = grosorBorde + 'px';
+        vistaPrevia.style.borderStyle = 'solid';
+    }
+    
+    // Actualizar posición según alineación
+    const contenedorPreview = vistaPrevia?.querySelector('.d-flex');
+    if (contenedorPreview) {
+        if (alineacion === 'derecha') {
+            contenedorPreview.style.flexDirection = 'row-reverse';
+        } else {
+            contenedorPreview.style.flexDirection = 'row';
+        }
+    }
+    
+    // Verificar si hay fondo decorativo para el precio
+    {% if fondo_precio_existe %}
+    const precioContainer = document.getElementById('preview-precio-container');
+    if (precioContainer) {
+        precioContainer.style.backgroundImage = 'url({{ fondo_precio_url }})';
+        precioContainer.style.backgroundSize = 'contain';
+        precioContainer.style.backgroundPosition = 'center';
+        precioContainer.style.backgroundRepeat = 'no-repeat';
+    }
+    {% endif %}
+    
+    // Animación de actualización
+    if (vistaPrevia) {
+        vistaPrevia.style.transform = 'scale(0.97)';
+        vistaPrevia.style.opacity = '0.8';
+        setTimeout(() => {
+            vistaPrevia.style.transform = 'scale(1)';
+            vistaPrevia.style.opacity = '1';
+        }, 200);
+    }
+    
+    // Mostrar mensaje de éxito (solo si event está disponible)
+    if (typeof event !== 'undefined' && event.target) {
+        const btnActualizar = event.target;
+        const textoOriginal = btnActualizar.innerHTML;
+        btnActualizar.innerHTML = '<i class="bi bi-check-circle-fill"></i> ¡Actualizado!';
+        btnActualizar.classList.remove('btn-primary');
+        btnActualizar.classList.add('btn-success');
+        btnActualizar.disabled = true;
+        
+        setTimeout(() => {
+            btnActualizar.innerHTML = textoOriginal;
+            btnActualizar.classList.remove('btn-success');
+            btnActualizar.classList.add('btn-primary');
+            btnActualizar.disabled = false;
+        }, 2000);
+    }
+}
+
+function actualizarTamanosFuente() {
+    const tamanoTitulo = document.querySelector('input[name="tamano_titulo"]')?.value || 18;
+    const tamanoPrecio = document.querySelector('input[name="tamano_precio"]')?.value || 24;
+    const tamanoDescripcion = document.querySelector('input[name="tamano_descripcion"]')?.value || 11;
+    
+    const previewTitulo = document.getElementById('preview-titulo');
+    const previewPrecio = document.getElementById('preview-precio');
+    const previewDetalles = document.getElementById('preview-detalles');
+    const previewCategoria = document.getElementById('preview-categoria');
+    
+    if (previewTitulo) previewTitulo.style.fontSize = tamanoTitulo + 'px';
+    if (previewPrecio) previewPrecio.style.fontSize = tamanoPrecio + 'px';
+    if (previewDetalles) previewDetalles.style.fontSize = tamanoDescripcion + 'px';
+    if (previewCategoria) previewCategoria.style.fontSize = tamanoDescripcion + 'px';
+}
+
+function resetearColores() {
+    if (confirm('¿Restaurar colores por defecto? Esta acción no se puede deshacer.')) {
+        // Valores por defecto
+        document.querySelector('input[name="color_principal"]').value = '#e94560';
+        document.querySelector('input[name="color_precio"]').value = '#27ae60';
+        document.querySelector('input[name="color_texto"]').value = '#555555';
+        document.querySelector('input[name="color_titulo"]').value = '#1a1a2e';
+        document.querySelector('input[name="color_borde"]').value = '#e94560';
+        document.querySelector('select[name="grosor_borde"]').value = '2';
+        document.querySelector('input[name="tamano_titulo"]').value = 18;
+        document.querySelector('input[name="tamano_precio"]').value = 24;
+        document.querySelector('input[name="tamano_descripcion"]').value = 11;
+        
+        // Actualizar outputs de sliders
+        document.querySelectorAll('output.badge').forEach((output, index) => {
+            const defaults = [18, 24, 11];
+            if (index < 3) output.textContent = defaults[index] + 'px';
+        });
+        
+        actualizarVistaPrevia();
+        actualizarTamanosFuente();
+    }
+}
+
+// Actualizar vista previa automáticamente al cambiar colores
+document.addEventListener('DOMContentLoaded', function() {
+    // Aplicar colores iniciales
+    actualizarVistaPrevia();
+    
+    // Escuchar cambios en inputs de color
+    const colorInputs = document.querySelectorAll('input[type="color"]');
+    colorInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            actualizarVistaPrevia();
+        });
+    });
+    
+    // Escuchar cambios en selects
+    const selectInputs = document.querySelectorAll('select[name="grosor_borde"], select[name="alineacion_imagen"], select[name="estilo_precio"]');
+    selectInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            actualizarVistaPrevia();
+        });
+    });
+    
+    // Escuchar cambios en sliders de tamaño de fuente
+    const rangeInputs = document.querySelectorAll('input[name="tamano_titulo"], input[name="tamano_precio"], input[name="tamano_descripcion"]');
+    rangeInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            actualizarTamanosFuente();
+        });
+    });
+});
+</script>
+{% endblock %}

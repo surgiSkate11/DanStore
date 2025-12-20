@@ -1,0 +1,445 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestionar Premios - {{ sorteo.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .premios-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .premio-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .premio-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .btn-agregar-premio {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-agregar-premio:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+    }
+    
+    .premios-actuales {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .premio-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-eliminar {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-eliminar:hover {
+        background: #dc2626;
+        transform: scale(1.05);
+    }
+    
+    #alertaRequisitos {
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        font-size: 0.95rem;
+        font-weight: 500;
+        line-height: 1.6;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    #alertaRequisitos strong {
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="premios-container">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="text-white mb-3" style="font-size: 3rem; font-weight: 800; text-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            🎁 Gestionar Premios
+        </h1>
+        <p class="text-white" style="font-size: 1.2rem;">{{ sorteo.nombre }} - {{ sorteo.get_tipo_display }}</p>
+    </div>
+
+    <div class="row">
+        <!-- Premios Actuales -->
+        <div class="col-md-5">
+            <div class="premios-actuales">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0"><i class="bi bi-list-check"></i> Premios Configurados</h3>
+                    <div id="contadorPremios" class="badge fs-6" style="padding: 0.6rem 1rem;"></div>
+                </div>
+                
+                <div id="premiosActuales">
+                    {% if premios %}
+                        {% for premio in premios %}
+                        <div class="premio-item" data-premio-id="{{ premio.id }}">
+                            <div>
+                                <h6 class="mb-1">{{ premio.nombre }}</h6>
+                                <small class="text-muted">
+                                    {{ premio.get_tipo_display }}
+                                    {% if premio.valor_descuento %}
+                                        - {% if premio.tipo == 'descuento_porcentaje' %}{{ premio.valor_descuento }}%{% else %}${{ premio.valor_descuento }}{% endif %}
+                                    {% endif %}
+                                    {% if premio.numero_cofre %}
+                                        - Cofre #{{ premio.numero_cofre }}
+                                    {% endif %}
+                                    {% if premio.color %}
+                                        - {{ premio.color|upper }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <button class="btn-eliminar" onclick="eliminarPremio({{ premio.id }})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center py-5">
+                            <i class="bi bi-gift" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                            No hay premios configurados aún
+                        </p>
+                    {% endif %}
+                </div>
+
+                <div class="mt-4 text-center">
+                    <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver al Sorteo
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agregar Premios -->
+        <div class="col-md-7">
+            <div class="premios-actuales">
+                <h3 class="mb-4"><i class="bi bi-plus-circle"></i> Agregar Premios</h3>
+                
+                <div class="text-center py-5">
+                    <i class="bi bi-gift" style="font-size: 4rem; color: #667eea; display: block; margin-bottom: 1.5rem;"></i>
+                    <p class="text-muted mb-4" style="font-size: 1.1rem;">Crea premios personalizados para tu sorteo</p>
+                    <button class="btn-agregar-premio" onclick="mostrarFormularioPersonalizado()">
+                        <i class="bi bi-plus-circle"></i> Agregar Nuevo Premio
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Premio -->
+<div class="modal fade" id="modalAgregarPremio" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" style="max-width: 700px;">
+        <div class="modal-content" style="border: none; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem 1.75rem; border: none;">
+                <h5 class="modal-title" style="font-size: 1.4rem; font-weight: 700;"><i class="bi bi-gift-fill"></i> Agregar Nuevo Premio</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAgregarPremio" onsubmit="agregarPremio(event)">
+                {% csrf_token %}
+                <div class="modal-body" style="padding: 1.5rem 1.75rem; max-height: calc(90vh - 180px); overflow-y: auto;">
+                    <input type="hidden" id="premioPlantilla" name="plantilla">
+                    
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; font-size: 0.9rem; color: #1f2937; margin-bottom: 0.5rem;">
+                            <i class="bi bi-tag-fill text-primary"></i> Nombre del Premio *
+                        </label>
+                        <input type="text" class="form-control" id="premioNombre" name="nombre" required 
+                               style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem 0.9rem; font-size: 0.95rem;"
+                               placeholder="Ej: 10% de descuento en próxima compra">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; font-size: 0.9rem; color: #1f2937; margin-bottom: 0.5rem;">
+                            <i class="bi bi-box-seam text-success"></i> Tipo de Premio *
+                        </label>
+                        <select class="form-select" id="premioTipo" name="tipo" required onchange="actualizarCamposPremio()"
+                                style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem 0.9rem; font-size: 0.95rem;">
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="descuento_porcentaje">💰 Descuento Porcentaje</option>
+                            <option value="descuento_fijo">💵 Descuento Fijo ($)</option>
+                            <option value="producto_gratis">🎁 Producto Gratis</option>
+                            <option value="envio_gratis">🚚 Envío Gratis</option>
+                            <option value="cupon">🎟️ Cupón</option>
+                            <option value="combo">📦 Combo</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3" id="campoValorDescuento" style="display: none;">
+                            <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
+                                <i class="bi bi-percent text-warning"></i> Valor del Descuento
+                            </label>
+                            <input type="number" class="form-control" id="premioValor" name="valor_descuento" step="0.01" min="0"
+                                   style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;" placeholder="Ej: 10">
+                        </div>
+
+                        <div class="col-md-6 mb-3" id="campoMinCompra" style="display: none;">
+                            <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
+                                <i class="bi bi-cash text-info"></i> Mínimo de Compra ($)
+                            </label>
+                            <input type="number" class="form-control" id="premioMinCompra" name="minimo_compra" step="0.01" min="0"
+                                   style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;" placeholder="Ej: 500">
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="campoDescripcion">
+                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
+                            <i class="bi bi-card-text text-secondary"></i> Descripción / Condiciones
+                        </label>
+                        <textarea class="form-control" id="premioDescripcion" name="descripcion" rows="2"
+                                  style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem; font-size: 0.9rem;"
+                                  placeholder="Condiciones del premio, restricciones, etc."></textarea>
+                    </div>
+
+                    {% if sorteo.tipo == 'cofre' %}
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
+                            <i class="bi bi-123 text-primary"></i> Número de Cofre (opcional)
+                        </label>
+                        <input type="number" class="form-control" id="premioNumeroCofre" name="numero_cofre" min="1" max="10"
+                               style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;" placeholder="Ej: 1, 2, 3...">
+                    </div>
+                    {% endif %}
+
+                    {% if sorteo.tipo == 'semaforo' %}
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
+                            <i class="bi bi-stoplights text-danger"></i> Color del Semáforo
+                        </label>
+                        <select class="form-select" id="premioColor" name="color"
+                                style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;">
+                            <option value="">Seleccionar color...</option>
+                            <option value="rojo">🔴 Rojo (60% probabilidad)</option>
+                            <option value="amarillo">🟡 Amarillo (30% probabilidad)</option>
+                            <option value="verde">🟢 Verde (10% probabilidad)</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
+                            <i class="bi bi-calendar-check text-success"></i> Validez del Premio
+                        </label>
+                        <select class="form-select" id="premioValidez" name="dias_validez"
+                                style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;">
+                            <option value="1">24 horas ⚡</option>
+                            <option value="2" selected>48 horas 🔥</option>
+                            <option value="3">72 horas ✨</option>
+                            <option value="7">7 días 📅</option>
+                            <option value="15">15 días 📆</option>
+                            <option value="30">30 días 🗓️</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer" style="background: #f9fafb; padding: 1rem 1.75rem; border: none; gap: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 600;">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; border-radius: 8px; padding: 0.6rem 2rem; font-weight: 700; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                        <i class="bi bi-check-circle-fill"></i> Agregar Premio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const sorteoId = {{ sorteo.id }};
+const sorteoTipo = "{{ sorteo.tipo }}";
+const cantidadCofres = {{ sorteo.cantidad_cofres }};
+let premiosActualesCount = {{ premios|length }};
+
+// Determinar cantidad máxima según tipo
+function getMaxPremios() {
+    if (sorteoTipo === 'cofre') return cantidadCofres;
+    if (sorteoTipo === 'semaforo') return 3;
+    if (sorteoTipo === 'ranking') return 3;
+    return null; // Sin límite para ruleta y caja misteriosa
+}
+
+function actualizarContador() {
+    const maxPremios = getMaxPremios();
+    const contador = document.getElementById('contadorPremios');
+    
+    if (maxPremios) {
+        const completo = premiosActualesCount >= maxPremios;
+        
+        contador.className = `badge fs-6 ${completo ? 'bg-success' : 'bg-warning text-dark'}`;
+        contador.innerHTML = `${premiosActualesCount} / ${maxPremios}`;
+        
+        // Deshabilitar botón si se alcanzó el límite
+        const btnAgregar = document.querySelector('.btn-agregar-premio');
+        if (btnAgregar) {
+            btnAgregar.disabled = completo;
+            if (completo) {
+                btnAgregar.innerHTML = '<i class="bi bi-check-circle"></i> Premios Completos';
+                btnAgregar.style.opacity = '0.6';
+                btnAgregar.style.cursor = 'not-allowed';
+            }
+        }
+    } else {
+        contador.className = 'badge bg-info fs-6';
+        contador.innerHTML = `${premiosActualesCount} premios`;
+        alerta.style.display = 'none';
+    }
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarContador();
+});
+
+function mostrarFormularioPersonalizado() {
+    const maxPremios = getMaxPremios();
+    if (maxPremios && premiosActualesCount >= maxPremios) {
+        let detalle = '';
+        if (sorteoTipo === 'cofre') detalle = 'Uno por cada cofre.';
+        else if (sorteoTipo === 'semaforo') detalle = 'Uno por cada color.';
+        else if (sorteoTipo === 'ranking') detalle = 'Uno por cada posición.';
+        showToast(`Ya agregaste ${maxPremios} premios. ${detalle} Límite alcanzado`, 'warning', 'Límite Alcanzado');
+        return;
+    }
+    
+    document.getElementById('formAgregarPremio').reset();
+    actualizarCamposPremio();
+    const modal = new bootstrap.Modal(document.getElementById('modalAgregarPremio'));
+    modal.show();
+}
+
+function actualizarCamposPremio() {
+    const tipo = document.getElementById('premioTipo').value;
+    const campoValor = document.getElementById('campoValorDescuento');
+    const campoMin = document.getElementById('campoMinCompra');
+    
+    if (tipo.includes('descuento')) {
+        campoValor.style.display = 'block';
+        campoMin.style.display = 'block';
+    } else {
+        campoValor.style.display = 'none';
+        campoMin.style.display = 'none';
+    }
+}
+
+function agregarPremio(event) {
+    event.preventDefault();
+    
+    // Validar límite antes de enviar
+    const maxPremios = getMaxPremios();
+    if (maxPremios && premiosActualesCount >= maxPremios) {
+        let detalle = '';
+        if (sorteoTipo === 'cofre') detalle = 'Uno por cada cofre.';
+        else if (sorteoTipo === 'semaforo') detalle = 'Uno por cada color.';
+        else if (sorteoTipo === 'ranking') detalle = 'Uno por cada posición.';
+        showToast(`Ya agregaste ${maxPremios} premios. ${detalle} Límite alcanzado`, 'error', 'Límite Alcanzado');
+        return;
+    }
+    
+    const formData = new FormData(event.target);
+    // El CSRF token ya está en el formulario como campo hidden
+    
+    fetch(`/sorteos/${sorteoId}/premios/agregar/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.mensaje || 'Premio agregado exitosamente', 'success', 'Agregado');
+            bootstrap.Modal.getInstance(document.getElementById('modalAgregarPremio')).hide();
+            location.reload();
+        } else {
+            if (data.limite_alcanzado) {
+                showToast(data.error, 'warning', 'Límite Alcanzado');
+            } else {
+                showToast(data.error || 'Error al agregar premio', 'error');
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al agregar premio', 'error');
+    });
+}
+
+function eliminarPremio(premioId) {
+    // Mostrar toast de confirmación
+    const maxPremios = getMaxPremios();
+    const faltan = maxPremios ? maxPremios - premiosActualesCount + 1 : 0;
+    
+    if (maxPremios && faltan > 0) {
+        let detalle = '';
+        if (sorteoTipo === 'cofre') detalle = 'Uno por cada cofre.';
+        else if (sorteoTipo === 'semaforo') detalle = 'Uno por cada color.';
+        else if (sorteoTipo === 'ranking') detalle = 'Uno por cada posición.';
+        showToast(`Debes agregar ${maxPremios} premios. ${detalle} Faltarán ${faltan}`, 'warning', 'Eliminar Premio');
+    }
+    
+    fetch(`/sorteos/premios/${premioId}/eliminar/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.mensaje || 'Premio eliminado', 'success', 'Eliminado');
+            document.querySelector(`[data-premio-id="${premioId}"]`).remove();
+            premiosActualesCount--;
+            actualizarContador();
+        } else {
+            showToast(data.error || 'Error al eliminar', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error al eliminar premio', 'error');
+    });
+}
+</script>
+{% endblock %}

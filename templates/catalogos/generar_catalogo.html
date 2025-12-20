@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Generar Catálogo - Tiendita{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-file-earmark-pdf"></i> Generar Catálogo PDF</h1>
+            <p class="lead text-muted">Selecciona los filtros para personalizar tu catálogo</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="get" action="{% url 'descargar_catalogo' %}" id="catalogoForm">
+                        <h5 class="mb-3">Filtros del Catálogo</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-people"></i> Categoría de Grupo
+                                </label>
+                                {{ filtro_form.categoria_grupo }}
+                                <small class="text-muted">Deja en blanco para incluir todas</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-tags"></i> Tipo de Prenda
+                                </label>
+                                {{ filtro_form.tipo_prenda }}
+                                <small class="text-muted">Opcional</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-search"></i> Búsqueda en Descripción
+                            </label>
+                            {{ filtro_form.busqueda }}
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Nota:</strong> Los productos marcados como "Vendidos" no se incluirán en el catálogo.
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-download"></i> Descargar Catálogo PDF
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h5 class="mb-3">
+                        <i class="bi bi-bar-chart"></i> Resumen
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <p class="mb-1 text-muted">Total de productos</p>
+                        <h3 class="mb-0">{{ total_productos }}</h3>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6 class="mb-3">Formato del Catálogo</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Portada personalizada
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            3 productos por página
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Diseño alternado
+                        </li>
+                        <li class="mb-2">
+                            <i class="bi bi-check-circle text-success"></i>
+                            Imágenes y descripciones
+                        </li>
+                    </ul>
+                    
+                    <div class="alert alert-light">
+                        <small>
+                            <i class="bi bi-lightbulb"></i>
+                            <strong>Tip:</strong> Usa los filtros para crear catálogos específicos 
+                            (por ejemplo, solo ropa de bebé).
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tiendita - Gestión de Inventario{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+    <style>
+        /* Toast Notification System */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            z-index: 9999;
+            max-width: 400px;
+            width: 90%;
+            opacity: 0;
+            animation: slideDown 0.4s ease forwards;
+            overflow: hidden;
+        }
+        
+        .toast-notification::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+            animation: shrinkBorder 3s linear forwards;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -30px);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        
+        @keyframes shrinkBorder {
+            from {
+                width: 100%;
+            }
+            to {
+                width: 0%;
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, -30px);
+            }
+        }
+        
+        .toast-notification.hiding {
+            animation: slideUp 0.3s ease forwards;
+        }
+        
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .toast-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        
+        .toast-message {
+            flex: 1;
+        }
+        
+        .toast-message h6 {
+            margin: 0 0 5px 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .toast-message p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        /* Global Responsive Styles */
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            h1, .h1 {
+                font-size: 1.75rem;
+            }
+            
+            h2, .h2 {
+                font-size: 1.5rem;
+            }
+            
+            h3, .h3 {
+                font-size: 1.25rem;
+            }
+            
+            .btn-lg {
+                padding: 0.5rem 1rem;
+                font-size: 1rem;
+            }
+            
+            .display-4 {
+                font-size: 2rem;
+            }
+            
+            .lead {
+                font-size: 1rem;
+            }
+            
+            table {
+                font-size: 0.875rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .navbar-brand {
+                font-size: 1rem;
+            }
+            
+            .nav-link {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.75rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+            
+            .btn {
+                font-size: 0.875rem;
+                padding: 0.4rem 0.8rem;
+            }
+            
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+            
+            .toast-notification {
+                max-width: 95%;
+                padding: 15px 20px;
+            }
+            
+            .toast-message h6 {
+                font-size: 0.9rem;
+            }
+            
+            .toast-message p {
+                font-size: 0.8rem;
+            }
+            
+            .toast-icon {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                <i class="bi bi-shop"></i> Tiendita
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">
+                            <i class="bi bi-house"></i> Inicio
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="productosDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-box"></i> Productos
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'lista_productos' %}">
+                                <i class="bi bi-list-ul"></i> Ver Todos
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'sincronizar_sheets' %}">
+                                <i class="bi bi-cloud-download"></i> Sincronizar Google Sheets
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="catalogoDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-file-earmark-pdf"></i> Catálogo
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'personalizar_catalogo' %}">
+                                <i class="bi bi-palette"></i> Personalizar Diseño
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'generar_catalogo' %}">
+                                <i class="bi bi-file-earmark-pdf"></i> Generar PDF
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'top_clientes' %}">
+                            <i class="bi bi-star-fill"></i> Clientes VIP
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="ventasDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-receipt"></i> Ventas/Facturas
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'lista_ventas' %}">
+                                <i class="bi bi-list-ul"></i> Ver Facturas
+                            </a></li>
+
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'configuracion_facturas' %}">
+                                <i class="bi bi-gear"></i> Configuración
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="sorteosDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-trophy"></i> Sorteos
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'lista_sorteos' %}">
+                                <i class="bi bi-list-ul"></i> Ver Sorteos
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'crear_sorteo' %}">
+                                <i class="bi bi-plus-circle"></i> Nuevo Sorteo
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                            </a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <!-- Messages -->
+    {% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% for message in messages %}
+            showDjangoToast('{{ message|escapejs }}', '{{ message.tags }}');
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
+    
+    <!-- Main Content -->
+    <main class="{% if user.is_authenticated %}container mt-4{% endif %}">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    {% if user.is_authenticated %}
+    <footer class="mt-5 py-3 bg-light">
+        <div class="container text-center">
+            <p class="text-muted mb-0">
+                &copy; 2025 Tiendita - Sistema de Gestión de Inventario
+            </p>
+        </div>
+    </footer>
+    {% endif %}
+    
+    <!-- jQuery (required for Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Sistema de notificaciones Toast global
+        function showDjangoToast(message, tags) {
+            // Mapeo de tags de Django a tipos de toast
+            const typeMap = {
+                'error': 'error',
+                'warning': 'warning',
+                'success': 'success',
+                'info': 'info',
+                'danger': 'error',
+                'primary': 'info',
+                'secondary': 'info'
+            };
+            
+            const type = typeMap[tags] || 'info';
+            
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            const icons = {
+                warning: '⚠️',
+                error: '❌',
+                success: '✅',
+                info: 'ℹ️'
+            };
+            
+            const titles = {
+                warning: 'Atención',
+                error: 'Oops! Algo salió mal',
+                success: '¡Perfecto!',
+                info: 'Información'
+            };
+            
+            // Calcular duración según longitud del mensaje
+            const palabras = message.split(' ').length;
+            const duracion = Math.min(Math.max(2000 + (palabras * 300), 3000), 8000);
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            
+            // Actualizar animación de la barra de progreso
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shrinkBorderDynamic {
+                    from { width: 100%; }
+                    to { width: 0%; }
+                }
+                .toast-notification::before {
+                    animation: shrinkBorderDynamic ${duracion}ms linear forwards !important;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <div class="toast-icon">${icons[type]}</div>
+                    <div class="toast-message">
+                        <h6>${titles[type]}</h6>
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    toast.remove();
+                    style.remove();
+                }, 300);
+            }, duracion);
+        }
+        
+        // Función showToast para compatibilidad con páginas de sorteos
+        function showToast(message, type = 'warning', title = '') {
+            const existingToast = document.querySelector('.toast-notification');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            const icons = {
+                warning: '⚠️',
+                error: '❌',
+                success: '✅',
+                info: 'ℹ️'
+            };
+            
+            const titles = {
+                warning: title || 'Atención',
+                error: title || 'Oops! Algo salió mal',
+                success: title || '¡Perfecto!',
+                info: title || 'Información'
+            };
+            
+            // Calcular duración según longitud del mensaje
+            const palabras = message.split(' ').length;
+            const duracion = Math.min(Math.max(2000 + (palabras * 300), 3000), 8000);
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            
+            // Actualizar animación de la barra de progreso
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes shrinkBorderDynamic {
+                    from { width: 100%; }
+                    to { width: 0%; }
+                }
+                .toast-notification::before {
+                    animation: shrinkBorderDynamic ${duracion}ms linear forwards !important;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            toast.innerHTML = `
+                <div class="toast-content">
+                    <div class="toast-icon">${icons[type]}</div>
+                    <div class="toast-message">
+                        <h6>${titles[type]}</h6>
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => {
+                    toast.remove();
+                    style.remove();
+                }, 300);
+            }, duracion);
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

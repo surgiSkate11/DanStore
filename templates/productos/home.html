@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - Tiendita{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <i class="bi bi-house-door"></i> Dashboard
+            </h1>
+            <p class="lead text-muted">Bienvenido al sistema de gestión de inventario</p>
+        </div>
+    </div>
+    
+    <!-- Cards de estadísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">Disponibles</h6>
+                            <h2 class="mb-0">{{ disponibles }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-check-circle" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-warning text-dark shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">Separados</h6>
+                            <h2 class="mb-0">{{ separados }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-bookmark" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-info text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">Vendidos</h6>
+                            <h2 class="mb-0">{{ vendidos }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-bag-check" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">Total</h6>
+                            <h2 class="mb-0">{{ total_productos }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-box-seam" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Accesos rápidos -->
+    <div class="row g-4">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-grid text-success" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Ver Productos</h5>
+                    <p class="card-text text-muted">Gestiona y filtra el inventario</p>
+                    <a href="{% url 'lista_productos' %}" class="btn btn-success">
+                        <i class="bi bi-eye"></i> Ver Inventario
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Generar Catálogo</h5>
+                    <p class="card-text text-muted">Crea un catálogo PDF personalizado</p>
+                    <a href="{% url 'generar_catalogo' %}" class="btn btn-danger">
+                        <i class="bi bi-download"></i> Generar PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
