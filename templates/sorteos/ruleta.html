@@ -1,643 +1,884 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Ruleta - {{ sorteo.nombre }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Toast Notification */
-    .toast-notification {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: white;
-        padding: 20px 30px;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-        z-index: 9999;
-        max-width: 400px;
-        width: 90%;
-        opacity: 0;
-        animation: slideDown 0.4s ease forwards;
+    main.container, main.container.mt-4 {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        height: auto !important;
+    }
+    footer, .footer, .mt-2 { display: none !important; }
+    html, body { overflow: hidden !important; height: 100% !important; }
+
+    .ruleta-page {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        height: calc(100vh - 56px);
+        padding: 15px 30px 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
         overflow: hidden;
     }
-    
-    .toast-notification::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
+
+    .wrapper {
+        max-width: 1200px;
         width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
-        animation: shrinkBorder 3s linear forwards;
-    }
-    
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translate(-50%, -30px);
-        }
-        to {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-    }
-    
-    @keyframes shrinkBorder {
-        from {
-            width: 100%;
-        }
-        to {
-            width: 0%;
-        }
-    }
-    
-    @keyframes slideUp {
-        from {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-        to {
-            opacity: 0;
-            transform: translate(-50%, -30px);
-        }
-    }
-    
-    .toast-notification.hiding {
-        animation: slideUp 0.3s ease forwards;
-    }
-    
-    .toast-content {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 15px;
     }
-    
-    .toast-icon {
-        font-size: 2rem;
+
+    .header {
+        text-align: center;
+        margin-bottom: 15px;
+        margin-top: 0;
         flex-shrink: 0;
     }
-    
-    .toast-message {
-        flex: 1;
-    }
-    
-    .toast-message h6 {
-        margin: 0 0 5px 0;
-        font-size: 1rem;
+
+    .header h1 {
+        color: #fff;
+        font-size: 1.3rem;
         font-weight: 600;
-    }
-    
-    .toast-message p {
         margin: 0;
-        font-size: 0.875rem;
-        color: #6b7280;
-    }
-    body {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-        min-height: 100vh;
-    }
-    
-    .container-fluid {
-        background: transparent !important;
-    }
-    
-    .ruleta-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem;
-        padding-bottom: 4rem;
-        min-height: calc(100vh - 100px);
-    }
-    
-    .ruleta-wrapper {
-        position: relative;
-        width: 600px;
-        height: 600px;
-        margin: 2rem auto;
-    }
-    
-    .ruleta {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        box-shadow: 
-            0 0 0 20px rgba(255, 215, 0, 0.3),
-            0 0 0 40px rgba(255, 215, 0, 0.2),
-            0 0 50px rgba(255, 215, 0, 0.5),
-            inset 0 0 100px rgba(0, 0, 0, 0.3);
-        transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99);
-        background: conic-gradient(
-            from 0deg,
-            #ff6b6b 0deg 36deg,
-            #4ecdc4 36deg 72deg,
-            #ffe66d 72deg 108deg,
-            #a8dadc 108deg 144deg,
-            #f1a7f5 144deg 180deg,
-            #95e1d3 180deg 216deg,
-            #ffc8dd 216deg 252deg,
-            #bde0fe 252deg 288deg,
-            #ffafcc 288deg 324deg,
-            #cdb4db 324deg 360deg
-        );
-    }
-    
-    .ruleta-segmento {
-        position: absolute;
-        width: 50%;
-        height: 50%;
-        top: 50%;
-        left: 50%;
-        transform-origin: 0 0;
-        clip-path: polygon(0 0, 100% 0, 50% 100%);
-        display: flex;
+        display: inline-flex;
         align-items: center;
+        gap: 10px;
+        padding: 10px 28px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 50px;
+        backdrop-filter: blur(10px);
+    }
+
+    .header h1 i { color: #fcd34d; }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 40px;
+        align-items: center;
+        width: 100%;
+    }
+
+    .ruleta-box {
+        display: flex;
         justify-content: center;
+        align-items: center;
     }
-    
-    .ruleta-nombre {
+
+    .wheel-wrap {
+        position: relative;
+        width: 100%;
+        max-width: 520px;
+    }
+
+    .wheel-frame {
         position: absolute;
-        top: 30%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(0deg);
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: white;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        white-space: nowrap;
-        width: 150px;
-        text-align: center;
+        inset: -12px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b, #fbbf24);
+        box-shadow: 0 0 30px rgba(251, 191, 36, 0.5);
     }
-    
-    .ruleta-centro {
+
+    #wheelCanvas {
+        width: 100%;
+        aspect-ratio: 1;
+        display: block;
+        border-radius: 50%;
+        position: relative;
+        z-index: 1;
+    }
+
+    #wheelCanvas.spinning {
+        transition: transform 6s cubic-bezier(0.05, 0.7, 0.1, 1);
+    }
+
+    .pointer {
+        position: absolute;
+        top: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        width: 0;
+        height: 0;
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        border-top: 30px solid #dc2626;
+        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.4));
+    }
+
+    .pointer::after {
+        content: '';
+        position: absolute;
+        top: -28px;
+        left: -10px;
+        width: 0;
+        height: 0;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-top: 18px solid #fbbf24;
+    }
+
+    .center-btn {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 120px;
-        height: 120px;
-        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        width: 75px;
+        height: 75px;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
         border-radius: 50%;
-        box-shadow: 
-            0 0 30px rgba(255, 215, 0, 0.8),
-            inset 0 0 20px rgba(0, 0, 0, 0.2);
+        border: 5px solid #fff;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 3rem;
-        z-index: 10;
-        cursor: pointer;
-        transition: transform 0.2s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        z-index: 5;
     }
-    
-    .ruleta-centro:hover {
-        transform: translate(-50%, -50%) scale(1.1);
+
+    .center-btn i { color: #fff; font-size: 1.5rem; }
+
+    .side-panel {
+        background: rgba(255,255,255,0.97);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        backdrop-filter: blur(10px);
+        height: fit-content;
+        max-height: 100%;
     }
-    
-    .ruleta-flecha {
-        position: absolute;
-        top: -40px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 30px solid transparent;
-        border-right: 30px solid transparent;
-        border-top: 60px solid #ef4444;
-        filter: drop-shadow(0 5px 10px rgba(239, 68, 68, 0.5));
-        z-index: 20;
-        animation: bounce 1s infinite;
+
+    .stat-row {
+        display: flex;
+        gap: 12px;
     }
-    
-    @keyframes bounce {
-        0%, 100% { top: -40px; }
-        50% { top: -50px; }
+
+    .stat-card {
+        flex: 1;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        border-radius: 14px;
+        padding: 16px 12px;
+        text-align: center;
     }
-    
-    .ganador-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
+
+    .stat-card.alt {
+        background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    }
+
+    .stat-card i { font-size: 1.4rem; margin-bottom: 4px; }
+    .stat-card:not(.alt) i { color: #f59e0b; }
+    .stat-card.alt i { color: #22c55e; }
+
+    .stat-card .num {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #1f2937;
+        line-height: 1;
+    }
+
+    .stat-card .label {
+        font-size: 0.6rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    .premio-box {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        border-radius: 14px;
+        padding: 14px 16px;
+    }
+
+    .premio-box .label {
+        font-size: 0.6rem;
+        color: #1d4ed8;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .premio-box .name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #1e40af;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .premio-box .name i { color: #3b82f6; font-size: 1rem; }
+
+    .btn-spin {
         width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: none;
+        padding: 16px;
+        font-size: 1rem;
+        font-weight: 700;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
-        animation: fadeIn 0.5s ease;
+        gap: 10px;
+        box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
     }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+
+    .btn-spin:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(34, 197, 94, 0.5);
     }
-    
-    .ganador-content {
-        text-align: center;
-        color: white;
-        animation: zoomIn 0.5s ease;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 3rem;
-        border-radius: 30px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+
+    .btn-spin:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-spin.completed {
+        background: linear-gradient(135deg, #6b7280, #4b5563);
+        box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+        opacity: 1;
     }
-    
-    .ganador-content h2 {
-        font-size: 3rem;
-        font-weight: 900;
-        text-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        margin-bottom: 2rem;
-        background: linear-gradient(to bottom, #fff, #f0f0f0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+
+    .btn-spin.spinning {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
     }
-    
-    .nombre-ganador {
-        font-size: 4rem;
-        font-weight: 900;
-        color: #ffd700;
-        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
-                     0 4px 15px rgba(0,0,0,0.5);
-        margin: 2rem 0;
-        animation: pulse-glow 2s ease-in-out infinite;
+
+    .participants-box .title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #6b7280;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
-    
-    @keyframes pulse-glow {
-        0%, 100% {
-            text-shadow: 0 0 30px rgba(255, 215, 0, 0.8),
-                         0 4px 15px rgba(0,0,0,0.5);
-        }
-        50% {
-            text-shadow: 0 0 50px rgba(255, 215, 0, 1),
-                         0 4px 20px rgba(0,0,0,0.7);
-        }
+
+    .participants-box .title-left {
+        display: flex;
+        align-items: center;
+        gap: 5px;
     }
-    
-    @keyframes zoomIn {
-        from { transform: scale(0) rotate(180deg); opacity: 0; }
-        to { transform: scale(1) rotate(0deg); opacity: 1; }
+
+    .participants-list {
+        min-height: 50px;
     }
-    
-    .ganador-confetti {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background: #ffd700;
-        animation: confetti-fall 3s linear infinite;
+
+    .p-item {
+        background: #f9fafb;
+        padding: 8px 10px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        font-size: 0.8rem;
+        color: #374151;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
-    
-    @keyframes confetti-fall {
-        0% {
-            top: -10%;
-            transform: translateX(0) rotate(0deg);
-            opacity: 1;
-        }
-        100% {
-            top: 110%;
-            transform: translateX(100px) rotate(720deg);
-            opacity: 0;
-        }
+
+    .p-item i { color: #f59e0b; font-size: 0.85rem; }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-    
-    .info-panel {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-        backdrop-filter: blur(15px);
-        border-radius: 20px;
-        padding: 2rem;
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        transition: all 0.3s ease;
+
+    .pagination-controls button {
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: #e5e7eb;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        padding: 0;
     }
-    
-    .info-panel:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-        border-color: rgba(255, 215, 0, 0.4);
+
+    .pagination-controls button:hover:not(:disabled) {
+        background: #22c55e;
+        color: #fff;
     }
-    
-    .btn-girar {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        font-size: 1.6rem;
-        padding: 1.2rem 3.5rem;
-        border-radius: 50px;
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5), 0 0 0 0 rgba(16, 185, 129, 0.4);
-        transition: all 0.3s ease;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        animation: pulse-button 2s ease-in-out infinite;
-    }
-    
-    @keyframes pulse-button {
-        0%, 100% {
-            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5), 0 0 0 0 rgba(16, 185, 129, 0.4);
-        }
-        50% {
-            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5), 0 0 0 15px rgba(16, 185, 129, 0);
-        }
-    }
-    
-    .btn-girar:hover:not(:disabled) {
-        transform: scale(1.08) translateY(-2px);
-        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.7);
-        border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    .btn-girar:disabled {
-        opacity: 0.5;
+
+    .pagination-controls button:disabled {
+        opacity: 0.4;
         cursor: not-allowed;
     }
-    
-    .participantes-count {
-        font-size: 3rem;
+
+    .pagination-controls button i {
+        font-size: 0.7rem;
+        color: #374151;
+    }
+
+    .pagination-controls button:hover:not(:disabled) i {
+        color: #fff;
+    }
+
+    .pagination-info {
+        font-size: 0.65rem;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .back-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 12px;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        transition: all 0.15s;
+    }
+
+    .back-link:hover {
+        background: #f9fafb;
+        color: #22c55e;
+        border-color: #22c55e;
+    }
+
+    /* Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(8px);
+    }
+
+    .modal-overlay.show { display: flex; }
+
+    .modal-box {
+        background: #fff;
+        border-radius: 20px;
+        padding: 30px 35px;
+        text-align: center;
+        max-width: 320px;
+        width: 90%;
+        animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+
+    @keyframes pop-in {
+        from { transform: scale(0.85); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .trophy-icon {
+        width: 65px;
+        height: 65px;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 12px;
+        box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+        animation: bounce-trophy 1s ease-in-out infinite;
+    }
+
+    @keyframes bounce-trophy {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .trophy-icon i { font-size: 1.6rem; color: #fff; }
+
+    .modal-title {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .winner-name {
+        font-size: 1.3rem;
         font-weight: 800;
-        color: #ffd700;
-        text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        color: #1f2937;
+        margin-bottom: 12px;
+        line-height: 1.2;
+    }
+
+    .prize-card {
+        background: linear-gradient(135deg, #fef9c3, #fef08a);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin-bottom: 15px;
+    }
+
+    .prize-card .lbl {
+        font-size: 0.5rem;
+        color: #a16207;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 3px;
+    }
+
+    .prize-card .val {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #78350f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+
+    .prize-card .val i { color: #eab308; }
+
+    .btn-continue {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        border: none;
+        color: #fff;
+        padding: 10px 30px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 3px 12px rgba(34, 197, 94, 0.35);
+    }
+
+    .btn-continue:hover {
+        transform: translateY(-1px);
+    }
+
+    .confetti {
+        position: fixed;
+        z-index: 10000;
+        animation: fall 3s linear forwards;
+    }
+
+    @keyframes fall {
+        to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+
+    @media (max-width: 900px) {
+        .main-grid { grid-template-columns: 1fr; gap: 20px; }
+        .wheel-wrap { max-width: 350px; }
+        .side-panel { max-width: 380px; margin: 0 auto; }
+        .ruleta-page { padding: 20px; justify-content: flex-start; height: auto; min-height: calc(100vh - 56px); }
+    }
+
+    @media (max-width: 500px) {
+        .wheel-wrap { max-width: 280px; }
+        .header h1 { font-size: 1.1rem; padding: 8px 20px; }
+        .side-panel { padding: 14px; }
+        .header { margin-bottom: 15px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ruleta-container">
-    <!-- Header -->
-    <div class="text-center mb-5">
-        <h1 class="text-white mb-3" style="font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 30px rgba(255,215,0,0.7), 0 4px 20px rgba(0,0,0,0.6);">
-            🎡 {{ sorteo.nombre }}
-        </h1>
-        <p class="text-white" style="font-size: 1.3rem; opacity: 0.95; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">¡Gira la ruleta y descubre al ganador!</p>
-        {% if sorteo.descripcion %}
-        <p class="text-white-50" style="font-size: 1.1rem; margin-top: 0.5rem;">{{ sorteo.descripcion }}</p>
-        {% endif %}
-    </div>
-    
-    <!-- Stats -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="info-panel text-center">
-                <div class="participantes-count">{{ participantes|length }}</div>
-                <p class="mb-0">Participantes</p>
-            </div>
+<div class="ruleta-page">
+    <div class="wrapper">
+        <div class="header">
+            <h1><i class="bi bi-stars"></i> {{ sorteo.nombre }}</h1>
         </div>
-        <div class="col-md-4">
-            <div class="info-panel text-center">
-                <div class="participantes-count" id="giradasCount">0</div>
-                <p class="mb-0">Giros realizados</p>
+
+        <div class="main-grid">
+            <div class="ruleta-box">
+                <div class="wheel-wrap">
+                    <div class="wheel-frame"></div>
+                    <div class="pointer"></div>
+                    <canvas id="wheelCanvas"></canvas>
+                    <div class="center-btn">
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="info-panel text-center">
-                <button class="btn-girar" id="btnGirar" onclick="girarRuleta()">
-                    <i class="bi bi-arrow-clockwise"></i> GIRAR
+
+            <div class="side-panel">
+                <div class="stat-row">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill"></i>
+                        <div class="num" id="numPart">0</div>
+                        <div class="label">Participantes</div>
+                    </div>
+                    <div class="stat-card alt">
+                        <i class="bi bi-gift-fill"></i>
+                        <div class="num" id="numPremios">{{ premios_restantes }}</div>
+                        <div class="label">Premios</div>
+                    </div>
+                </div>
+
+                <div class="premio-box" id="premioBox">
+                    <div class="label">Próximo premio</div>
+                    <div class="name"><i class="bi bi-gift"></i><span id="premioNombre">Cargando...</span></div>
+                </div>
+
+                <button id="btnSpin" class="btn-spin" onclick="spin()">
+                    <i class="bi bi-play-fill"></i> Girar Ruleta
                 </button>
+
+                <div class="participants-box">
+                    <div class="title">
+                        <div class="title-left"><i class="bi bi-person-lines-fill"></i> Participantes</div>
+                        <div class="pagination-controls">
+                            <button id="prevPage" onclick="prevPage()" disabled><i class="bi bi-chevron-left"></i></button>
+                            <span class="pagination-info" id="pageInfo">1/1</span>
+                            <button id="nextPage" onclick="nextPage()"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="participants-list" id="partList"></div>
+                </div>
+
+                <a href="{% url 'detalle_sorteo' sorteo.id %}" class="back-link">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
             </div>
         </div>
     </div>
-    
-    <!-- Ruleta -->
-    <div class="ruleta-wrapper">
-        <div class="ruleta-flecha"></div>
-        <div class="ruleta" id="ruleta">
-            <!-- Los segmentos se generan dinámicamente -->
-        </div>
-        <div class="ruleta-centro" onclick="girarRuleta()">
-            🎯
-        </div>
-    </div>
-    
-    <!-- Botones de Acción -->
-    <div class="text-center mt-5">
-        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg me-3" style="min-width: 150px; padding: 0.75rem 2rem; font-weight: 600; border-width: 2px;">
-            <i class="bi bi-arrow-left"></i> Volver
-        </a>
-        <button class="btn btn-danger btn-lg" onclick="finalizarSorteo()" style="min-width: 180px; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
-            <i class="bi bi-stop-circle"></i> Finalizar Sorteo
-        </button>
-    </div>
 </div>
 
-<!-- Modal de Ganador -->
-<div class="ganador-modal" id="ganadorModal">
-    <div class="ganador-content">
-        <div style="font-size: 10rem; margin-bottom: 1rem; animation: bounce 1s ease infinite;">🎉</div>
-        <h2 style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: 700;">¡TENEMOS GANADOR!</h2>
-        <div class="nombre-ganador" id="nombreGanador"></div>
-        <p style="font-size: 1.8rem; margin-top: 1.5rem; color: #fff; font-weight: 600;" id="telefonoGanador"></p>
-        
-        <div class="mt-5">
-            <button class="btn btn-success btn-lg me-3" onclick="registrarGanador()">
-                <i class="bi bi-check-circle"></i> Registrar Ganador
-            </button>
-            <button class="btn btn-outline-light btn-lg" onclick="cerrarModal()">
-                <i class="bi bi-x-circle"></i> Cerrar
-            </button>
+<div id="modal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="trophy-icon"><i class="bi bi-trophy-fill"></i></div>
+        <div class="modal-title">🎉 ¡Felicitaciones!</div>
+        <div class="winner-name" id="winnerName"></div>
+        <div class="prize-card">
+            <div class="lbl">Ha ganado</div>
+            <div class="val"><i class="bi bi-gift-fill"></i><span id="prizeName"></span></div>
         </div>
+        <button class="btn-continue" onclick="closeModal()">Continuar</button>
     </div>
-    
-    <!-- Confetti -->
-    <div id="confettiContainer"></div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-const participantes = {{ participantes|safe }};
-const sorteoId = {{ sorteo.id }};
-let ganadorActual = null;
-let giradasRealizadas = 0;
-let girando = false;
+    const sorteoId = {{ sorteo.id }};
+    const participantes = {{ participantes_json|safe }};
+    const premiosData = {{ premios_json|safe }};
+    
+    const premios = [...premiosData].filter(p => !p.asignado).sort((a, b) => a.orden - b.orden);
+    
+    let premioIdx = 0;
+    let spinning = false;
+    let lastRotation = 0;
+    let selectedWinner = null;
+    let currentPage = 0;
+    const itemsPerPage = 5;
 
-// Generar segmentos de la ruleta
-function generarSegmentos() {
-    const ruleta = document.getElementById('ruleta');
-    const totalParticipantes = participantes.length;
-    const anguloSegmento = 360 / totalParticipantes;
-    
-    participantes.forEach((participante, index) => {
-        const segmento = document.createElement('div');
-        segmento.className = 'ruleta-segmento';
-        segmento.style.transform = `rotate(${index * anguloSegmento}deg)`;
-        
-        const nombre = document.createElement('div');
-        nombre.className = 'ruleta-nombre';
-        nombre.textContent = participante.nombre;
-        nombre.style.transform = `rotate(${anguloSegmento / 2}deg)`;
-        
-        segmento.appendChild(nombre);
-        ruleta.appendChild(segmento);
-    });
-}
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
 
-// Girar ruleta
-function girarRuleta() {
-    if (girando || participantes.length === 0) return;
-    
-    girando = true;
-    document.getElementById('btnGirar').disabled = true;
-    
-    // Solicitar ganador al servidor
-    fetch(`/sorteos/${sorteoId}/sortear/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        ganadorActual = data.ganador;
-        
-        // Calcular rotación
-        const index = participantes.findIndex(p => p.id === ganadorActual.id);
-        const anguloSegmento = 360 / participantes.length;
-        const anguloGanador = index * anguloSegmento + (anguloSegmento / 2);
-        const vueltas = 5 + Math.random() * 3; // 5-8 vueltas
-        const rotacionTotal = (vueltas * 360) + (360 - anguloGanador);
-        
-        const ruleta = document.getElementById('ruleta');
-        ruleta.style.transform = `rotate(${rotacionTotal}deg)`;
-        
-        // Mostrar ganador después de la animación
-        setTimeout(() => {
-            mostrarGanador();
-            giradasRealizadas++;
-            document.getElementById('giradasCount').textContent = giradasRealizadas;
-            girando = false;
-            document.getElementById('btnGirar').disabled = false;
-        }, 5000);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('No se pudo sortear el ganador. Intenta nuevamente.', 'error');
-        girando = false;
-        document.getElementById('btnGirar').disabled = false;
-    });
-}
+    // Colores vibrantes arcoíris
+    const colors = [
+        '#facc15', '#f97316', '#ef4444', '#dc2626',
+        '#22c55e', '#16a34a', '#06b6d4', '#3b82f6',
+        '#6366f1', '#8b5cf6', '#a855f7', '#ec4899'
+    ];
 
-// Mostrar modal de ganador
-function mostrarGanador() {
-    document.getElementById('nombreGanador').textContent = ganadorActual.nombre;
-    document.getElementById('telefonoGanador').textContent = `📞 ${ganadorActual.telefono}`;
-    document.getElementById('ganadorModal').style.display = 'flex';
-    
-    // Generar confetti
-    generarConfetti();
-    
-    // Reproducir sonido de celebración (opcional)
-    // const audio = new Audio('/static/sounds/celebration.mp3');
-    // audio.play();
-}
-
-// Generar confetti
-function generarConfetti() {
-    const container = document.getElementById('confettiContainer');
-    container.innerHTML = '';
-    
-    const colores = ['#ffd700', '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8dadc', '#f1a7f5'];
-    
-    for (let i = 0; i < 100; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'ganador-confetti';
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.background = colores[Math.floor(Math.random() * colores.length)];
-        confetti.style.animationDelay = Math.random() * 2 + 's';
-        confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
-        container.appendChild(confetti);
+    function init() {
+        document.getElementById('numPart').textContent = participantes.length;
+        updatePremio();
+        renderList();
+        setupCanvas();
     }
-}
 
-// Cerrar modal
-function cerrarModal() {
-    document.getElementById('ganadorModal').style.display = 'none';
-}
-
-// Registrar ganador
-function registrarGanador() {
-    if (!ganadorActual) return;
-    
-    // Aquí podrías mostrar un formulario para seleccionar el premio
-    // Por ahora solo registramos sin premio específico
-    
-    const formData = new FormData();
-    formData.append('cliente_id', ganadorActual.id);
-    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-    
-    fetch(`/sorteos/${sorteoId}/registrar/`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.mensaje, 'success', '¡Registrado!');
-            cerrarModal();
-            // Opcional: eliminar participante de la ruleta
-            const index = participantes.findIndex(p => p.id === ganadorActual.id);
-            if (index > -1) {
-                participantes.splice(index, 1);
-                regenerarRuleta();
-            }
+    function updatePremio() {
+        const box = document.getElementById('premioBox');
+        const span = document.getElementById('premioNombre');
+        const btn = document.getElementById('btnSpin');
+        if (premioIdx < premios.length) {
+            span.textContent = premios[premioIdx].nombre;
+            box.style.display = 'block';
+            btn.style.display = 'flex';
+            btn.disabled = false;
+            btn.classList.remove('completed');
+            btn.innerHTML = '<i class="bi bi-play-fill"></i> Girar Ruleta';
+        } else {
+            box.style.display = 'none';
+            btn.style.display = 'none';
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('No se pudo registrar el ganador. Intenta nuevamente.', 'error');
-    });
-}
+    }
 
-// Regenerar ruleta después de eliminar participante
-function regenerarRuleta() {
-    const ruleta = document.getElementById('ruleta');
-    ruleta.innerHTML = '';
-    ruleta.style.transform = 'rotate(0deg)';
-    generarSegmentos();
-}
+    function renderList() {
+        const list = document.getElementById('partList');
+        if (participantes.length === 0) {
+            list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:10px;font-size:0.7rem;">Sin participantes</div>';
+            document.getElementById('pageInfo').textContent = '0/0';
+            document.getElementById('prevPage').disabled = true;
+            document.getElementById('nextPage').disabled = true;
+            return;
+        }
+        
+        const totalPages = Math.ceil(participantes.length / itemsPerPage);
+        const start = currentPage * itemsPerPage;
+        const end = Math.min(start + itemsPerPage, participantes.length);
+        const pageItems = participantes.slice(start, end);
+        
+        list.innerHTML = pageItems.map(p => 
+            `<div class="p-item"><i class="bi bi-person-fill"></i>${p.nombre}</div>`
+        ).join('');
+        
+        document.getElementById('pageInfo').textContent = `${currentPage + 1}/${totalPages}`;
+        document.getElementById('prevPage').disabled = currentPage === 0;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages - 1;
+    }
 
-// Finalizar sorteo
-function finalizarSorteo() {
-    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarSorteo'));
-    modal.show();
-}
+    function prevPage() {
+        if (currentPage > 0) {
+            currentPage--;
+            renderList();
+        }
+    }
 
-// Inicializar
-document.addEventListener('DOMContentLoaded', function() {
-    generarSegmentos();
-});
-</script>
+    function nextPage() {
+        const totalPages = Math.ceil(participantes.length / itemsPerPage);
+        if (currentPage < totalPages - 1) {
+            currentPage++;
+            renderList();
+        }
+    }
 
-<!-- Modal Finalizar Sorteo -->
-<div class="modal fade" id="modalFinalizarSorteo" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-stop-circle-fill"></i> Finalizar Sorteo
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #dc3545;"></i>
-                <h5 class="mt-3">¿Deseas finalizar este sorteo?</h5>
-                <p class="text-muted">No podrás realizar más giros después de finalizarlo.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="button" class="btn btn-danger" onclick="confirmarFinalizarSorteo()">
-                    <i class="bi bi-stop-circle"></i> Sí, Finalizar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+    function setupCanvas() {
+        const wrap = document.querySelector('.wheel-wrap');
+        const size = Math.min(wrap.offsetWidth, 380);
+        canvas.width = size;
+        canvas.height = size;
+        draw();
+    }
 
-<script>
-function confirmarFinalizarSorteo() {
-    window.location.href = `/sorteos/${sorteoId}/finalizar/`;
-}
+    function draw() {
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const r = canvas.width / 2 - 2;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (participantes.length === 0) {
+            ctx.fillStyle = '#1f2937';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '500 11px system-ui';
+            ctx.textAlign = 'center';
+            ctx.fillText('Sin participantes', cx, cy);
+            return;
+        }
+
+        const n = participantes.length;
+        const slice = (Math.PI * 2) / n;
+
+        participantes.forEach((p, i) => {
+            const start = i * slice - Math.PI / 2;
+            const end = start + slice;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, r, start, end);
+            ctx.closePath();
+            ctx.fillStyle = colors[i % colors.length];
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(start + slice / 2);
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            
+            let fs = 10;
+            if (n > 18) fs = 6;
+            else if (n > 12) fs = 7;
+            else if (n > 8) fs = 8;
+            
+            ctx.font = `bold ${fs}px system-ui`;
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 2;
+
+            let name = p.nombre || '';
+            if (name.length > 10 && n > 6) name = name.substring(0, 8) + '..';
+
+            ctx.fillText(name, r * 0.75, 0);
+            ctx.restore();
+        });
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    function spin() {
+        if (spinning || participantes.length === 0) return;
+        if (premioIdx >= premios.length) return;
+
+        spinning = true;
+        const btn = document.getElementById('btnSpin');
+        btn.disabled = true;
+        btn.classList.add('spinning');
+        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Girando...';
+
+        fetch(`/sorteos/${sorteoId}/sortear/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                resetBtn();
+                return;
+            }
+
+            selectedWinner = data.ganador;
+            const idx = participantes.findIndex(p => p.id === selectedWinner.id);
+
+            if (idx === -1) {
+                resetBtn();
+                return;
+            }
+
+            const n = participantes.length;
+            const sliceDeg = 360 / n;
+            const winnerCenter = idx * sliceDeg + sliceDeg / 2;
+            const spins = 8 + Math.floor(Math.random() * 4);
+            const targetAngle = 360 - winnerCenter;
+            const currentNormalized = lastRotation % 360;
+            let rotation = spins * 360 + targetAngle - currentNormalized;
+            if (rotation < spins * 360) rotation += 360;
+            
+            lastRotation += rotation;
+            
+            canvas.classList.add('spinning');
+            canvas.style.transform = `rotate(${lastRotation}deg)`;
+
+            setTimeout(() => {
+                canvas.classList.remove('spinning');
+                showWinner();
+            }, 6000);
+        })
+        .catch(() => {
+            resetBtn();
+        });
+    }
+
+    function showWinner() {
+        if (!selectedWinner) return;
+        const prize = premios[premioIdx];
+        document.getElementById('winnerName').textContent = selectedWinner.nombre;
+        document.getElementById('prizeName').textContent = prize.nombre;
+        document.getElementById('modal').classList.add('show');
+        confetti();
+        register(selectedWinner.id, prize.id);
+    }
+
+    function confetti() {
+        const cols = ['#facc15', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+        for (let i = 0; i < 50; i++) {
+            setTimeout(() => {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = '-10px';
+                c.style.background = cols[Math.floor(Math.random() * cols.length)];
+                c.style.width = (4 + Math.random() * 5) + 'px';
+                c.style.height = (4 + Math.random() * 5) + 'px';
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3500);
+            }, i * 40);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+        selectedWinner = null;
+        premioIdx++;
+        document.getElementById('numPremios').textContent = premios.length - premioIdx;
+        updatePremio();
+
+        if (premioIdx >= premios.length) {
+            // El backend ya marcó el sorteo como completado al registrar el último premio
+            // Solo redirigir a la página de detalle
+            setTimeout(() => {
+                window.location.href = `/sorteos/${sorteoId}/`;
+            }, 1000);
+        } else {
+            resetBtn();
+        }
+    }
+
+    function finalizarSorteo() {
+        // Esta función ya no es necesaria porque el backend marca el sorteo como completado
+        // automáticamente al registrar el último premio, pero la mantenemos por compatibilidad
+        fetch(`/sorteos/${sorteoId}/finalizar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(() => {
+            window.location.href = `/sorteos/${sorteoId}/`;
+        })
+        .catch(() => {
+            window.location.href = `/sorteos/${sorteoId}/`;
+        });
+    }
+
+    function register(clienteId, premioId) {
+        fetch(`/sorteos/${sorteoId}/registrar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `cliente_id=${clienteId}&premio_id=${premioId}`
+        })
+        .then(r => r.json())
+        .catch(() => {});
+    }
+
+    function resetBtn() {
+        spinning = false;
+        const btn = document.getElementById('btnSpin');
+        btn.disabled = false;
+        btn.classList.remove('spinning');
+        btn.innerHTML = '<i class="bi bi-play-fill"></i> Girar Ruleta';
+    }
+
+    function getCookie(name) {
+        let v = null;
+        if (document.cookie) {
+            document.cookie.split(';').forEach(c => {
+                c = c.trim();
+                if (c.startsWith(name + '=')) v = decodeURIComponent(c.substring(name.length + 1));
+            });
+        }
+        return v;
+    }
+
+    window.addEventListener('load', init);
+    window.addEventListener('resize', setupCanvas);
 </script>
 {% endblock %}

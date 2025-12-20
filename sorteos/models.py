@@ -54,8 +54,9 @@ class Sorteo(models.Model):
     
     # Configuración específica por tipo
     cantidad_cofres = models.IntegerField(
-        default=5,
-        verbose_name="Cantidad de cofres (para tipo cofre)"
+        default=3,
+        verbose_name="Cantidad de cofres (para tipo cofre)",
+        help_text="Mínimo 3 cofres"
     )
     
     # Estado y fechas
@@ -116,6 +117,11 @@ class Sorteo(models.Model):
     def cantidad_participantes(self):
         """Retorna la cantidad de participantes elegibles"""
         return self.obtener_participantes().count()
+    
+    @property
+    def premios(self):
+        """Retorna los premios asociados a este sorteo a través de SorteoPremio"""
+        return self.sorteo_premios.select_related('premio').all()
 
 
 class Participante(models.Model):
@@ -144,7 +150,7 @@ class Participante(models.Model):
 
 
 class Premio(models.Model):
-    """Premios disponibles en los sorteos"""
+    """Premios reutilizables para sorteos"""
     
     TIPO_PREMIO = [
         ('descuento_porcentaje', '% Descuento'),
@@ -156,12 +162,6 @@ class Premio(models.Model):
         ('gracias', 'Gracias por Participar'),
     ]
     
-    sorteo = models.ForeignKey(
-        Sorteo, 
-        on_delete=models.CASCADE, 
-        related_name='premios',
-        verbose_name="Sorteo"
-    )
     nombre = models.CharField(max_length=200, verbose_name="Nombre del premio")
     tipo = models.CharField(max_length=30, choices=TIPO_PREMIO, verbose_name="Tipo de premio")
     descripcion = models.TextField(blank=True, verbose_name="Descripción")
@@ -188,9 +188,36 @@ class Premio(models.Model):
         help_text="Cuántos días es válido el premio"
     )
     
-    # Para tipo cofre/semáforo
+    creado_en = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Premio"
+        verbose_name_plural = "Premios"
+        ordering = ['nombre']
+    
+    def __str__(self):
+        return f"{self.nombre} - {self.get_tipo_display()}"
+
+
+class SorteoPremio(models.Model):
+    """Relación entre sorteos y premios con configuración específica"""
+    sorteo = models.ForeignKey(
+        Sorteo,
+        on_delete=models.CASCADE,
+        related_name='sorteo_premios',
+        verbose_name="Sorteo"
+    )
+    premio = models.ForeignKey(
+        Premio,
+        on_delete=models.CASCADE,
+        related_name='sorteos_asociados',
+        verbose_name="Premio"
+    )
+    
+    # Configuración específica del premio en este sorteo
     color = models.CharField(
-        max_length=20, 
+        max_length=20,
+        null=True,
         blank=True,
         help_text="Para semáforo: rojo, amarillo, verde"
     )
@@ -199,23 +226,22 @@ class Premio(models.Model):
         blank=True,
         help_text="Para cofre: número del 1 al 8"
     )
-    
-    # Configuración
     cantidad_disponible = models.IntegerField(
         default=1,
         verbose_name="Cantidad disponible"
     )
     asignado = models.BooleanField(default=False, verbose_name="Ya asignado")
-    
-    creado_en = models.DateTimeField(auto_now_add=True)
+    orden = models.IntegerField(default=0, verbose_name="Orden de entrega")
+    agregado_en = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        verbose_name = "Premio"
-        verbose_name_plural = "Premios"
-        ordering = ['sorteo', 'numero_cofre', 'color']
+        verbose_name = "Premio de Sorteo"
+        verbose_name_plural = "Premios de Sorteos"
+        ordering = ['sorteo', 'orden', 'agregado_en']
+        unique_together = ['sorteo', 'premio', 'numero_cofre', 'color']
     
     def __str__(self):
-        return f"{self.nombre} - {self.get_tipo_display()}"
+        return f"{self.premio.nombre} en {self.sorteo.nombre}"
 
 
 class ResultadoSorteo(models.Model):

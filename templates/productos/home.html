@@ -107,6 +107,19 @@
                 </div>
             </div>
         </div>
+        
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-cloud-arrow-down text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Sincronizar Sheets</h5>
+                    <p class="card-text text-muted">Importa productos desde Google Sheets</p>
+                    <a href="{% url 'sincronizar_sheets' %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Sincronizar
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

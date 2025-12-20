@@ -476,8 +476,8 @@
 
 <script>
 const sorteoId = {{ sorteo.id }};
-const participantes = {{ participantes|safe }};
-const premios = {{ premios|safe }};
+const participantes = {{ participantes_json|safe }};
+const premios = {{ premios_json|safe }};
 
 let ganadorActual = null;
 let premioActual = null;

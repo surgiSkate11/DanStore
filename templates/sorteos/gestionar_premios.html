@@ -6,51 +6,76 @@
 <style>
     body {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
+        background-attachment: fixed;
+    }
+    
+    .premios-page {
+        background: transparent;
+        min-height: auto;
+        padding-bottom: 0;
     }
     
     .premios-container {
-        max-width: 1400px;
+        max-width: 1600px;
         margin: 0 auto;
         padding: 2rem;
     }
     
-    .premio-card {
+    .section-card {
         background: white;
         border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+        padding: 2rem;
         box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .lista-premios-scroll {
+        max-height: 400px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .lista-premios-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .lista-premios-scroll::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .lista-premios-scroll::-webkit-scrollbar-thumb {
+        background: #667eea;
+        border-radius: 10px;
+    }
+    
+    .lista-premios-scroll::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
+    }
+    
+    .premio-card {
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
         transition: all 0.3s ease;
+        cursor: pointer;
         position: relative;
     }
     
     .premio-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        z-index: 1;
     }
     
-    .btn-agregar-premio {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border: none;
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 10px;
-        font-weight: 700;
-        font-size: 1.1rem;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-agregar-premio:hover {
-        transform: scale(1.05);
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
-    }
-    
-    .premios-actuales {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
+    .premio-card.premio-activo {
+        border: 2px solid #667eea;
+        background: #f0f4ff;
     }
     
     .premio-item {
@@ -61,6 +86,23 @@
         background: #f9fafb;
         border-radius: 10px;
         margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .btn-agregar-premio {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        padding: 0.65rem 1rem;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-agregar-premio:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
     }
     
     .btn-eliminar {
@@ -70,78 +112,108 @@
         padding: 0.5rem 1rem;
         border-radius: 8px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
     }
     
     .btn-eliminar:hover {
         background: #dc2626;
-        transform: scale(1.05);
+        transform: translateY(-2px);
     }
     
-    #alertaRequisitos {
-        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        font-size: 0.95rem;
-        font-weight: 500;
-        line-height: 1.6;
-        border: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .d-flex.gap-2 .btn-secondary {
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
     }
     
-    #alertaRequisitos strong {
-        font-weight: 700;
-        font-size: 1.05rem;
+    .d-flex.gap-2 .btn-secondary:hover {
+        transform: translateY(-2px);
+    }
+    
+    .premio-badge {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        border-radius: 5px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+    }
+    
+    .badge-descuento { background: #fef3c7; color: #92400e; }
+    .badge-producto { background: #dbeafe; color: #1e3a8a; }
+    .badge-envio { background: #d1fae5; color: #065f46; }
+    .badge-cupon { background: #fce7f3; color: #831843; }
+    
+    .tab-button {
+        background: white;
+        border: 2px solid #e5e7eb;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        margin-right: 0.5rem;
+    }
+    
+    .tab-button.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="premios-container">
-    <!-- Header -->
-    <div class="text-center mb-5">
-        <h1 class="text-white mb-3" style="font-size: 3rem; font-weight: 800; text-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-            🎁 Gestionar Premios
-        </h1>
-        <p class="text-white" style="font-size: 1.2rem;">{{ sorteo.nombre }} - {{ sorteo.get_tipo_display }}</p>
-    </div>
+<div class="premios-page">
+    <div class="premios-container">
+        <!-- Header -->
+        <div class="text-center mb-4">
+            <h1 class="text-white mb-2" style="font-size: 2.5rem; font-weight: 800; text-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                🎁 Gestionar Premios
+            </h1>
+            <p class="text-white" style="font-size: 1.1rem;">{{ sorteo.nombre }} - {{ sorteo.get_tipo_display }}</p>
+        </div>
 
     <div class="row">
-        <!-- Premios Actuales -->
+        <!-- Premios Configurados -->
         <div class="col-md-5">
-            <div class="premios-actuales">
+            <div class="section-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="mb-0"><i class="bi bi-list-check"></i> Premios Configurados</h3>
-                    <div id="contadorPremios" class="badge fs-6" style="padding: 0.6rem 1rem;"></div>
+                    <h4 class="mb-0"><i class="bi bi-list-check"></i> Premios Configurados</h4>
+                    <div id="contadorPremios" class="badge bg-primary fs-6" style="padding: 0.5rem 1rem;"></div>
                 </div>
                 
                 <div id="premiosActuales">
-                    {% if premios %}
-                        {% for premio in premios %}
-                        <div class="premio-item" data-premio-id="{{ premio.id }}">
+                    {% if premios_sorteo %}
+                        {% for sp in premios_sorteo %}
+                        <div class="premio-item" data-sorteo-premio-id="{{ sp.id }}">
                             <div>
-                                <h6 class="mb-1">{{ premio.nombre }}</h6>
+                                <h6 class="mb-1">{{ sp.premio.nombre }}</h6>
                                 <small class="text-muted">
-                                    {{ premio.get_tipo_display }}
-                                    {% if premio.valor_descuento %}
-                                        - {% if premio.tipo == 'descuento_porcentaje' %}{{ premio.valor_descuento }}%{% else %}${{ premio.valor_descuento }}{% endif %}
+                                    {{ sp.premio.get_tipo_display }}
+                                    {% if sp.premio.valor_descuento %}
+                                        - {% if sp.premio.tipo == 'descuento_porcentaje' %}{{ sp.premio.valor_descuento }}%{% else %}${{ sp.premio.valor_descuento }}{% endif %}
                                     {% endif %}
-                                    {% if premio.numero_cofre %}
-                                        - Cofre #{{ premio.numero_cofre }}
+                                    {% if sp.numero_cofre %}
+                                        - Cofre #{{ sp.numero_cofre }}
                                     {% endif %}
-                                    {% if premio.color %}
-                                        - {{ premio.color|upper }}
+                                    {% if sp.color %}
+                                        - {{ sp.color|upper }}
+                                    {% endif %}
+                                    {% if sp.orden %}
+                                        - Orden: {{ sp.orden }}
                                     {% endif %}
                                 </small>
                             </div>
-                            <button class="btn-eliminar" onclick="eliminarPremio({{ premio.id }})">
+                            <button class="btn-eliminar" onclick="eliminarPremioDelSorteo({{ sp.id }})">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted text-center py-5">
-                            <i class="bi bi-gift" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
-                            No hay premios configurados aún
-                        </p>
+                        <div class="text-center py-5" id="mensajeVacio">
+                            <i class="bi bi-gift" style="font-size: 3rem; color: #cbd5e1; display: block; margin-bottom: 1rem;"></i>
+                            <p class="text-muted">No hay premios configurados</p>
+                        </div>
                     {% endif %}
                 </div>
 
@@ -155,200 +227,330 @@
 
         <!-- Agregar Premios -->
         <div class="col-md-7">
-            <div class="premios-actuales">
-                <h3 class="mb-4"><i class="bi bi-plus-circle"></i> Agregar Premios</h3>
+            <div class="section-card">
+                <h4 class="mb-4"><i class="bi bi-plus-circle"></i> Agregar Premios</h4>
                 
-                <div class="text-center py-5">
-                    <i class="bi bi-gift" style="font-size: 4rem; color: #667eea; display: block; margin-bottom: 1.5rem;"></i>
-                    <p class="text-muted mb-4" style="font-size: 1.1rem;">Crea premios personalizados para tu sorteo</p>
-                    <button class="btn-agregar-premio" onclick="mostrarFormularioPersonalizado()">
-                        <i class="bi bi-plus-circle"></i> Agregar Nuevo Premio
+                <!-- Tabs -->
+                <div class="mb-4">
+                    <button class="tab-button active" onclick="mostrarTab('existentes')" id="tabExistentes">
+                        <i class="bi bi-collection"></i> Usar Premio Existente
                     </button>
+                    <button class="tab-button" onclick="mostrarTab('nuevo')" id="tabNuevo">
+                        <i class="bi bi-plus-circle"></i> Crear Nuevo Premio
+                    </button>
+                </div>
+
+                <!-- Premios Existentes -->
+                <div id="seccionExistentes">
+                    <h5 class="mb-3">Biblioteca de Premios</h5>
+                    {% if premios_disponibles %}
+                        <div class="lista-premios-scroll">
+                            {% for premio in premios_disponibles %}
+                            <div class="premio-card" onclick="seleccionarPremioExistente({{ premio.id }}, this)">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-2">{{ premio.nombre }}</h6>
+                                        <div class="mb-2">
+                                            {% if premio.tipo == 'descuento_porcentaje' or premio.tipo == 'descuento_fijo' %}
+                                                <span class="premio-badge badge-descuento">{{ premio.get_tipo_display }}</span>
+                                            {% elif premio.tipo == 'producto_gratis' %}
+                                                <span class="premio-badge badge-producto">{{ premio.get_tipo_display }}</span>
+                                            {% elif premio.tipo == 'envio_gratis' %}
+                                                <span class="premio-badge badge-envio">{{ premio.get_tipo_display }}</span>
+                                            {% else %}
+                                                <span class="premio-badge badge-cupon">{{ premio.get_tipo_display }}</span>
+                                            {% endif %}
+                                            {% if premio.valor_descuento %}
+                                                <span class="text-primary fw-bold">
+                                                    {% if premio.tipo == 'descuento_porcentaje' %}{{ premio.valor_descuento }}%{% else %}${{ premio.valor_descuento }}{% endif %}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        {% if premio.descripcion %}
+                                            <small class="text-muted">{{ premio.descripcion|truncatewords:15 }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <i class="bi bi-chevron-right text-muted"></i>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #cbd5e1;"></i>
+                            <p class="text-muted mt-3">No hay premios en la biblioteca.<br>Crea tu primer premio.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Crear Nuevo Premio -->
+                <div id="seccionNuevo" style="display: none;">
+                    <form id="formAgregarPremio" onsubmit="agregarPremio(event)">
+                        {% csrf_token %}
+                        <input type="hidden" id="premioExistenteId" name="premio_id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre del Premio *</label>
+                            <input type="text" class="form-control" id="premioNombre" name="nombre" required 
+                                   placeholder="Ej: 10% de descuento en próxima compra">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de Premio *</label>
+                            <select class="form-select" id="premioTipo" name="tipo" required onchange="actualizarCamposPremio()">
+                                <option value="">Seleccionar tipo...</option>
+                                <option value="descuento_porcentaje">💰 Descuento Porcentaje</option>
+                                <option value="descuento_fijo">💵 Descuento Fijo ($)</option>
+                                <option value="producto_gratis">🎁 Producto Gratis</option>
+                                <option value="envio_gratis">🚚 Envío Gratis</option>
+                                <option value="cupon">🎟️ Cupón</option>
+                                <option value="combo">📦 Combo</option>
+                                <option value="gracias">❤️ Gracias por Participar</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3" id="campoValorDescuento" style="display: none;">
+                                <label class="form-label fw-bold">Valor del Descuento</label>
+                                <input type="number" class="form-control" id="premioValor" name="valor_descuento" step="0.01" min="0" placeholder="Ej: 10">
+                            </div>
+
+                            <div class="col-md-6 mb-3" id="campoMinCompra" style="display: none;">
+                                <label class="form-label fw-bold">Mínimo de Compra ($)</label>
+                                <input type="number" class="form-control" id="premioMinCompra" name="minimo_compra" step="0.01" min="0" placeholder="Ej: 500">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Descripción / Condiciones</label>
+                            <textarea class="form-control" id="premioDescripcion" name="descripcion" rows="2" 
+                                      placeholder="Condiciones del premio, restricciones, etc."></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Días de Validez</label>
+                            <input type="number" class="form-control" id="premioDiasValidez" name="dias_validez" value="2" min="1" max="365">
+                        </div>
+
+                        {% if sorteo.tipo == 'cofre' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Número de Cofre</label>
+                            <input type="number" class="form-control" id="premioNumeroCofre" name="numero_cofre" min="1" max="{{ sorteo.cantidad_cofres }}" 
+                                   placeholder="Ej: 1, 2, 3...">
+                        </div>
+                        {% endif %}
+
+                        {% if sorteo.tipo == 'semaforo' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Color *</label>
+                            <select class="form-select" id="premioColor" name="color" required>
+                                <option value="">Seleccionar color...</option>
+                                <option value="verde">🟢 Verde</option>
+                                <option value="amarillo">🟡 Amarillo</option>
+                                <option value="rojo">🔴 Rojo</option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        {% if sorteo.tipo != 'semaforo' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Orden de Entrega (Opcional)</label>
+                            <input type="number" class="form-control" id="premioOrden" name="orden" value="{{ premios_sorteo|length|add:1 }}" min="1">
+                            <small class="text-muted">Si tienes múltiples ganadores, este número indica el orden de entrega. El sistema ordenará de menor a mayor.</small>
+                        </div>
+                        {% endif %}
+
+                        <button type="submit" class="btn-agregar-premio w-100">
+                            <i class="bi bi-plus-circle"></i> Agregar Premio
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Form para configurar premio existente -->
+                <div id="seccionConfigurarExistente" style="display: none;">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Configurando premio: <strong id="nombrePremioSeleccionado"></strong>
+                    </div>
+                    <form id="formUsarExistente" onsubmit="agregarPremioExistente(event)">
+                        {% csrf_token %}
+                        <input type="hidden" id="premioExistenteIdForm" name="premio_id">
+                        
+                        {% if sorteo.tipo == 'cofre' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Número de Cofre</label>
+                            <input type="number" class="form-control" name="numero_cofre" min="1" max="{{ sorteo.cantidad_cofres }}" 
+                                   placeholder="Ej: 1, 2, 3...">
+                        </div>
+                        {% endif %}
+
+                        {% if sorteo.tipo == 'semaforo' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Color *</label>
+                            <select class="form-select" name="color" required>
+                                <option value="">Seleccionar color...</option>
+                                <option value="verde">🟢 Verde</option>
+                                <option value="amarillo">🟡 Amarillo</option>
+                                <option value="rojo">🔴 Rojo</option>
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        {% if sorteo.tipo != 'semaforo' %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Orden de Entrega (Opcional)</label>
+                            <input type="number" class="form-control" name="orden" value="{{ premios_sorteo|length|add:1 }}" min="1">
+                            <small class="text-muted">Si tienes múltiples ganadores, este número indica el orden de entrega. El sistema ordenará de menor a mayor.</small>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-secondary flex-fill" onclick="cancelarSeleccion()">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </button>
+                            <button type="submit" class="btn-agregar-premio flex-fill">
+                                <i class="bi bi-check-circle"></i> Agregar al Sorteo
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Modal Agregar Premio -->
-<div class="modal fade" id="modalAgregarPremio" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable" style="max-width: 700px;">
-        <div class="modal-content" style="border: none; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem 1.75rem; border: none;">
-                <h5 class="modal-title" style="font-size: 1.4rem; font-weight: 700;"><i class="bi bi-gift-fill"></i> Agregar Nuevo Premio</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formAgregarPremio" onsubmit="agregarPremio(event)">
-                {% csrf_token %}
-                <div class="modal-body" style="padding: 1.5rem 1.75rem; max-height: calc(90vh - 180px); overflow-y: auto;">
-                    <input type="hidden" id="premioPlantilla" name="plantilla">
-                    
-                    <div class="mb-3">
-                        <label class="form-label" style="font-weight: 600; font-size: 0.9rem; color: #1f2937; margin-bottom: 0.5rem;">
-                            <i class="bi bi-tag-fill text-primary"></i> Nombre del Premio *
-                        </label>
-                        <input type="text" class="form-control" id="premioNombre" name="nombre" required 
-                               style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem 0.9rem; font-size: 0.95rem;"
-                               placeholder="Ej: 10% de descuento en próxima compra">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label" style="font-weight: 600; font-size: 0.9rem; color: #1f2937; margin-bottom: 0.5rem;">
-                            <i class="bi bi-box-seam text-success"></i> Tipo de Premio *
-                        </label>
-                        <select class="form-select" id="premioTipo" name="tipo" required onchange="actualizarCamposPremio()"
-                                style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem 0.9rem; font-size: 0.95rem;">
-                            <option value="">Seleccionar tipo...</option>
-                            <option value="descuento_porcentaje">💰 Descuento Porcentaje</option>
-                            <option value="descuento_fijo">💵 Descuento Fijo ($)</option>
-                            <option value="producto_gratis">🎁 Producto Gratis</option>
-                            <option value="envio_gratis">🚚 Envío Gratis</option>
-                            <option value="cupon">🎟️ Cupón</option>
-                            <option value="combo">📦 Combo</option>
-                        </select>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3" id="campoValorDescuento" style="display: none;">
-                            <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
-                                <i class="bi bi-percent text-warning"></i> Valor del Descuento
-                            </label>
-                            <input type="number" class="form-control" id="premioValor" name="valor_descuento" step="0.01" min="0"
-                                   style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;" placeholder="Ej: 10">
-                        </div>
-
-                        <div class="col-md-6 mb-3" id="campoMinCompra" style="display: none;">
-                            <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
-                                <i class="bi bi-cash text-info"></i> Mínimo de Compra ($)
-                            </label>
-                            <input type="number" class="form-control" id="premioMinCompra" name="minimo_compra" step="0.01" min="0"
-                                   style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;" placeholder="Ej: 500">
-                        </div>
-                    </div>
-
-                    <div class="mb-3" id="campoDescripcion">
-                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
-                            <i class="bi bi-card-text text-secondary"></i> Descripción / Condiciones
-                        </label>
-                        <textarea class="form-control" id="premioDescripcion" name="descripcion" rows="2"
-                                  style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem; font-size: 0.9rem;"
-                                  placeholder="Condiciones del premio, restricciones, etc."></textarea>
-                    </div>
-
-                    {% if sorteo.tipo == 'cofre' %}
-                    <div class="mb-3">
-                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
-                            <i class="bi bi-123 text-primary"></i> Número de Cofre (opcional)
-                        </label>
-                        <input type="number" class="form-control" id="premioNumeroCofre" name="numero_cofre" min="1" max="10"
-                               style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;" placeholder="Ej: 1, 2, 3...">
-                    </div>
-                    {% endif %}
-
-                    {% if sorteo.tipo == 'semaforo' %}
-                    <div class="mb-3">
-                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
-                            <i class="bi bi-stoplights text-danger"></i> Color del Semáforo
-                        </label>
-                        <select class="form-select" id="premioColor" name="color"
-                                style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;">
-                            <option value="">Seleccionar color...</option>
-                            <option value="rojo">🔴 Rojo (60% probabilidad)</option>
-                            <option value="amarillo">🟡 Amarillo (30% probabilidad)</option>
-                            <option value="verde">🟢 Verde (10% probabilidad)</option>
-                        </select>
-                    </div>
-                    {% endif %}
-
-                    <div class="mb-3">
-                        <label class="form-label" style="font-weight: 600; color: #1f2937; font-size: 0.85rem;">
-                            <i class="bi bi-calendar-check text-success"></i> Validez del Premio
-                        </label>
-                        <select class="form-select" id="premioValidez" name="dias_validez"
-                                style="border-radius: 8px; border: 2px solid #e5e7eb; padding: 0.6rem;">
-                            <option value="1">24 horas ⚡</option>
-                            <option value="2" selected>48 horas 🔥</option>
-                            <option value="3">72 horas ✨</option>
-                            <option value="7">7 días 📅</option>
-                            <option value="15">15 días 📆</option>
-                            <option value="30">30 días 🗓️</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer" style="background: #f9fafb; padding: 1rem 1.75rem; border: none; gap: 0.75rem;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 600;">
-                        <i class="bi bi-x-circle"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; color: white; border-radius: 8px; padding: 0.6rem 2rem; font-weight: 700; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-                        <i class="bi bi-check-circle-fill"></i> Agregar Premio
-                    </button>
-                </div>
-            </form>
-        </div>
+    
     </div>
 </div>
 
 <script>
-const sorteoId = {{ sorteo.id }};
-const sorteoTipo = "{{ sorteo.tipo }}";
-const cantidadCofres = {{ sorteo.cantidad_cofres }};
-let premiosActualesCount = {{ premios|length }};
+let premioSeleccionadoId = null;
 
-// Determinar cantidad máxima según tipo
-function getMaxPremios() {
-    if (sorteoTipo === 'cofre') return cantidadCofres;
-    if (sorteoTipo === 'semaforo') return 3;
-    if (sorteoTipo === 'ranking') return 3;
-    return null; // Sin límite para ruleta y caja misteriosa
+// Función para mostrar mensajes
+function mostrarMensaje(message, type) {
+    showDjangoToast(message, type);
 }
 
-function actualizarContador() {
-    const maxPremios = getMaxPremios();
-    const contador = document.getElementById('contadorPremios');
+function mostrarTab(tab) {
+    // Actualizar botones
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
     
-    if (maxPremios) {
-        const completo = premiosActualesCount >= maxPremios;
-        
-        contador.className = `badge fs-6 ${completo ? 'bg-success' : 'bg-warning text-dark'}`;
-        contador.innerHTML = `${premiosActualesCount} / ${maxPremios}`;
-        
-        // Deshabilitar botón si se alcanzó el límite
-        const btnAgregar = document.querySelector('.btn-agregar-premio');
-        if (btnAgregar) {
-            btnAgregar.disabled = completo;
-            if (completo) {
-                btnAgregar.innerHTML = '<i class="bi bi-check-circle"></i> Premios Completos';
-                btnAgregar.style.opacity = '0.6';
-                btnAgregar.style.cursor = 'not-allowed';
-            }
-        }
+    if (tab === 'existentes') {
+        document.getElementById('tabExistentes').classList.add('active');
+        document.getElementById('seccionExistentes').style.display = 'block';
+        document.getElementById('seccionNuevo').style.display = 'none';
+        document.getElementById('seccionConfigurarExistente').style.display = 'none';
     } else {
-        contador.className = 'badge bg-info fs-6';
-        contador.innerHTML = `${premiosActualesCount} premios`;
-        alerta.style.display = 'none';
+        document.getElementById('tabNuevo').classList.add('active');
+        document.getElementById('seccionExistentes').style.display = 'none';
+        document.getElementById('seccionNuevo').style.display = 'block';
+        document.getElementById('seccionConfigurarExistente').style.display = 'none';
     }
 }
 
-// Inicializar al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    actualizarContador();
-});
-
-function mostrarFormularioPersonalizado() {
-    const maxPremios = getMaxPremios();
-    if (maxPremios && premiosActualesCount >= maxPremios) {
-        let detalle = '';
-        if (sorteoTipo === 'cofre') detalle = 'Uno por cada cofre.';
-        else if (sorteoTipo === 'semaforo') detalle = 'Uno por cada color.';
-        else if (sorteoTipo === 'ranking') detalle = 'Uno por cada posición.';
-        showToast(`Ya agregaste ${maxPremios} premios. ${detalle} Límite alcanzado`, 'warning', 'Límite Alcanzado');
-        return;
-    }
+function seleccionarPremioExistente(premioId, elemento) {
+    premioSeleccionadoId = premioId;
     
-    document.getElementById('formAgregarPremio').reset();
-    actualizarCamposPremio();
-    const modal = new bootstrap.Modal(document.getElementById('modalAgregarPremio'));
+    // Remover clase activa de otros premios
+    document.querySelectorAll('.premio-card').forEach(card => card.classList.remove('premio-activo'));
+    elemento.classList.add('premio-activo');
+    
+    // Mostrar formulario de configuración
+    document.getElementById('seccionExistentes').style.display = 'none';
+    document.getElementById('seccionConfigurarExistente').style.display = 'block';
+    document.getElementById('premioExistenteIdForm').value = premioId;
+    document.getElementById('nombrePremioSeleccionado').textContent = elemento.querySelector('h6').textContent;
+}
+
+function cancelarSeleccion() {
+    premioSeleccionadoId = null;
+    document.querySelectorAll('.premio-card').forEach(card => card.classList.remove('premio-activo'));
+    document.getElementById('seccionExistentes').style.display = 'block';
+    document.getElementById('seccionConfigurarExistente').style.display = 'none';
+}
+
+function agregarPremio(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    
+    fetch("{% url 'agregar_premio' sorteo.id %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje(data.mensaje, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            mostrarMensaje(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al agregar premio', 'danger');
+    });
+}
+
+function agregarPremioExistente(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    
+    fetch("{% url 'agregar_premio' sorteo.id %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje(data.mensaje, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            mostrarMensaje(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al agregar premio', 'danger');
+    });
+}
+
+let premioIdAEliminar = null;
+
+function eliminarPremioDelSorteo(premioId) {
+    premioIdAEliminar = premioId;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminarPremio'));
     modal.show();
+}
+
+function confirmarEliminarPremio() {
+    if (!premioIdAEliminar) return;
+    
+    fetch(`/sorteos/{{ sorteo.id }}/premios/${premioIdAEliminar}/eliminar/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarMensaje(data.mensaje, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            mostrarMensaje(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarMensaje('Error al eliminar premio', 'danger');
+    });
 }
 
 function actualizarCamposPremio() {
@@ -356,7 +558,7 @@ function actualizarCamposPremio() {
     const campoValor = document.getElementById('campoValorDescuento');
     const campoMin = document.getElementById('campoMinCompra');
     
-    if (tipo.includes('descuento')) {
+    if (tipo === 'descuento_porcentaje' || tipo === 'descuento_fijo') {
         campoValor.style.display = 'block';
         campoMin.style.display = 'block';
     } else {
@@ -365,81 +567,93 @@ function actualizarCamposPremio() {
     }
 }
 
-function agregarPremio(event) {
-    event.preventDefault();
+function actualizarContador() {
+    const contador = document.querySelectorAll('.premio-item').length;
+    const badge = document.getElementById('contadorPremios');
+    badge.textContent = `${contador} premios`;
     
-    // Validar límite antes de enviar
-    const maxPremios = getMaxPremios();
-    if (maxPremios && premiosActualesCount >= maxPremios) {
-        let detalle = '';
-        if (sorteoTipo === 'cofre') detalle = 'Uno por cada cofre.';
-        else if (sorteoTipo === 'semaforo') detalle = 'Uno por cada color.';
-        else if (sorteoTipo === 'ranking') detalle = 'Uno por cada posición.';
-        showToast(`Ya agregaste ${maxPremios} premios. ${detalle} Límite alcanzado`, 'error', 'Límite Alcanzado');
-        return;
-    }
-    
-    const formData = new FormData(event.target);
-    // El CSRF token ya está en el formulario como campo hidden
-    
-    fetch(`/sorteos/${sorteoId}/premios/agregar/`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.mensaje || 'Premio agregado exitosamente', 'success', 'Agregado');
-            bootstrap.Modal.getInstance(document.getElementById('modalAgregarPremio')).hide();
-            location.reload();
-        } else {
-            if (data.limite_alcanzado) {
-                showToast(data.error, 'warning', 'Límite Alcanzado');
-            } else {
-                showToast(data.error || 'Error al agregar premio', 'error');
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error al agregar premio', 'error');
-    });
+    {% if sorteo.tipo == 'cofre' %}
+        badge.style.background = contador >= {{ sorteo.cantidad_cofres }} ? '#ef4444' : '#10b981';
+    {% elif sorteo.tipo == 'semaforo' %}
+        badge.style.background = contador >= 3 ? '#ef4444' : '#10b981';
+        actualizarColoresDisponibles();
+    {% elif sorteo.tipo == 'ranking' %}
+        badge.style.background = contador >= 3 ? '#ef4444' : '#10b981';
+    {% endif %}
 }
 
-function eliminarPremio(premioId) {
-    // Mostrar toast de confirmación
-    const maxPremios = getMaxPremios();
-    const faltan = maxPremios ? maxPremios - premiosActualesCount + 1 : 0;
+{% if sorteo.tipo == 'semaforo' %}
+function actualizarColoresDisponibles() {
+    // Obtener colores ya utilizados
+    const coloresUtilizados = [];
+    {% for sp in premios_sorteo %}
+        {% if sp.color %}
+            coloresUtilizados.push('{{ sp.color }}');
+        {% endif %}
+    {% endfor %}
     
-    if (maxPremios && faltan > 0) {
-        let detalle = '';
-        if (sorteoTipo === 'cofre') detalle = 'Uno por cada cofre.';
-        else if (sorteoTipo === 'semaforo') detalle = 'Uno por cada color.';
-        else if (sorteoTipo === 'ranking') detalle = 'Uno por cada posición.';
-        showToast(`Debes agregar ${maxPremios} premios. ${detalle} Faltarán ${faltan}`, 'warning', 'Eliminar Premio');
-    }
+    // Actualizar select de nuevo premio
+    const selectNuevo = document.getElementById('premioColor');
+    const selectExistente = document.querySelector('#seccionConfigurarExistente select[name="color"]');
     
-    fetch(`/sorteos/premios/${premioId}/eliminar/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+    [selectNuevo, selectExistente].forEach(select => {
+        if (!select) return;
+        
+        // Resetear opciones
+        const options = select.querySelectorAll('option[value]');
+        options.forEach(option => {
+            const valor = option.value;
+            if (valor && coloresUtilizados.includes(valor)) {
+                option.disabled = true;
+                option.textContent = option.textContent.replace(' (Ocupado)', '') + ' (Ocupado)';
+            } else {
+                option.disabled = false;
+                option.textContent = option.textContent.replace(' (Ocupado)', '');
+            }
+        });
+        
+        // Si el color seleccionado está ocupado, resetear
+        if (select.value && coloresUtilizados.includes(select.value)) {
+            select.value = '';
         }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.mensaje || 'Premio eliminado', 'success', 'Eliminado');
-            document.querySelector(`[data-premio-id="${premioId}"]`).remove();
-            premiosActualesCount--;
-            actualizarContador();
-        } else {
-            showToast(data.error || 'Error al eliminar', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('Error al eliminar premio', 'error');
     });
 }
+{% endif %}
+
+// Actualizar contador al cargar
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarContador();
+    {% if sorteo.tipo == 'semaforo' %}
+    actualizarColoresDisponibles();
+    {% endif %}
+});
 </script>
+
+<!-- Modal de Confirmación para Eliminar Premio -->
+<div class="modal fade" id="modalEliminarPremio" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash-fill"></i> Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem; color: #ef4444;"></i>
+                <h5 class="mt-3">¿Eliminar este premio del sorteo?</h5>
+                <p class="text-muted">Esta acción no se puede deshacer. El premio seguirá en tu biblioteca para usarlo en otros sorteos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminarPremio()" data-bs-dismiss="modal">
+                    <i class="bi bi-trash-fill"></i> Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

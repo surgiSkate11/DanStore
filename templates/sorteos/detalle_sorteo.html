@@ -95,7 +95,7 @@
     }
     
     .participante-item {
-        padding: 1rem;
+        padding: 0.85rem 1rem;
         border-bottom: 1px solid #e5e7eb;
         transition: background 0.2s ease;
     }
@@ -103,11 +103,71 @@
     .participante-item:hover {
         background: #f9fafb;
     }
+
+    .participante-item:last-child {
+        border-bottom: none;
+    }
     
     .premio-badge {
         padding: 0.5rem 1rem;
         border-radius: 10px;
         font-weight: 600;
+    }
+
+    /* Paginación de participantes */
+    .participantes-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 0.75rem;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .participantes-pagination button {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        padding: 0;
+    }
+
+    .participantes-pagination button:hover:not(:disabled) {
+        background: #667eea;
+        color: #fff;
+    }
+
+    .participantes-pagination button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .participantes-pagination button i {
+        font-size: 0.85rem;
+        color: #374151;
+    }
+
+    .participantes-pagination button:hover:not(:disabled) i {
+        color: #fff;
+    }
+
+    .participantes-pagination .page-info {
+        font-size: 0.8rem;
+        color: #6b7280;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: center;
+    }
+
+    .participantes-list-container {
+        min-height: 280px;
     }
     
     /* Sección de Ganadores Prominente */
@@ -115,48 +175,143 @@
         background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
         border: 3px solid #f59e0b;
         border-radius: 20px;
-        padding: 2rem;
+        padding: 1.5rem;
         margin-bottom: 2rem;
         box-shadow: 0 10px 40px rgba(245, 158, 11, 0.2);
     }
-    
+
+    .ganadores-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .ganadores-header .trophy {
+        font-size: 2rem;
+    }
+
+    .ganadores-header h3 {
+        font-weight: 800;
+        color: #92400e;
+        font-size: 1.5rem;
+        margin: 0;
+    }
+
+    .ganadores-header p {
+        color: #b45309;
+        font-weight: 500;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .ganadores-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.25rem;
+        max-width: 100%;
+        padding: 0.5rem;
+    }
+
     .ganadores-section .ganador-card {
         background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-radius: 16px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
-        border-left: 5px solid #f59e0b;
+        border-left: 4px solid #f59e0b;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-width: 260px;
+        max-width: 340px;
+        flex: 0 1 auto;
     }
     
     .ganadores-section .ganador-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
     }
     
     .ganadores-section .ganador-posicion {
         background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
-        width: 50px;
-        height: 50px;
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         font-weight: 800;
-        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .ganador-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .ganador-info h5 {
+        font-weight: 700;
+        color: #1f2937;
+        font-size: 1rem;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .ganador-info .fecha {
+        font-size: 0.75rem;
+        color: #6b7280;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .ganador-info .fecha i {
+        font-size: 0.65rem;
     }
     
     .ganadores-section .ganador-premio {
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
-        padding: 0.5rem 1.25rem;
-        border-radius: 25px;
+        padding: 0.35rem 0.85rem;
+        border-radius: 20px;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        width: fit-content;
+    }
+
+    .ganadores-section .ganador-premio i {
+        font-size: 0.75rem;
+    }
+
+    @media (max-width: 600px) {
+        .ganadores-grid {
+            flex-direction: column;
+            align-items: center;
+        }
+        .ganadores-section .ganador-card {
+            width: 100%;
+            max-width: 100%;
+            min-width: auto;
+        }
+        .ganadores-header h3 {
+            font-size: 1.2rem;
+        }
+        .ganadores-header .trophy {
+            font-size: 1.5rem;
+        }
     }
     
     /* Criterios mejorados */
@@ -300,9 +455,9 @@
                 <i class="bi bi-people-fill"></i> Gestionar Participantes
             </a>
             {% endif %}
-            <a href="{% url 'ejecutar_sorteo' sorteo.id %}" class="btn btn-action-success">
+            <button onclick="ejecutarSorteo()" class="btn btn-action-success">
                 <i class="bi bi-play-circle-fill"></i> Ejecutar Sorteo
-            </a>
+            </button>
         </div>
         {% endif %}
     </div>
@@ -310,38 +465,32 @@
     <!-- Sección de Ganadores Prominente (solo si hay resultados) -->
     {% if resultados %}
     <div class="ganadores-section">
-        <div class="d-flex align-items-center justify-content-center mb-4">
-            <span style="font-size: 3rem; margin-right: 1rem;">🏆</span>
+        <div class="ganadores-header">
+            <span class="trophy">🏆</span>
             <div class="text-center">
-                <h3 class="mb-0" style="font-weight: 800; color: #92400e; font-size: 2rem;">¡Ganador{% if resultados|length > 1 %}es{% endif %} del Sorteo!</h3>
-                <p class="mb-0" style="color: #b45309; font-weight: 500;">{{ sorteo.nombre }}</p>
+                <h3>¡Ganador{% if ganadores_unicos|length > 1 %}es{% endif %} del Sorteo!</h3>
+                <p>{{ sorteo.nombre }}</p>
             </div>
-            <span style="font-size: 3rem; margin-left: 1rem;">🏆</span>
+            <span class="trophy">🏆</span>
         </div>
         
-        <div class="row justify-content-center">
-            {% for resultado in resultados %}
-            <div class="col-md-{% if resultados|length == 1 %}6{% elif resultados|length == 2 %}5{% else %}4{% endif %} mb-3">
-                <div class="ganador-card">
-                    <div class="d-flex align-items-center">
-                        <div class="ganador-posicion me-3">
-                            {% if resultado.posicion %}
-                                {{ resultado.posicion }}°
-                            {% else %}
-                                🎉
-                            {% endif %}
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="mb-1" style="font-weight: 700; color: #1f2937;">{{ resultado.cliente.nombre }}</h5>
-                            <small class="text-muted d-block mb-2">
-                                <i class="bi bi-calendar-check"></i> {{ resultado.fecha_resultado|date:"d/m/Y H:i" }}
-                            </small>
-                            {% if resultado.premio %}
-                            <span class="ganador-premio">
-                                <i class="bi bi-gift-fill"></i> {{ resultado.premio.nombre }}
-                            </span>
-                            {% endif %}
-                        </div>
+        <div class="ganadores-grid">
+            {% for ganador in ganadores_unicos %}
+            <div class="ganador-card">
+                <div class="ganador-posicion">
+                    🎉
+                </div>
+                <div class="ganador-info">
+                    <h5>{{ ganador.cliente.nombre }}</h5>
+                    <div class="fecha">
+                        <i class="bi bi-calendar-check"></i> {{ ganador.fecha|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for premio in ganador.premios %}
+                        <span class="ganador-premio">
+                            <i class="bi bi-gift-fill"></i> {{ premio }}
+                        </span>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -377,30 +526,17 @@
                 </div>
                 <div class="card-body p-0">
                     {% if participantes %}
-                    <div style="max-height: {% if resultados %}250px{% else %}400px{% endif %}; overflow-y: auto;">
-                        {% for participante in participantes %}
-                        <div class="participante-item">
-                            <div class="d-flex align-items-center">
-                                <div class="me-3">
-                                    <i class="bi bi-person-circle" style="font-size: 2rem; color: #667eea;"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <strong>{{ participante.nombre }}</strong>
-                                    <br>
-                                    <small class="text-muted">
-                                        <i class="bi bi-telephone"></i> {{ participante.telefono|default:"N/A" }}
-                                    </small>
-                                </div>
-                                {% if resultados %}
-                                {% for resultado in resultados %}
-                                    {% if resultado.cliente.id == participante.id %}
-                                    <span class="badge bg-success"><i class="bi bi-trophy-fill"></i> Ganador</span>
-                                    {% endif %}
-                                {% endfor %}
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
+                    <div class="participantes-list-container" id="participantesList">
+                        <!-- Los participantes se cargan por JavaScript -->
+                    </div>
+                    <div class="participantes-pagination">
+                        <button id="prevPartPage" onclick="prevPartPage()" disabled>
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <span class="page-info" id="partPageInfo">1/1</span>
+                        <button id="nextPartPage" onclick="nextPartPage()">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
                     </div>
                     {% else %}
                     <div class="p-4 text-center text-muted">
@@ -487,29 +623,31 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="mb-0"><i class="bi bi-gift"></i> Premios Configurados</h6>
+                    {% if not sorteo.completado %}
                     <a href="{% url 'gestionar_premios' sorteo.id %}" class="btn btn-sm btn-primary">
                         <i class="bi bi-plus-circle"></i> Gestionar
                     </a>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     {% if premios %}
-                    {% for premio in premios %}
+                    {% for sorteo_premio in premios %}
                     <div class="mb-3 pb-3 border-bottom">
-                        <h6 class="mb-1">{{ premio.nombre }}</h6>
+                        <h6 class="mb-1">{{ sorteo_premio.premio.nombre }}</h6>
                         <p class="mb-1 small">
-                            <span class="badge bg-info">{{ premio.get_tipo_display }}</span>
-                            {% if premio.numero_cofre %}
-                            <span class="badge bg-secondary">Cofre #{{ premio.numero_cofre }}</span>
+                            <span class="badge bg-info">{{ sorteo_premio.premio.get_tipo_display }}</span>
+                            {% if sorteo_premio.numero_cofre %}
+                            <span class="badge bg-secondary">Cofre #{{ sorteo_premio.numero_cofre }}</span>
                             {% endif %}
-                            {% if premio.color %}
-                            <span class="badge" style="background: {% if premio.color == 'rojo' %}#ef4444{% elif premio.color == 'amarillo' %}#f59e0b{% else %}#10b981{% endif %};">
-                                {{ premio.color|upper }}
+                            {% if sorteo_premio.color %}
+                            <span class="badge" style="background: {% if sorteo_premio.color == 'rojo' %}#ef4444{% elif sorteo_premio.color == 'amarillo' %}#f59e0b{% else %}#10b981{% endif %};">
+                                {{ sorteo_premio.color|upper }}
                             </span>
                             {% endif %}
                         </p>
-                        {% if premio.valor_descuento %}
+                        {% if sorteo_premio.premio.valor_descuento %}
                         <p class="mb-0 small text-success">
-                            <strong>Valor: {% if premio.tipo == 'descuento_porcentaje' %}{{ premio.valor_descuento }}%{% else %}${{ premio.valor_descuento }}{% endif %}</strong>
+                            <strong>Valor: {% if sorteo_premio.premio.tipo == 'descuento_porcentaje' %}{{ sorteo_premio.premio.valor_descuento }}%{% else %}${{ sorteo_premio.premio.valor_descuento }}{% endif %}</strong>
                         </p>
                         {% endif %}
                     </div>
@@ -528,4 +666,113 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Configuración del sorteo
+    const sorteoTipo = "{{ sorteo.tipo }}";
+    const sorteoUrl = "{% url 'ejecutar_sorteo' sorteo.id %}";
+    const premiosCount = {{ premios.count }};
+    const premiosAsignados = {{ premios_asignados|default:0 }};
+    const premiosDisponibles = premiosCount - premiosAsignados;
+    
+    // Función para ejecutar sorteo con validación
+    function ejecutarSorteo() {
+        // Validar premios para ranking (necesita 3)
+        if (sorteoTipo === 'ranking') {
+            if (premiosDisponibles === 0) {
+                if (typeof showToast === 'function') {
+                    showToast('Debes agregar premios antes de iniciar el sorteo', 'warning');
+                }
+                return;
+            }
+            if (premiosDisponibles < 3) {
+                if (typeof showToast === 'function') {
+                    showToast('Necesitas 3 premios para el Top 3. Tienes ' + premiosDisponibles, 'warning');
+                }
+                return;
+            }
+        } else {
+            // Para otros tipos, validar que haya al menos 1 premio
+            if (premiosDisponibles === 0) {
+                if (typeof showToast === 'function') {
+                    showToast('Debes agregar premios para el sorteo', 'warning');
+                }
+                return;
+            }
+        }
+        
+        // Si pasa las validaciones, redirigir
+        window.location.href = sorteoUrl;
+    }
+
+    // Datos de participantes y ganadores
+    const participantesData = [
+        {% for participante in participantes %}
+        {
+            id: {{ participante.id }},
+            nombre: "{{ participante.nombre|escapejs }}",
+            telefono: "{{ participante.telefono|default:'N/A'|escapejs }}",
+            esGanador: {% if resultados %}[{% for r in resultados %}{{ r.cliente.id }}{% if not forloop.last %},{% endif %}{% endfor %}].includes({{ participante.id }}){% else %}false{% endif %}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    let currentPartPage = 0;
+    const itemsPerPartPage = 5;
+
+    function renderParticipantes() {
+        const container = document.getElementById('participantesList');
+        if (!container || participantesData.length === 0) return;
+
+        const totalPages = Math.ceil(participantesData.length / itemsPerPartPage);
+        const start = currentPartPage * itemsPerPartPage;
+        const end = Math.min(start + itemsPerPartPage, participantesData.length);
+        const pageItems = participantesData.slice(start, end);
+
+        container.innerHTML = pageItems.map(p => `
+            <div class="participante-item">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="bi bi-person-circle" style="font-size: 2rem; color: #667eea;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong>${p.nombre}</strong>
+                        <br>
+                        <small class="text-muted">
+                            <i class="bi bi-telephone"></i> ${p.telefono}
+                        </small>
+                    </div>
+                    ${p.esGanador ? '<span class="badge bg-success"><i class="bi bi-trophy-fill"></i> Ganador</span>' : ''}
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('partPageInfo').textContent = `${currentPartPage + 1}/${totalPages}`;
+        document.getElementById('prevPartPage').disabled = currentPartPage === 0;
+        document.getElementById('nextPartPage').disabled = currentPartPage >= totalPages - 1;
+    }
+
+    function prevPartPage() {
+        if (currentPartPage > 0) {
+            currentPartPage--;
+            renderParticipantes();
+        }
+    }
+
+    function nextPartPage() {
+        const totalPages = Math.ceil(participantesData.length / itemsPerPartPage);
+        if (currentPartPage < totalPages - 1) {
+            currentPartPage++;
+            renderParticipantes();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (participantesData.length > 0) {
+            renderParticipantes();
+        }
+    });
+</script>
 {% endblock %}

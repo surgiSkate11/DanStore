@@ -27,5 +27,5 @@ urlpatterns = [
     # Gestión de premios
     path('<int:sorteo_id>/premios/', views.gestionar_premios, name='gestionar_premios'),
     path('<int:sorteo_id>/premios/agregar/', views.agregar_premio, name='agregar_premio'),
-    path('premios/<int:premio_id>/eliminar/', views.eliminar_premio, name='eliminar_premio'),
+    path('<int:sorteo_id>/premios/<int:premio_id>/eliminar/', views.eliminar_premio, name='eliminar_premio'),
 ]

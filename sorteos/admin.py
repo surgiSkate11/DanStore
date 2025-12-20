@@ -1,11 +1,12 @@
 from django.contrib import admin
-from .models import Sorteo, Participante, Premio, ResultadoSorteo, Cupon
+from .models import Sorteo, Participante, Premio, SorteoPremio, ResultadoSorteo, Cupon
 
 
-class PremioInline(admin.TabularInline):
-    model = Premio
+class SorteoPremioInline(admin.TabularInline):
+    model = SorteoPremio
     extra = 1
-    fields = ['nombre', 'tipo', 'valor_descuento', 'numero_cofre', 'color', 'cantidad_disponible']
+    fields = ['premio', 'numero_cofre', 'color', 'orden', 'asignado']
+    raw_id_fields = ['premio']
 
 
 class ParticipanteInline(admin.TabularInline):
@@ -26,7 +27,7 @@ class SorteoAdmin(admin.ModelAdmin):
     list_display = ['nombre', 'tipo', 'criterio', 'cantidad_participantes', 'activo', 'completado', 'fecha_creacion']
     list_filter = ['tipo', 'criterio', 'activo', 'completado', 'fecha_creacion']
     search_fields = ['nombre', 'descripcion']
-    inlines = [PremioInline, ParticipanteInline, ResultadoInline]
+    inlines = [SorteoPremioInline, ParticipanteInline, ResultadoInline]
     readonly_fields = ['fecha_creacion', 'cantidad_participantes']
     
     fieldsets = (
@@ -47,9 +48,18 @@ class SorteoAdmin(admin.ModelAdmin):
 
 @admin.register(Premio)
 class PremioAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'tipo', 'sorteo', 'valor_descuento', 'numero_cofre', 'color', 'asignado']
-    list_filter = ['tipo', 'asignado', 'sorteo']
+    list_display = ['nombre', 'tipo', 'valor_descuento', 'creado_en']
+    list_filter = ['tipo', 'creado_en']
     search_fields = ['nombre', 'descripcion']
+    readonly_fields = ['creado_en']
+
+
+@admin.register(SorteoPremio)
+class SorteoPremioAdmin(admin.ModelAdmin):
+    list_display = ['sorteo', 'premio', 'numero_cofre', 'color', 'orden', 'asignado']
+    list_filter = ['asignado', 'sorteo__tipo']
+    search_fields = ['sorteo__nombre', 'premio__nombre']
+    raw_id_fields = ['sorteo', 'premio']
 
 
 @admin.register(ResultadoSorteo)

@@ -298,15 +298,15 @@
     {% endif %}
     
     <!-- Main Content -->
-    <main class="{% if user.is_authenticated %}container mt-4{% endif %}">
+    <main class="{% if user.is_authenticated %}{% if request.resolver_match.url_name != 'gestionar_premios' %}container mt-4{% endif %}{% endif %}">
         {% block content %}{% endblock %}
     </main>
     
     <!-- Footer -->
-    {% if user.is_authenticated %}
-    <footer class="mt-5 py-3 bg-light">
+    {% if user.is_authenticated and url_name != 'gestionar_premios' %}
+    <footer class="mt-2">
         <div class="container text-center">
-            <p class="text-muted mb-0">
+            <p class="text-white mb-0" style="font-size: 0.875rem; opacity: 0.9;">
                 &copy; 2025 Tiendita - Sistema de Gestión de Inventario
             </p>
         </div>
@@ -418,7 +418,7 @@
             
             // Calcular duración según longitud del mensaje
             const palabras = message.split(' ').length;
-            const duracion = Math.min(Math.max(2000 + (palabras * 300), 3000), 8000);
+            const duracion = Math.min(Math.max(3000 + (palabras * 400), 4000), 10000);
             
             const toast = document.createElement('div');
             toast.className = 'toast-notification';
