@@ -109,8 +109,8 @@
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         border: none;
         color: white;
-        font-size: 1.1rem;
-        padding: 0.6rem 2rem;
+        font-size: 1.2rem;
+        padding: 0.8rem 2.5rem;
         border-radius: 50px;
         box-shadow: 0 10px 25px rgba(16,185,129,0.4);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -132,14 +132,14 @@
         cursor: not-allowed;
     }
     
-    .btn-success {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    .btn-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important;
         border: none !important;
         color: white !important;
         font-size: 1.1rem !important;
         padding: 0.6rem 2rem !important;
         border-radius: 50px !important;
-        box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4) !important;
+        box-shadow: 0 10px 25px rgba(255, 193, 7, 0.4) !important;
         font-weight: 700 !important;
         text-transform: uppercase !important;
         margin: 0.3rem !important;
@@ -186,16 +186,17 @@
         border-radius: 15px;
         padding: 2rem 1.5rem;
         margin: 1rem 0;
-        min-height: 120px;
+        min-height: 140px; /* 🔑 Altura fija para evitar colapso */
         display: flex;
         align-items: center;
         justify-content: center;
         border: 2px solid rgba(255,255,255,0.1);
         backdrop-filter: blur(5px);
+        overflow: hidden;
     }
     
     .nombre-girando {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 900;
         color: #fff;
         text-shadow: 0 2px 10px rgba(0,0,0,0.5);
@@ -203,10 +204,13 @@
         font-family: 'Segoe UI', sans-serif;
         letter-spacing: 0.5px;
         line-height: 1.4;
+        word-wrap: break-word;
+        max-width: 100%;
+        text-align: center;
     }
     
     .nombre-girando.instruccion {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         color: rgba(255,255,255,0.95);
         opacity: 0.95;
     }
@@ -215,48 +219,26 @@
         animation: nombre-spin 0.1s ease infinite;
         color: #feca57;
         text-shadow: 0 0 20px rgba(254, 202, 87, 0.8);
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
     
     .nombre-girando.ganador {
         color: #ffd700;
-        font-size: 2rem;
+        font-size: 1.8rem;
         animation: ganador-glow-epico 1.5s ease infinite;
         text-shadow: 0 0 40px rgba(255,215,0,1);
-        transform: scale(1.3);
+        transform: scale(1.15);
     }
     
     @keyframes ganador-glow-epico {
         0%, 100% { 
             text-shadow: 0 0 40px rgba(255,215,0,1), 0 0 60px rgba(255,215,0,0.8);
-            transform: scale(1.3);
+            transform: scale(1.15);
         }
         50% { 
             text-shadow: 0 0 60px rgba(255,215,0,1), 0 0 100px rgba(255,215,0,0.9);
-            transform: scale(1.4);
+            transform: scale(1.2);
         }
-    }
-    
-    .ganadores-lista {
-        background: rgba(0,0,0,0.4);
-        border-radius: 15px;
-        padding: 1rem;
-        margin-top: 1rem;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .ganador-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.8rem;
-        margin: 0.5rem 0;
-        background: rgba(255,255,255,0.1);
-        border-radius: 10px;
-        color: #fff;
-        border: 1px solid rgba(255,255,255,0.05);
-        transition: all 0.3s ease;
     }
     
     .semaforo-post {
@@ -277,7 +259,7 @@
     }
     
     .semaforo-post.zoom-effect {
-        transform: scale(1.1) translateY(-8px);
+        transform: scale(1.15) translateY(-10px);
         box-shadow: 0 60px 120px rgba(0,0,0,0.7);
         border: 3px solid rgba(255,255,255,0.6);
     }
@@ -290,10 +272,11 @@
         align-items: center;
         justify-content: center;
         font-size: 3.5rem;
-        transition: all 0.4s ease;
-        cursor: pointer;
+        transition: all 0.3s ease;
+        cursor: default;
         border: 4px solid rgba(255,255,255,0.2);
         box-shadow: inset 0 -10px 20px rgba(0,0,0,0.3), 0 8px 20px rgba(0,0,0,0.2);
+        opacity: 0.4;
     }
     
     .luz-roja {
@@ -305,6 +288,7 @@
         box-shadow: 0 0 100px rgba(255,0,0,1), 0 0 160px rgba(255,0,0,0.8);
         animation: pulse-red 1.2s ease infinite;
         transform: scale(1.08);
+        opacity: 1;
     }
     
     @keyframes pulse-red {
@@ -327,6 +311,7 @@
         box-shadow: 0 0 100px rgba(255,204,0,1), 0 0 160px rgba(255,204,0,0.8);
         animation: pulse-yellow 1.2s ease infinite;
         transform: scale(1.08);
+        opacity: 1;
     }
     
     @keyframes pulse-yellow {
@@ -349,6 +334,7 @@
         box-shadow: 0 0 100px rgba(0,255,0,1), 0 0 160px rgba(0,255,0,0.8);
         animation: pulse-green 1.2s ease infinite;
         transform: scale(1.08);
+        opacity: 1;
     }
     
     @keyframes pulse-green {
@@ -407,6 +393,149 @@
         color: #5cb85c;
         text-shadow: 0 0 20px rgba(92,184,92,0.8);
     }
+
+    /* Modal de Ganador */
+    .modal-ganador {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.85);
+        backdrop-filter: blur(10px);
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .modal-ganador-content {
+        position: relative;
+        background: linear-gradient(135deg, rgba(30,30,60,0.95) 0%, rgba(20,20,40,0.95) 100%);
+        margin: 5% auto;
+        padding: 0;
+        border: 3px solid rgba(255,215,0,0.6);
+        border-radius: 30px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 30px 100px rgba(255,215,0,0.5);
+        animation: slideDown 0.5s ease;
+        overflow: hidden;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .modal-header-ganador {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        padding: 2rem;
+        text-align: center;
+        border-bottom: 3px solid rgba(255,255,255,0.3);
+    }
+
+    .modal-header-ganador h2 {
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: #1a1a2e;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .modal-body-ganador {
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+
+    .ganador-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        border: 2px solid rgba(255,215,0,0.3);
+    }
+
+    .ganador-nombre {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: #ffd700;
+        margin-bottom: 1rem;
+        text-shadow: 0 0 30px rgba(255,215,0,0.8);
+        animation: ganador-glow-epico 1.5s ease infinite;
+    }
+
+    .ganador-premio-box {
+        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        border: 2px solid rgba(255,255,255,0.2);
+    }
+
+    .ganador-premio-titulo {
+        font-size: 1.2rem;
+        color: rgba(255,255,255,0.8);
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .ganador-premio-nombre {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0.5rem 0;
+    }
+
+    .ganador-premio-descripcion {
+        font-size: 1.1rem;
+        color: rgba(255,255,255,0.9);
+        margin-top: 0.5rem;
+    }
+
+    .modal-close-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        padding: 0.8rem 3rem;
+        border-radius: 50px;
+        margin-top: 2rem;
+        cursor: pointer;
+        font-weight: 700;
+        text-transform: uppercase;
+        box-shadow: 0 10px 30px rgba(16,185,129,0.4);
+        transition: all 0.3s ease;
+    }
+
+    .modal-close-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 40px rgba(16,185,129,0.6);
+    }
+
+    .premio-color-rojo {
+        color: #ff6b6b !important;
+        text-shadow: 0 0 30px rgba(255,107,107,0.8) !important;
+    }
+
+    .premio-color-amarillo {
+        color: #feca57 !important;
+        text-shadow: 0 0 30px rgba(254,202,87,0.8) !important;
+    }
+
+    .premio-color-verde {
+        color: #5cb85c !important;
+        text-shadow: 0 0 30px rgba(92,184,92,0.8) !important;
+    }
 </style>
 {% endblock %}
 
@@ -421,14 +550,8 @@
     </div>
 
     <div class="text-center" style="margin-bottom: 1.5rem;">
-        <button id="sortearParticipante" class="btn btn-live me-3">
-            🎲 Sortear Participante
-        </button>
-        <button id="sortearPremio" class="btn btn-success me-3" style="display: none;">
-            🎁 Sortear Premio
-        </button>
-        <button id="siguienteRonda" class="btn btn-info me-3" style="display: none;">
-            ➡️ Siguiente Ganador
+        <button id="iniciarSorteo" class="btn btn-live">
+            🎲 Iniciar Sorteo Completo
         </button>
         <button id="reiniciarSorteo" class="btn btn-warning" style="display: none;">
             🔄 Reiniciar Sorteo
@@ -439,21 +562,16 @@
         <div>
             <div class="sorteo-box">
                 <h4 style="color: #fff; margin-bottom: 1rem;">
-                    🏆 Sorteo de Participantes
+                    🏆 Sorteo de Participante
                 </h4>
                 <div class="sorteo-display">
                     <div id="nombreGirando" class="nombre-girando instruccion">
-                        Haz clic en "Sortear Participante"
+                        Haz clic en "Iniciar Sorteo Completo"
                     </div>
                 </div>
                 <div style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">
                     Total participantes: <span id="totalParticipantes">{{ participantes|length }}</span>
                 </div>
-            </div>
-            
-            <div class="ganadores-lista" id="ganadoresList" style="display: none;">
-                <h5 style="color: #fff; margin-bottom: 1rem;">🏅 Ganadores Seleccionados</h5>
-                <div id="ganadoresContainer"></div>
             </div>
         </div>
         
@@ -489,6 +607,32 @@
         </div>
     </div>
 </div>
+
+<!-- Modal del Ganador -->
+<div id="modalGanador" class="modal-ganador">
+    <div class="modal-ganador-content">
+        <div class="modal-header-ganador">
+            <h2>🎉 ¡TENEMOS UN GANADOR! 🎉</h2>
+        </div>
+        <div class="modal-body-ganador">
+            <div class="ganador-card">
+                <div class="ganador-nombre" id="modalNombreGanador">
+                    <!-- Nombre del ganador -->
+                </div>
+                <div class="ganador-premio-box">
+                    <div class="ganador-premio-titulo">Ha ganado:</div>
+                    <div class="ganador-premio-nombre" id="modalPremioNombre">
+                        <!-- Nombre del premio -->
+                    </div>
+                    <div class="ganador-premio-descripcion" id="modalPremioDescripcion">
+                        <!-- Descripción del premio -->
+                    </div>
+                </div>
+            </div>
+            <button class="modal-close-btn" onclick="cerrarModal()">Aceptar</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -506,18 +650,18 @@ const premiosPorColor = {
 };
 
 const participantesOriginales = {{ participantes_json|safe }};
-const luces = ['rojo', 'amarillo', 'verde'];
+const ordenLuces = ['roja', 'amarilla', 'verde'];
 
-let rondaActual = 1;
-const maxRondas = 3;
-let ganadoresSeleccionados = [];
 let participantesDisponibles = [...participantesOriginales];
 let sorteoCorriendo = false;
 let intervaloCiclado = null;
+let intervaloPremio = null;
 let ganadorActual = null;
+let premioGanador = null;
+let colorGanador = null;
 
 // ============== FUNCIONES PRINCIPALES ==============
-function iniciarSorteoParticipante() {
+function iniciarSorteoCompleto() {
     if (!participantesDisponibles || participantesDisponibles.length === 0) {
         alert('No hay participantes disponibles');
         return;
@@ -529,14 +673,22 @@ function iniciarSorteoParticipante() {
     }
     
     sorteoCorriendo = true;
-    document.getElementById('sortearParticipante').disabled = true;
+    document.getElementById('iniciarSorteo').disabled = true;
     
+    sortearParticipante();
+}
+
+function sortearParticipante() {
     const nombreDisplay = document.getElementById('nombreGirando');
     nombreDisplay.classList.remove('instruccion');
     nombreDisplay.classList.add('cycling');
     
     let contador = 0;
     intervaloCiclado = setInterval(() => {
+        if (participantesDisponibles.length === 0) {
+            clearInterval(intervaloCiclado);
+            return;
+        }
         const indice = Math.floor(Math.random() * participantesDisponibles.length);
         nombreDisplay.textContent = participantesDisponibles[indice].nombre;
         contador++;
@@ -545,6 +697,12 @@ function iniciarSorteoParticipante() {
     setTimeout(() => {
         clearInterval(intervaloCiclado);
         intervaloCiclado = null;
+        
+        if (participantesDisponibles.length === 0) {
+            sorteoCorriendo = false;
+            document.getElementById('iniciarSorteo').disabled = false;
+            return;
+        }
         
         const indiceGanador = Math.floor(Math.random() * participantesDisponibles.length);
         ganadorActual = participantesDisponibles[indiceGanador];
@@ -559,192 +717,200 @@ function iniciarSorteoParticipante() {
             origin: { y: 0.6 }
         });
         
-        ganadoresSeleccionados.push({
-            ronda: rondaActual,
-            participante: ganadorActual,
-            premio: null
-        });
+        setTimeout(() => {
+            sortearPremio();
+        }, 3000);
         
-        participantesDisponibles = participantesDisponibles.filter(p => p.id !== ganadorActual.id);
-        
-        actualizarGanadoresList();
-        
-        document.getElementById('sortearPremio').style.display = 'inline-block';
-        document.getElementById('reiniciarSorteo').style.display = 'inline-block';
-        
-        sorteoCorriendo = false;
-    }, 4000);
+    }, 8000);
 }
 
-function iniciarSorteoPremio() {
-    if (!ganadorActual) {
-        alert('Primero debe sortear un participante');
-        return;
-    }
-    
-    if (sorteoCorriendo) return;
-    
-    sorteoCorriendo = true;
-    document.getElementById('sortearPremio').disabled = true;
+function sortearPremio() {
     document.querySelector('.semaforo-post').classList.add('zoom-effect');
     
-    let contadorLuces = 0;
-    intervaloCiclado = setInterval(() => {
-        document.querySelectorAll('.luz').forEach(luz => luz.classList.remove('active'));
-        
-        const luzActual = luces[contadorLuces % luces.length];
-        document.getElementById(`luz-${luzActual}`).classList.add('active');
-        
-        contadorLuces++;
-    }, 200);
+    let indiceActual = 0;
+    let velocidad = 200;
+    const duracionTotal = 10000;
+    const inicioAceleracion = 7000;
+    const tiempoInicio = Date.now();
     
-    setTimeout(() => {
-        clearInterval(intervaloCiclado);
-        intervaloCiclado = null;
+    function ciclarLuces() {
+        const tiempoTranscurrido = Date.now() - tiempoInicio;
         
-        document.querySelector('.semaforo-post').classList.remove('zoom-effect');
-        
-        const coloresDisponibles = Object.keys(premiosPorColor);
-        const colorGanador = coloresDisponibles[Math.floor(Math.random() * coloresDisponibles.length)];
-        const premioGanador = premiosPorColor[colorGanador];
-        
-        document.querySelectorAll('.luz').forEach(luz => luz.classList.remove('active'));
-        document.getElementById(`luz-${colorGanador}`).classList.add('active');
-        
-        const ganadorIndex = ganadoresSeleccionados.findIndex(g => g.participante.id === ganadorActual.id);
-        if (ganadorIndex !== -1) {
-            ganadoresSeleccionados[ganadorIndex].premio = premioGanador;
-            ganadoresSeleccionados[ganadorIndex].color = colorGanador;
+        if (tiempoTranscurrido >= duracionTotal) {
+            clearInterval(intervaloPremio);
+            finalizarSorteoPremio();
+            return;
         }
         
-        registrarResultado(ganadorActual, premioGanador);
+        document.querySelectorAll('.luz').forEach(luz => {
+            luz.classList.remove('active');
+        });
         
-        actualizarGanadoresList();
-        
-        setTimeout(() => {
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        }, 300);
-        
-        if (rondaActual < maxRondas && participantesDisponibles.length > 0) {
-            document.getElementById('siguienteRonda').style.display = 'inline-block';
-            document.getElementById('sortearPremio').style.display = 'none';
-        } else {
-            finalizarSorteo();
+        const luzActual = ordenLuces[indiceActual];
+        const elementoLuz = document.getElementById(`luz-${luzActual}`);
+        if (elementoLuz) {
+            elementoLuz.classList.add('active');
         }
         
-        sorteoCorriendo = false;
-    }, 3000);
+        indiceActual = (indiceActual + 1) % ordenLuces.length;
+        
+        if (tiempoTranscurrido > inicioAceleracion && intervaloPremio) {
+            const factorAceleracion = (tiempoTranscurrido - inicioAceleracion) / (duracionTotal - inicioAceleracion);
+            velocidad = 200 - (150 * factorAceleracion);
+            clearInterval(intervaloPremio);
+            intervaloPremio = setInterval(ciclarLuces, Math.max(50, velocidad));
+        }
+    }
+    
+    intervaloPremio = setInterval(ciclarLuces, velocidad);
 }
 
-function siguienteRonda() {
-    if (rondaActual >= maxRondas) {
-        finalizarSorteo();
+function finalizarSorteoPremio() {
+    if (intervaloPremio) {
+        clearInterval(intervaloPremio);
+        intervaloPremio = null;
+    }
+    
+    const semaforoPost = document.querySelector('.semaforo-post');
+    if (semaforoPost) {
+        semaforoPost.classList.remove('zoom-effect');
+    }
+    
+    // Verificar que haya ganador y premios
+    if (!ganadorActual) {
+        console.error('No hay ganador definido');
         return;
     }
     
-    rondaActual++;
-    ganadorActual = null;
+    const coloresDisponibles = Object.keys(premiosPorColor);
+    if (coloresDisponibles.length === 0) {
+        console.error('No hay premios definidos');
+        return;
+    }
+    
+    colorGanador = coloresDisponibles[Math.floor(Math.random() * coloresDisponibles.length)];
+    premioGanador = premiosPorColor[colorGanador];
+    
+    document.querySelectorAll('.luz').forEach(luz => luz.classList.remove('active'));
+    
+    const luzGanadora = document.getElementById(`luz-${colorGanador}`);
+    if (luzGanadora) {
+        luzGanadora.classList.add('active');
+    }
+    
+    // Registrar resultado solo si hay datos válidos
+    if (ganadorActual && premioGanador) {
+        registrarResultado(ganadorActual, premioGanador);
+    }
+    
+    participantesDisponibles = participantesDisponibles.filter(p => p.id !== ganadorActual.id);
+    document.getElementById('totalParticipantes').textContent = participantesDisponibles.length;
+    
+    setTimeout(() => {
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 }
+                });
+            }, i * 300);
+        }
+    }, 500);
+    
+    // Mostrar modal después de 2 segundos
+    setTimeout(() => {
+        if (ganadorActual && premioGanador) {
+            mostrarModalGanador();
+        }
+    }, 2000);
+    
+    sorteoCorriendo = false;
+}
+
+function mostrarModalGanador() {
+    // Validar que existan los datos
+    if (!ganadorActual || !premioGanador) {
+        console.error('Datos de ganador o premio no disponibles');
+        return;
+    }
+    
+    const modal = document.getElementById('modalGanador');
+    const nombreElement = document.getElementById('modalNombreGanador');
+    const premioNombreElement = document.getElementById('modalPremioNombre');
+    const premioDescripcionElement = document.getElementById('modalPremioDescripcion');
+    
+    nombreElement.textContent = ganadorActual.nombre;
+    premioNombreElement.textContent = `🎁 ${premioGanador.nombre}`;
+    premioDescripcionElement.textContent = premioGanador.descripcion;
+    
+    premioNombreElement.className = `ganador-premio-nombre premio-color-${colorGanador}`;
+    
+    modal.style.display = 'block';
+    
+    setTimeout(() => {
+        confetti({
+            particleCount: 200,
+            spread: 120,
+            origin: { y: 0.5 }
+        });
+    }, 300);
+}
+
+function cerrarModal() {
+    const modal = document.getElementById('modalGanador');
+    modal.style.display = 'none';
     
     const nombreDisplay = document.getElementById('nombreGirando');
     nombreDisplay.classList.remove('ganador');
     nombreDisplay.classList.add('instruccion');
-    nombreDisplay.textContent = 'Haz clic en "Sortear Participante"';
     
-    document.getElementById('sortearParticipante').disabled = false;
-    document.getElementById('sortearPremio').style.display = 'none';
-    document.getElementById('sortearPremio').disabled = false;
-    document.getElementById('siguienteRonda').style.display = 'none';
+    if (participantesDisponibles.length > 0) {
+        nombreDisplay.textContent = 'Haz clic en "Iniciar Sorteo Completo"';
+        document.getElementById('iniciarSorteo').disabled = false;
+    } else {
+        nombreDisplay.textContent = '🎉 ¡Sorteo Completado! No hay más participantes';
+        document.getElementById('iniciarSorteo').style.display = 'none';
+    }
     
-    document.querySelectorAll('.luz').forEach(luz => {
-        luz.classList.remove('active');
-        luz.style.animation = '';
-    });
-    
-    document.getElementById('totalParticipantes').textContent = participantesDisponibles.length;
-}
-
-function finalizarSorteo() {
-    const nombreDisplay = document.getElementById('nombreGirando');
-    nombreDisplay.classList.remove('ganador');
-    nombreDisplay.textContent = '🎉 ¡Sorteo Completado!';
-    
-    document.getElementById('sortearParticipante').style.display = 'none';
-    document.getElementById('sortearPremio').style.display = 'none';
-    document.getElementById('siguienteRonda').style.display = 'none';
-    
-    setTimeout(() => {
-        for (let i = 0; i < 3; i++) {
-            setTimeout(() => confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }), i * 500);
-        }
-    }, 500);
+    document.getElementById('reiniciarSorteo').style.display = 'inline-block';
+    document.querySelectorAll('.luz').forEach(luz => luz.classList.remove('active'));
 }
 
 function reiniciarSorteoCompleto() {
-    rondaActual = 1;
-    ganadoresSeleccionados = [];
     participantesDisponibles = [...participantesOriginales];
     ganadorActual = null;
+    premioGanador = null;
+    colorGanador = null;
     sorteoCorriendo = false;
     
     const nombreDisplay = document.getElementById('nombreGirando');
-    nombreDisplay.classList.remove('ganador', 'cycling');
-    nombreDisplay.classList.add('instruccion');
-    nombreDisplay.textContent = 'Haz clic en "Sortear Participante"';
+    nombreDisplay.className = 'nombre-girando instruccion';
+    nombreDisplay.textContent = 'Haz clic en "Iniciar Sorteo Completo"';
     
-    document.getElementById('sortearParticipante').disabled = false;
-    document.getElementById('sortearParticipante').style.display = 'inline-block';
-    document.getElementById('sortearPremio').style.display = 'none';
-    document.getElementById('siguienteRonda').style.display = 'none';
+    document.getElementById('iniciarSorteo').disabled = false;
+    document.getElementById('iniciarSorteo').style.display = 'inline-block';
     document.getElementById('reiniciarSorteo').style.display = 'none';
     
     document.querySelectorAll('.luz').forEach(luz => {
         luz.classList.remove('active');
-        luz.style.animation = '';
     });
     
-    document.getElementById('ganadoresList').style.display = 'none';
-    document.getElementById('ganadoresContainer').innerHTML = '';
     document.getElementById('totalParticipantes').textContent = participantesDisponibles.length;
-}
-
-function actualizarGanadoresList() {
-    const lista = document.getElementById('ganadoresList');
-    const container = document.getElementById('ganadoresContainer');
-    
-    lista.style.display = 'block';
-    container.innerHTML = '';
-    
-    ganadoresSeleccionados.forEach((ganador, index) => {
-        const item = document.createElement('div');
-        item.className = 'ganador-item';
-        
-        const premioText = ganador.premio ? 
-            `🎁 ${ganador.premio.nombre}` : 
-            '⏳ Esperando premio...';
-        
-        item.innerHTML = `
-            <div>
-                <strong>🏅 Ganador ${ganador.ronda}:</strong> ${ganador.participante.nombre}
-            </div>
-            <div style="font-size: 0.9rem; opacity: 0.9;">
-                ${premioText}
-            </div>
-        `;
-        
-        container.appendChild(item);
-    });
+    document.getElementById('modalGanador').style.display = 'none';
 }
 
 function registrarResultado(cliente, premio) {
+    // Validación estricta
     if (!cliente || !cliente.id || !premio || !premio.id) {
-        console.error('Datos inválidos para registro');
+        console.error('Datos inválidos para registro:', { cliente, premio });
         return;
     }
     
     const formData = new FormData();
     formData.append('cliente_id', cliente.id);
     formData.append('premio_id', premio.id);
-    formData.append('posicion', rondaActual);
+    formData.append('posicion', 1);
     
     fetch('{% url "registrar_resultado" sorteo.pk %}', {
         method: 'POST',
@@ -768,13 +934,17 @@ function registrarResultado(cliente, premio) {
 
 // ============== ASIGNAR EVENTOS A BOTONES ==============
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('sortearParticipante').addEventListener('click', iniciarSorteoParticipante);
-    document.getElementById('sortearPremio').addEventListener('click', iniciarSorteoPremio);
-    document.getElementById('siguienteRonda').addEventListener('click', siguienteRonda);
+    document.getElementById('iniciarSorteo').addEventListener('click', iniciarSorteoCompleto);
     document.getElementById('reiniciarSorteo').addEventListener('click', reiniciarSorteoCompleto);
     
-    // Actualizar contador inicial
     document.getElementById('totalParticipantes').textContent = participantesDisponibles.length;
+    
+    window.onclick = function(event) {
+        const modal = document.getElementById('modalGanador');
+        if (event.target == modal) {
+            cerrarModal();
+        }
+    }
 });
 </script>
 {% endblock %}
