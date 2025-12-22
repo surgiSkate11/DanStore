@@ -5,7 +5,8 @@ from django.http import JsonResponse
 from django.utils import timezone
 from .models import Sorteo, Participante, Premio, ResultadoSorteo, Cupon
 import random
-import string
+import string 
+from .models import SorteoPremio
 
 
 @login_required
@@ -289,7 +290,7 @@ def registrar_resultado(request, sorteo_id):
             sorteo_premio.asignado = True
             sorteo_premio.save()
         
-        # Verificar si el sorteo debe marcarse como completado
+        # CORRECCIÓN: Verificar si el sorteo debe marcarse como completado
         sorteo_completado = False
         
         if sorteo.tipo == 'ranking':
@@ -301,6 +302,14 @@ def registrar_resultado(request, sorteo_id):
                 sorteo.fecha_sorteo = timezone.now()
                 sorteo.save()
                 sorteo_completado = True
+        elif sorteo.tipo == 'semaforo':
+            # NUEVO: Para semáforo, completar cuando se asigne un premio
+            # El semáforo solo entrega 1 premio por sorteo (una luz ganadora)
+            sorteo.completado = True
+            sorteo.activo = False
+            sorteo.fecha_sorteo = timezone.now()
+            sorteo.save()
+            sorteo_completado = True
         else:
             # Para otros sorteos: completar cuando todos los premios estén asignados
             premios_sin_asignar = sorteo.sorteo_premios.filter(asignado=False).count()
@@ -542,7 +551,6 @@ def eliminar_premio(request, sorteo_id, premio_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
-    from .models import SorteoPremio
     # premio_id es el ID de SorteoPremio
     sorteo_premio = get_object_or_404(SorteoPremio, id=premio_id, sorteo_id=sorteo_id)
     
