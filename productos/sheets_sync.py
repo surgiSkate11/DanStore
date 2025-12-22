@@ -38,22 +38,26 @@ def limpiar_precio(valor):
 def conectar_google_sheets():
     """Conecta con Google Sheets usando credenciales (solo lectura)"""
     try:
-        # Buscar archivo de credenciales
-        credentials_path = os.path.join(settings.BASE_DIR, 'credentials.json')
-        
-        if not os.path.exists(credentials_path):
-            return None, "No se encontró el archivo credentials.json"
-        
         # Configurar scopes (lectura y escritura)
         scopes = [
             'https://www.googleapis.com/auth/spreadsheets',  # Lectura y escritura
             'https://www.googleapis.com/auth/drive'  # Lectura y escritura Drive
         ]
-        
-        # Autenticar
+
+        # 1. Intentar leer de variable de entorno
+        credentials_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
+        if credentials_json:
+            credentials_dict = json.loads(credentials_json)
+            creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+            client = gspread.authorize(creds)
+            return client, None
+
+        # 2. Si no existe variable, buscar archivo local
+        credentials_path = os.path.join(settings.BASE_DIR, 'credentials.json')
+        if not os.path.exists(credentials_path):
+            return None, "No se encontró el archivo credentials.json ni la variable GOOGLE_CREDENTIALS_JSON"
         creds = Credentials.from_service_account_file(credentials_path, scopes=scopes)
         client = gspread.authorize(creds)
-        
         return client, None
     except Exception as e:
         return None, f"Error de conexión: {str(e)}"
