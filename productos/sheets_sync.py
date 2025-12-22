@@ -181,21 +181,10 @@ def sincronizar_sheets(request):
                             tipos_prenda_nuevos.add(tipo_str)
                     tipo_prenda = tipos_prenda_cache[tipo_str]
                     
-                    # Mapear categoría del Sheet al modelo
-                    mapeo_categoria = {
-                        'bebé': 'bebe',
-                        'bebe': 'bebe',
-                        'niña': 'nina',
-                        'nina': 'nina',
-                        'niño': 'nino',
-                        'nino': 'nino',
-                        'joven': 'joven',
-                        'adolescente': 'joven',
-                        'mujer': 'adulto_mujer',
-                        'hombre': 'adulto_hombre'
-                    }
-                    categoria_grupo = mapeo_categoria.get(categoria_str.lower(), 'adulto_mujer')
-                    
+
+                    # Guardar la categoría exactamente como viene del Sheets
+                    categoria_grupo = categoria_str.strip()
+
                     # Rango de edad es el mismo valor de talla
                     rango_edad = talla
                     
