@@ -523,7 +523,6 @@ def agregar_premio(request, sorteo_id):
                     'error': f'Ya existe un premio para el color {color}. Cada color solo puede tener un premio.'
                 }, status=400)
         
-        from .models import SorteoPremio
         sorteo_premio = SorteoPremio.objects.create(
             sorteo=sorteo,
             premio=premio,
