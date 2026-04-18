@@ -54,7 +54,53 @@ def generar_catalogo(request):
     return render(request, 'catalogos/generar_catalogo.html', context)
 
 
-# Clase personalizada para agregar bordes decorativos en cada página
+@login_required
+def preview_catalogo(request):
+    """Vista para mostrar previsualización HTML del catálogo antes de descargar PDF"""
+    
+    # Obtener productos según filtros
+    productos = Producto.objects.exclude(estado__in=['vendido', 'separado']).exclude(
+        Q(imagen='') | Q(imagen__isnull=True)
+    )
+    
+    # Aplicar filtros
+    categoria_grupo = request.GET.get('categoria_grupo')
+    tipo_prenda_id = request.GET.get('tipo_prenda')
+    busqueda = request.GET.get('busqueda')
+    
+    if categoria_grupo:
+        productos = productos.filter(categoria_grupo=categoria_grupo)
+    
+    if tipo_prenda_id:
+        productos = productos.filter(tipo_prenda_id=tipo_prenda_id)
+    
+    if busqueda:
+        productos = productos.filter(Q(descripcion__icontains=busqueda))
+    
+    # Ordenar por categoría
+    from django.db.models import Case, When, Value, IntegerField
+    order_map = {
+        'bebe': 1, 'nina': 2, 'nino': 3, 'joven': 4, 'adulto_hombre': 5, 'adulto_mujer': 6
+    }
+    preserved = Case(*[When(categoria_grupo=k, then=Value(v)) for k, v in order_map.items()], 
+                     output_field=IntegerField())
+    productos = productos.annotate(cat_order=preserved).order_by('cat_order', 'tipo_prenda', 'precio')
+    
+    # Query string para descargar
+    query_string = request.GET.urlencode()
+    
+    context = {
+        'productos': productos,
+        'total_productos': productos.count(),
+        'query_string': query_string,
+        'categoria_grupo': categoria_grupo,
+        'tipo_prenda_id': tipo_prenda_id,
+        'busqueda': busqueda,
+    }
+    
+    return render(request, 'catalogos/preview_catalogo.html', context)
+
+
 def agregar_fondo_pagina(canvas_obj, doc):
     """Callback que agrega fondo a cada página ANTES del contenido"""
     catalogo_dir = os.path.join(settings.MEDIA_ROOT, 'catalogo')

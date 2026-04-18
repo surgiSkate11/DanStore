@@ -226,7 +226,8 @@ def sincronizar_sheets(request):
                             producto_existente.precio_real != precio_real or
                             producto_existente.descripcion != descripcion or
                             producto_existente.vendido_a != vendido_a or
-                            producto_existente.estado != estado
+                            producto_existente.estado != estado or
+                            producto_existente.origen != 'sheets'
                         )
                         
                         if cambios_detectados:
@@ -270,6 +271,8 @@ def sincronizar_sheets(request):
                             producto_existente.vendido_a = vendido_a
                             producto_existente.estado = estado
                             producto_existente.sincronizado_sheets = True
+                            producto_existente.origen = 'sheets'
+                            producto_existente.fecha_importacion = timezone.now()
                             productos_a_actualizar.append(producto_existente)
                     else:
                         # Preparar producto nuevo para bulk_create
@@ -287,6 +290,8 @@ def sincronizar_sheets(request):
                                 estado=estado,
                                 google_sheets_row=idx,
                                 sincronizado_sheets=True,
+                                origen='sheets',
+                                fecha_importacion=timezone.now(),
                             )
                         )
                     
@@ -302,7 +307,8 @@ def sincronizar_sheets(request):
                 Producto.objects.bulk_update(
                     productos_a_actualizar,
                     ['tipo_prenda', 'marca', 'color', 'categoria_grupo', 'rango_edad', 
-                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'sincronizado_sheets'],
+                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'sincronizado_sheets',
+                     'origen', 'fecha_importacion'],
                     batch_size=500
                 )
                 productos_actualizados = len(productos_a_actualizar)
@@ -337,9 +343,10 @@ def sincronizar_sheets(request):
                     messages.warning(request, f'{error}')
             
             # ========================================
-            # LIMPIEZA DE CONSISTENCIA
+            # LIMPIEZA DE CONSISTENCIA - PASO 1
             # ========================================
-            # Eliminar facturas de productos que ya NO están en estado 'vendido'
+            # IMPORTANTE: Primero limpiar facturas inconsistentes ANTES de crear nuevas
+            # Esto evita que se vuelvan a facturar productos que cambiaron de estado
             from ventas.models import DetalleVenta, Venta
             
             # Buscar productos en estado 'separado' o 'disponible' que tengan facturas
@@ -367,9 +374,11 @@ def sincronizar_sheets(request):
                     try:
                         venta = Venta.objects.get(id=venta_id)
                         if not venta.detalles.exists():
+                            # Si la venta quedó sin productos, eliminarla
                             venta.delete()
                             ventas_eliminadas += 1
                         else:
+                            # Si aún tiene productos, recalcular total
                             venta.calcular_total()
                             ventas_actualizadas += 1
                     except Venta.DoesNotExist:
@@ -379,13 +388,13 @@ def sincronizar_sheets(request):
                 if ventas_eliminadas > 0:
                     messages.info(request, f'Limpieza: {ventas_eliminadas} factura(s) eliminada(s) porque los productos cambiaron a estado "separado" o "disponible"')
                 if ventas_actualizadas > 0:
-                    messages.info(request, f'Limpieza: {ventas_actualizadas} factura(s) actualizada(s) después de eliminar productos no vendidos')
+                    messages.info(request, f'Limpieza: {ventas_actualizadas} factura(s) actualizada(s) después de eliminar {cantidad_detalles} producto(s) no vendido(s)')
             
             # ========================================
             # SINCRONIZACIÓN AUTOMÁTICA DE FACTURAS
             # ========================================
-            # Después de sincronizar productos, crear facturas automáticamente
-            # para productos vendidos (con vendido_a)
+            # Después de sincronizar productos Y limpiar facturas inconsistentes,
+            # crear facturas automáticamente para productos vendidos (con vendido_a)
             estadisticas_ventas = sincronizar_ventas_desde_sheets()
             
             # Mostrar resultados de sincronización de facturas SOLO si hay actividad

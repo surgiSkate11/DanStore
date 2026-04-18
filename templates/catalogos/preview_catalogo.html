@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Vista Previa - Catálogo{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header con botones de acción -->
+    <div class="row mb-4 sticky-top bg-white pt-3 pb-3 shadow-sm" style="z-index: 100;">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="bi bi-eye"></i> Vista Previa del Catálogo
+                    </h2>
+                    <p class="text-muted mb-0">
+                        {{ total_productos }} producto{{ total_productos|pluralize }} seleccionado{{ total_productos|pluralize }}
+                    </p>
+                </div>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'generar_catalogo' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-pencil-square"></i> Editar Filtros
+                    </a>
+                    <form method="get" action="{% url 'descargar_catalogo' %}" class="d-inline">
+                        {{ request.GET.urlencode|safe }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-download"></i> Descargar PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if total_productos == 0 %}
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">No hay productos</h4>
+        <p>No se encontraron productos con los filtros seleccionados.</p>
+        <a href="{% url 'generar_catalogo' %}" class="btn btn-warning">
+            <i class="bi bi-pencil-square"></i> Cambiar Filtros
+        </a>
+    </div>
+    {% else %}
+
+    <!-- Grid de productos preview -->
+    <div class="row g-4 pb-5">
+        {% for categoria_key, categoria_label in productos|dictsort:"get_categoria_grupo_display" %}
+            {% regroup productos by get_categoria_grupo_display as categoria_group %}
+            {% for category in categoria_group %}
+                <div class="col-12">
+                    <h4 class="mt-4 mb-3">
+                        <i class="bi bi-folder"></i> {{ category.grouper }}
+                    </h4>
+                    <div class="row g-3">
+                        {% for producto in category.list %}
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                            <div class="card h-100 shadow-sm preview-card">
+                                {% if producto.imagen %}
+                                <div class="position-relative overflow-hidden" style="height: 200px;">
+                                    <img 
+                                        src="{{ producto.imagen.url }}" 
+                                        alt="{{ producto.tipo_prenda }}"
+                                        class="card-img-top" 
+                                        style="height: 100%; object-fit: cover;"
+                                    >
+                                </div>
+                                {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="card-body p-2">
+                                    <p class="card-text small mb-1">
+                                        <strong>{{ producto.tipo_prenda }}</strong>
+                                    </p>
+                                    {% if producto.color %}
+                                    <p class="card-text small text-muted mb-1">
+                                        <i class="bi bi-palette"></i> {{ producto.color }}
+                                    </p>
+                                    {% endif %}
+                                    <p class="card-text small text-muted mb-2">
+                                        {{ producto.rango_edad }}
+                                    </p>
+                                    <p class="card-text fw-bold text-primary">
+                                        ${{ producto.precio }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% empty %}
+            {% regroup productos by get_categoria_grupo_display as producto_por_categoria %}
+            {% for grupo in producto_por_categoria %}
+                <div class="col-12">
+                    <h4 class="mt-4 mb-3">
+                        <i class="bi bi-folder"></i> {{ grupo.grouper }}
+                    </h4>
+                    <div class="row g-3">
+                        {% for producto in grupo.list %}
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                            <div class="card h-100 shadow-sm preview-card">
+                                {% if producto.imagen %}
+                                <div class="position-relative overflow-hidden" style="height: 200px;">
+                                    <img 
+                                        src="{{ producto.imagen.url }}" 
+                                        alt="{{ producto.tipo_prenda }}"
+                                        class="card-img-top" 
+                                        style="height: 100%; object-fit: cover;"
+                                    >
+                                </div>
+                                {% else %}
+                                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="card-body p-2">
+                                    <p class="card-text small mb-1">
+                                        <strong>{{ producto.tipo_prenda }}</strong>
+                                    </p>
+                                    {% if producto.color %}
+                                    <p class="card-text small text-muted mb-1">
+                                        <i class="bi bi-palette"></i> {{ producto.color }}
+                                    </p>
+                                    {% endif %}
+                                    <p class="card-text small text-muted mb-2">
+                                        {{ producto.rango_edad }}
+                                    </p>
+                                    <p class="card-text fw-bold text-primary">
+                                        ${{ producto.precio }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% endblock %}
+    </div>
+
+    {% endif %}
+</div>
+
+<style>
+    .preview-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .preview-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
+    }
+</style>
+{% endblock %}

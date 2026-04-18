@@ -4,12 +4,44 @@
 
 {% block content %}
 <div class="container">
+    {% if not onboarding_completado %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading">👋 ¡Bienvenido a Tiendita!</h4>
+        <p>Parece que aún no completaste tu onboarding. <a href="{% url 'onboarding' %}" class="alert-link">Completa tu perfil</a> para personalizar la app según tu negocio.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    {% if usa_demo_data %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading">📊 Datos de Demostración Activos</h4>
+        <p>Estás viendo datos ficticios para explorar la app. Carga tus propios datos cuando estés listo.</p>
+        <form method="post" action="{% url 'limpiar_demo' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-info">Limpiar Demo Data</button>
+        </form>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% elif total_productos == 0 %}
+    <div class="alert alert-primary alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading">📦 ¡Comienza aquí!</h4>
+        <p>Tu inventario está vacío. Agrega tu primer producto o carga datos de demostración para ver cómo funciona.</p>
+        {% if not usa_demo_data %}
+        <form method="post" action="{% url 'cargar_demo' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">Cargar Demo Data</button>
+        </form>
+        {% endif %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
     <div class="row mb-4">
         <div class="col">
             <h1 class="display-4">
                 <i class="bi bi-house-door"></i> Dashboard
             </h1>
-            <p class="lead text-muted">Bienvenido al sistema de gestión de inventario</p>
+            <p class="lead text-muted">{{ nombre_negocio }} - {{ get_negocio_display }}</p>
         </div>
     </div>
     
@@ -20,6 +52,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
+                            <h6 class="card-title text-uppercase mb-1 small">{{ vocab.unidad_plural }}</h6>
                             <h6 class="card-title text-uppercase mb-1 small">Disponibles</h6>
                             <h2 class="mb-0">{{ disponibles }}</h2>
                         </div>
@@ -36,7 +69,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title text-uppercase mb-1 small">Separados</h6>
+                            <h6 class="card-title text-uppercase mb-1 small">{{ vocab.separado_plural }}</h6>
                             <h2 class="mb-0">{{ separados }}</h2>
                         </div>
                         <div class="d-none d-sm-block">
@@ -80,16 +113,31 @@
         </div>
     </div>
     
-    <!-- Accesos rápidos -->
+    <!-- Accesos rápidos - REORDENADO SEGÚN PRIORIDADES -->
     <div class="row g-4">
+        <!-- PRINCIPAL: Agregar Producto -->
+        <div class="col-12">
+            <div class="card shadow-lg border-success" style="border-width: 3px;">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-plus-circle text-success" style="font-size: 4rem;"></i>
+                    <h4 class="card-title mt-4 mb-2">Agregar {{ vocab.unidad }} Nuevo</h4>
+                    <p class="card-text text-muted mb-4">Comienza registrando tus productos directamente</p>
+                    <a href="{% url 'crear_producto' %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-plus"></i> Agregar {{ vocab.unidad }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECUNDARIOS: Otras opciones existentes -->
         <div class="col-12 col-md-6 col-lg-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body text-center">
-                    <i class="bi bi-grid text-success" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Ver Productos</h5>
-                    <p class="card-text text-muted">Gestiona y filtra el inventario</p>
-                    <a href="{% url 'lista_productos' %}" class="btn btn-success">
-                        <i class="bi bi-eye"></i> Ver Inventario
+                    <i class="bi bi-grid text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Ver Inventario</h5>
+                    <p class="card-text text-muted">Gestiona y filtra tus {{ vocab.unidad_plural }}</p>
+                    <a href="{% url 'lista_productos' %}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> Ver Todo
                     </a>
                 </div>
             </div>
@@ -100,21 +148,22 @@
                 <div class="card-body text-center">
                     <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
                     <h5 class="card-title mt-3">Generar Catálogo</h5>
-                    <p class="card-text text-muted">Crea un catálogo PDF personalizado</p>
+                    <p class="card-text text-muted">Crea un catálogo PDF para compartir</p>
                     <a href="{% url 'generar_catalogo' %}" class="btn btn-danger">
-                        <i class="bi bi-download"></i> Generar PDF
+                        <i class="bi bi-download"></i> Generar
                     </a>
                 </div>
             </div>
         </div>
         
+        <!-- Sincronización: Opción avanzada -->
         <div class="col-12 col-md-6 col-lg-4">
             <div class="card shadow-sm h-100">
                 <div class="card-body text-center">
-                    <i class="bi bi-cloud-arrow-down text-primary" style="font-size: 3rem;"></i>
-                    <h5 class="card-title mt-3">Sincronizar Sheets</h5>
-                    <p class="card-text text-muted">Importa productos desde Google Sheets</p>
-                    <a href="{% url 'sincronizar_sheets' %}" class="btn btn-primary">
+                    <i class="bi bi-cloud-arrow-down text-secondary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Google Sheets</h5>
+                    <p class="card-text text-muted"><small>Opción avanzada: Sincroniza productos desde Sheets</small></p>
+                    <a href="{% url 'sincronizar_sheets' %}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-arrow-repeat"></i> Sincronizar
                     </a>
                 </div>
@@ -123,3 +172,4 @@
     </div>
 </div>
 {% endblock %}
+

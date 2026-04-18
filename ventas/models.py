@@ -9,6 +9,12 @@ class Cliente(models.Model):
     telefono = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     email = models.EmailField(blank=True, verbose_name="Email")
     direccion = models.TextField(blank=True, verbose_name="Dirección")
+    # CAMBIO 3.2: RUC/Cédula
+    ruc_cedula = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="RUC / Cédula"
+    )
     notas = models.TextField(blank=True, verbose_name="Notas adicionales")
     creado_en = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de registro")
     
@@ -27,10 +33,60 @@ class Cliente(models.Model):
     def cantidad_ventas(self):
         """Cuenta las ventas del cliente"""
         return self.ventas.count()
+    
+    def separaciones_sin_pagar(self):
+        """Cuenta productos separados que aún no tienen factura"""
+        return Producto.objects.filter(
+            vendido_a=self.nombre,
+            estado='separado'
+        ).count()
+    
+    def ultima_compra(self):
+        """Retorna la fecha de la última compra"""
+        ultima_venta = self.ventas.order_by('-fecha').first()
+        return ultima_venta.fecha if ultima_venta else None
+    
+    def get_comportamiento(self):
+        """Retorna diccionario con info de comportamiento del cliente"""
+        return {
+            'total_comprado': self.total_compras(),
+            'cantidad_compras': self.cantidad_ventas(),
+            'separaciones_sin_pagar': self.separaciones_sin_pagar(),
+            'ultima_compra': self.ultima_compra(),
+        }
 
 
 class Venta(models.Model):
     """Modelo de ventas/facturas - Solo se crean cuando hay pago"""
+    
+    # CAMBIO 3.1: Numeración oficial
+    numero_factura = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        verbose_name="Número de factura"
+    )
+    
+    # CAMBIO 3.1: Método de pago
+    METODO_PAGO = [
+        ('efectivo', 'Efectivo'),
+        ('transferencia', 'Transferencia'),
+        ('tarjeta', 'Tarjeta'),
+        ('otro', 'Otro'),
+    ]
+    metodo_pago = models.CharField(
+        max_length=20,
+        choices=METODO_PAGO,
+        default='efectivo',
+        verbose_name="Método de pago"
+    )
+    
+    # CAMBIO 3.1: RUC/cédula fiscal
+    ruc_cliente = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="RUC / Cédula del cliente"
+    )
     
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='ventas', verbose_name="Cliente")
     fecha = models.DateTimeField(default=timezone.now, verbose_name="Fecha de venta")
@@ -50,7 +106,32 @@ class Venta(models.Model):
         ordering = ['-fecha', '-creado_en']
     
     def __str__(self):
-        return f"Venta #{self.id} - {self.cliente.nombre} - ${self.total}"
+        return f"Factura {self.numero_factura} - {self.cliente.nombre} - ${self.total}"
+    
+    def save(self, *args, **kwargs):
+        """Generar número de factura antes de guardar"""
+        if not self.numero_factura:
+            self.numero_factura = self._generar_numero()
+        super().save(*args, **kwargs)
+    
+    def _generar_numero(self):
+        """Genera número de factura secuencial"""
+        from django.db import transaction
+        with transaction.atomic():
+            ultima = (
+                Venta.objects
+                .select_for_update()
+                .order_by('-creado_en')
+                .first()
+            )
+            if ultima and ultima.numero_factura:
+                try:
+                    ultimo_num = int(ultima.numero_factura.split('-')[-1])
+                except ValueError:
+                    ultimo_num = 0
+            else:
+                ultimo_num = 0
+            return f"FAC-{str(ultimo_num + 1).zfill(6)}"
     
     def calcular_total(self):
         """Calcula el total de la venta"""

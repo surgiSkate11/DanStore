@@ -139,6 +139,33 @@ class Producto(models.Model):
         db_index=True  # Índice para ordenamiento y filtrado por precio
     )
     
+    # Atributos dinámicos según tipo de negocio
+    atributos = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Atributos dinámicos',
+        help_text='Almacena atributos personalizados según el tipo de negocio (ej: talla, vencimiento, etc.)'
+    )
+    
+    # CAMBIO 1: Campo para saber el ORIGEN del producto
+    ORIGEN_CHOICES = [
+        ('manual', 'Cargado manualmente'),
+        ('excel', 'Importado desde Excel/CSV'),
+        ('sheets', 'Sincronizado desde Google Sheets'),
+    ]
+    origen = models.CharField(
+        max_length=20,
+        choices=ORIGEN_CHOICES,
+        default='manual',
+        verbose_name='Origen del producto',
+        db_index=True
+    )
+    fecha_importacion = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Fecha de importación'
+    )
+    
     # Campos de auditoría
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)

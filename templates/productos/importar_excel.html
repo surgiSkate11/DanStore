@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Importar Productos - Tiendita{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10">
+            <h1 class="mb-1">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Importar Productos
+            </h1>
+            <p class="text-muted mb-4">Sube un archivo Excel o CSV con tu inventario</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Instrucciones del formato -->
+            <div class="card mb-4 border-info">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-info-circle"></i> Formato requerido del archivo
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">Tu archivo debe tener estas columnas <strong>en este orden</strong>:</p>
+                    <table class="table table-sm table-bordered table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 40px;">Col</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Ejemplo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-center fw-bold">A</td>
+                                <td><strong>Nombre del producto</strong> ⚠️</td>
+                                <td>Campo único - identifica el producto</td>
+                                <td>Vestido floral</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center fw-bold">B</td>
+                                <td>Categoría de grupo</td>
+                                <td>Ver valores debajo</td>
+                                <td>adulto_mujer</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center fw-bold">C</td>
+                                <td>Precio</td>
+                                <td>Número con dos decimales</td>
+                                <td>25.00</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center fw-bold">D</td>
+                                <td>Estado</td>
+                                <td>disponible, separado, vendido</td>
+                                <td>disponible</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center fw-bold">E</td>
+                                <td>Descripción</td>
+                                <td>Información adicional (opcional)</td>
+                                <td>Talla M, color rojo</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h6 class="mt-4 mb-2">Valores válidos para Categoría:</h6>
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <ul class="list-unstyled">
+                                <li><code>bebe</code> — Bebé</li>
+                                <li><code>nina</code> — Niña</li>
+                                <li><code>nino</code> — Niño</li>
+                                <li><code>joven</code> — Joven/Adolescente</li>
+                            </ul>
+                        </div>
+                        <div class="col-sm-6">
+                            <ul class="list-unstyled">
+                                <li><code>adulto_hombre</code> — Adulto Hombre</li>
+                                <li><code>adulto_mujer</code> — Adulto Mujer (por defecto)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <strong>📌 Importante:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>La <strong>fila 1</strong> debe ser la cabecera (se ignora automáticamente)</li>
+                            <li>El campo <strong>Nombre es obligatorio</strong> para cada fila</li>
+                            <li>Si el Nombre ya existe, se <strong>actualiza</strong> el producto</li>
+                            <li>Formatos soportados: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de subida -->
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="importForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="archivo" class="form-label fw-bold">
+                                <i class="bi bi-upload"></i> Selecciona tu archivo
+                            </label>
+                            <input 
+                                type="file" 
+                                id="archivo"
+                                name="archivo" 
+                                class="form-control form-control-lg" 
+                                accept=".xlsx,.xls,.csv"
+                                required
+                            >
+                            <small class="text-muted d-block mt-2">
+                                Formatos aceptados: .xlsx, .xls, .csv (máx 10 MB)
+                            </small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-cloud-upload"></i> Importar Productos
+                            </button>
+                            <a href="{% url 'descargar_plantilla' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-download"></i> Descargar Plantilla
+                            </a>
+                            <a href="{% url 'lista_productos' %}" class="btn btn-outline-secondary btn-lg ms-auto">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="alert alert-success mt-4" role="alert">
+                <h6 class="alert-heading">💡 Consejos:</h6>
+                <ul class="mb-0">
+                    <li>Descarga la plantilla de ejemplo para mantener el formato correcto</li>
+                    <li>Prepara tu archivo en Excel, luego guardalo como CSV o XLSX</li>
+                    <li>Revisa los valores de Categoría antes de importar</li>
+                    <li>Si hay errores en alguna fila, verás un resumen al finalizar</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

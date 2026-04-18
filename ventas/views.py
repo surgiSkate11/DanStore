@@ -4,6 +4,8 @@ from django.db.models import Sum, Count, Q
 from django.http import HttpResponse
 from django.contrib import messages
 from django.conf import settings
+from django.template.loader import render_to_string
+from weasyprint import HTML
 import json
 from productos.models import Producto
 from .models import Cliente, Venta, DetalleVenta, ConfiguracionFactura
@@ -12,9 +14,84 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from decimal import Decimal
 import io
 import os
+
+
+def convertir_emojis_a_unicode(texto):
+    """Convierte emojis de color a símbolos Unicode simples que ReportLab puede renderizar"""
+    # Mapeo de emojis comunes a símbolos Unicode que funcionan en PDFs
+    reemplazos = {
+        '❤️': '♥',  # Corazón de color a corazón Unicode
+        '❤': '♥',
+        '💙': '♥',
+        '💚': '♥',
+        '💛': '♥',
+        '💜': '♥',
+        '🖤': '♥',
+        '🤍': '♥',
+        '😊': '☺',  # Cara sonriente
+        '😃': '☺',
+        '😄': '☺',
+        '😁': '☺',
+        '🙂': '☺',
+        '⭐': '★',  # Estrella
+        '🌟': '★',
+        '✨': '✦',
+        '🎉': '※',  # Celebración
+        '👍': '✓',  # Pulgar arriba
+        '✅': '✓',
+        '💰': '$',  # Dinero
+        '💵': '$',
+        '📱': '☎',  # Teléfono
+        '📞': '☎',
+        '📧': '@',  # Email
+        '✉': '@',
+        '🏠': '⌂',  # Casa
+        '🎁': '※',  # Regalo
+        '🎈': '○',  # Globo
+        '🔥': '※',
+        '💯': '100',
+        '👏': '※',
+        '🙏': '※',
+    }
+    
+    resultado = texto
+    for emoji, simbolo in reemplazos.items():
+        resultado = resultado.replace(emoji, simbolo)
+    
+    return resultado
+
+
+def registrar_fuentes_unicode():
+    """Registra fuentes con soporte Unicode para caracteres especiales"""
+    try:
+        # Intentar registrar fuentes del sistema Windows que soporten Unicode
+        fuentes_registradas = False
+        
+        # Rutas comunes de fuentes en Windows
+        rutas_fuentes = [
+            r'C:\Windows\Fonts\segoeui.ttf',   # Segoe UI (buena para Unicode)
+            r'C:\Windows\Fonts\arial.ttf',     # Arial como fallback
+        ]
+        
+        for ruta in rutas_fuentes:
+            if os.path.exists(ruta):
+                try:
+                    nombre_fuente = os.path.basename(ruta).replace('.ttf', '')
+                    # Solo registrar si no está ya registrada
+                    if nombre_fuente not in pdfmetrics.getRegisteredFontNames():
+                        pdfmetrics.registerFont(TTFont(nombre_fuente, ruta))
+                        fuentes_registradas = True
+                except Exception:
+                    continue
+        
+        return fuentes_registradas
+    except Exception:
+        return False
 
 
 @login_required
@@ -371,10 +448,20 @@ def generar_factura_pdf(request, venta_id):
     style_titulo = ParagraphStyle(
         'Titulo',
         parent=styles['Heading1'],
-        fontSize=24,
+        fontSize=26,
         textColor=color_principal,
-        spaceAfter=12,
-        fontName='Helvetica-Bold'
+        spaceAfter=6,
+        fontName='Helvetica-Bold',
+        leading=30
+    )
+    
+    style_subtitulo_empresa = ParagraphStyle(
+        'SubtituloEmpresa',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=color_texto,
+        spaceAfter=4,
+        fontName='Helvetica'
     )
     
     style_normal = ParagraphStyle(
@@ -391,32 +478,38 @@ def generar_factura_pdf(request, venta_id):
     if config.logo:
         try:
             logo_path = os.path.join(settings.MEDIA_ROOT, str(config.logo))
-            logo = RLImage(logo_path, width=3*cm, height=3*cm)
+            logo = RLImage(logo_path, width=3.5*cm, height=3.5*cm)
             info_empresa = [
                 Paragraph(f"<b>{config.nombre_empresa}</b>", style_titulo),
-                Paragraph(config.direccion_empresa or '', style_normal),
-                Paragraph(f"Tel: {config.telefono_empresa}" if config.telefono_empresa else '', style_normal),
-                Paragraph(config.email_empresa or '', style_normal),
+                Paragraph(config.direccion_empresa or '', style_subtitulo_empresa),
+                Paragraph(f"<b>Teléfono:</b> {config.telefono_empresa}" if config.telefono_empresa else '', style_subtitulo_empresa),
+                Paragraph(f"<b>Email:</b> {config.email_empresa}" if config.email_empresa else '', style_subtitulo_empresa),
             ]
             encabezado_data = [[logo, info_empresa]]
         except:
             pass
     
     if not encabezado_data:
-        # Sin logo
+        # Sin logo - diseño centralizado y elegante
         elements.append(Paragraph(f"<b>{config.nombre_empresa}</b>", style_titulo))
         if config.direccion_empresa:
-            elements.append(Paragraph(config.direccion_empresa, style_normal))
-        elements.append(Spacer(1, 0.5*cm))
+            elements.append(Paragraph(config.direccion_empresa, style_subtitulo_empresa))
+        if config.telefono_empresa:
+            elements.append(Paragraph(f"Teléfono: {config.telefono_empresa}", style_subtitulo_empresa))
+        if config.email_empresa:
+            elements.append(Paragraph(f"Email: {config.email_empresa}", style_subtitulo_empresa))
+        elements.append(Spacer(1, 0.4*cm))
     else:
-        table_encabezado = Table(encabezado_data, colWidths=[4*cm, 12*cm])
+        table_encabezado = Table(encabezado_data, colWidths=[4*cm, 13*cm])
         table_encabezado.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Centrado vertical
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
         ]))
         elements.append(table_encabezado)
-        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Spacer(1, 0.4*cm))
     
     # === LÍNEA DECORATIVA CON COLOR PERSONALIZADO ===
     line_table = Table([['']], colWidths=[17*cm])
@@ -437,7 +530,7 @@ def generar_factura_pdf(request, venta_id):
     # Segunda fila: Fecha (siempre) y Teléfono (si existe)
     segunda_fila = [Paragraph(f"<b>Fecha:</b> {venta.fecha.strftime('%d/%m/%Y %H:%M:%S')}", style_normal)]
     if venta.cliente.telefono:
-        segunda_fila.append(Paragraph(f"<b>Tel:</b> {venta.cliente.telefono}", style_normal))
+        segunda_fila.append(Paragraph(f"<b>Teléfono:</b> {venta.cliente.telefono}", style_normal))
     else:
         segunda_fila.append(Paragraph("", style_normal))
     info_data.append(segunda_fila)
@@ -473,64 +566,147 @@ def generar_factura_pdf(request, venta_id):
             f"${detalle.precio_unitario:.2f}"
         ])
     
-    productos_table = Table(productos_data, colWidths=[1*cm, 7*cm, 3.5*cm, 2.5*cm, 3*cm])
+    # Anchos optimizados: Más espacio a Categoría, menos a Precio
+    productos_table = Table(productos_data, colWidths=[1*cm, 6.5*cm, 4.5*cm, 2.5*cm, 2.5*cm])
     productos_table.setStyle(TableStyle([
+        # Encabezado con degradado visual
         ('BACKGROUND', (0, 0), (-1, 0), color_principal),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # # centrado
-        ('ALIGN', (1, 0), (1, -1), 'LEFT'),    # Producto a la izquierda
-        ('ALIGN', (2, 0), (2, -1), 'CENTER'),  # Categoría centrada
-        ('ALIGN', (3, 0), (3, -1), 'CENTER'),  # Talla centrada
-        ('ALIGN', (4, 0), (4, -1), 'CENTER'),  # Precio centrado
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),  # Todos los encabezados centrados
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # centrado
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Producto a la izquierda
+        ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Categoría centrada
+        ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Talla centrada
+        ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Precio centrado
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('TOPPADDING', (0, 0), (-1, 0), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 1), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Alineación vertical centrada
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        # Bordes y líneas
+        ('BOX', (0, 0), (-1, -1), 1.5, color_borde),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.white),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        # Filas alternas con colores sutiles
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+        # Padding mejorado
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     elements.append(productos_table)
-    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Spacer(1, 0.7*cm))
     
-    # === TOTALES ===
+    # === TOTALES CON DISEÑO PROFESIONAL ===
+    # Estilo para etiquetas de totales
+    style_total_label = ParagraphStyle(
+        'TotalLabel',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=color_texto,
+        fontName='Helvetica'
+    )
+    
+    # Estilo para valores de totales
+    style_total_valor = ParagraphStyle(
+        'TotalValor',
+        parent=styles['Normal'],
+        fontSize=10,
+        textColor=color_texto,
+        fontName='Helvetica-Bold'
+    )
+    
+    # Estilo para total final
+    style_total_final = ParagraphStyle(
+        'TotalFinal',
+        parent=styles['Normal'],
+        fontSize=13,
+        textColor=colors.white,
+        fontName='Helvetica-Bold'
+    )
+    
     totales_data = [
-        ['Subtotal:', f"${venta.subtotal:.2f}"],
+        [Paragraph('Subtotal:', style_total_label), Paragraph(f"${venta.subtotal:.2f}", style_total_valor)],
     ]
     
     if venta.descuento > 0:
-        totales_data.append(['Descuento:', f"-${venta.descuento:.2f}"])
+        totales_data.append([
+            Paragraph('Descuento:', style_total_label), 
+            Paragraph(f"-${venta.descuento:.2f}", style_total_valor)
+        ])
     
     if venta.envio > 0:
-        totales_data.append(['Envío:', f"${venta.envio:.2f}"])
+        totales_data.append([
+            Paragraph('Envío:', style_total_label), 
+            Paragraph(f"${venta.envio:.2f}", style_total_valor)
+        ])
     
     if venta.otros_gastos > 0:
         desc = venta.descripcion_otros or 'Otros gastos'
-        totales_data.append([f'{desc}:', f"${venta.otros_gastos:.2f}"])
+        totales_data.append([
+            Paragraph(f'{desc}:', style_total_label), 
+            Paragraph(f"${venta.otros_gastos:.2f}", style_total_valor)
+        ])
     
-    totales_data.append([Paragraph('<b>TOTAL:</b>', style_normal), 
-                         Paragraph(f'<b>${venta.total:.2f}</b>', style_normal)])
+    # Fila del total final con estilo destacado
+    totales_data.append([
+        Paragraph('<b>TOTAL:</b>', style_total_final), 
+        Paragraph(f'<b>${venta.total:.2f}</b>', style_total_final)
+    ])
     
-    totales_table = Table(totales_data, colWidths=[14*cm, 3*cm])
+    totales_table = Table(totales_data, colWidths=[13.5*cm, 3.5*cm])
     totales_table.setStyle(TableStyle([
+        # Alineación
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        # Línea superior para separar
+        ('LINEABOVE', (0, 0), (-1, 0), 1, color_borde),
+        # Fila del total final con fondo destacado
+        ('BACKGROUND', (0, -1), (-1, -1), color_principal),
         ('LINEABOVE', (0, -1), (-1, -1), 2, color_principal),
+        # Padding
+        ('TOPPADDING', (0, 0), (-1, -2), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -2), 6),
         ('TOPPADDING', (0, -1), (-1, -1), 10),
-        ('FONTSIZE', (0, -1), (-1, -1), 12),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 10),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        # Bordes redondeados simulados
+        ('BOX', (0, -1), (-1, -1), 1.5, color_principal),
     ]))
     elements.append(totales_table)
     
     # === MENSAJE PIE DE PÁGINA ===
     if config.mensaje_factura:
         elements.append(Spacer(1, 1*cm))
-        elements.append(Paragraph(config.mensaje_factura, style_normal))
+        # Registrar fuentes con soporte Unicode
+        fuentes_ok = registrar_fuentes_unicode()
+        
+        # Convertir emojis a símbolos Unicode compatibles
+        mensaje_procesado = convertir_emojis_a_unicode(config.mensaje_factura)
+        
+        # Estilo para mensaje de factura - centrado y elegante
+        style_mensaje = ParagraphStyle(
+            'MensajePie',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=color_texto,
+            alignment=1,  # Centrado
+            spaceAfter=6,
+            fontName='segoeui' if fuentes_ok and 'segoeui' in pdfmetrics.getRegisteredFontNames() else 'Helvetica',
+            leading=15
+        )
+        # Agregar línea decorativa antes del mensaje
+        line_mensaje = Table([['']], colWidths=[12*cm])
+        line_mensaje.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, -1), 0.5, color_borde),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(line_mensaje)
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(mensaje_procesado, style_mensaje))
     
     # Generar PDF
     doc.build(elements)
@@ -588,10 +764,20 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
     style_titulo = ParagraphStyle(
         'Titulo',
         parent=styles['Heading1'],
-        fontSize=24,
+        fontSize=26,
         textColor=color_principal,
-        spaceAfter=12,
-        fontName='Helvetica-Bold'
+        spaceAfter=6,
+        fontName='Helvetica-Bold',
+        leading=30
+    )
+    
+    style_subtitulo_empresa = ParagraphStyle(
+        'SubtituloEmpresa',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=color_texto,
+        spaceAfter=4,
+        fontName='Helvetica'
     )
     
     style_normal = ParagraphStyle(
@@ -608,32 +794,38 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
     if config.logo:
         try:
             logo_path = os.path.join(settings.MEDIA_ROOT, str(config.logo))
-            logo = RLImage(logo_path, width=3*cm, height=3*cm)
+            logo = RLImage(logo_path, width=3.5*cm, height=3.5*cm)
             info_empresa = [
                 Paragraph(f"<b>{config.nombre_empresa}</b>", style_titulo),
-                Paragraph(config.direccion_empresa or '', style_normal),
-                Paragraph(f"Tel: {config.telefono_empresa}" if config.telefono_empresa else '', style_normal),
-                Paragraph(config.email_empresa or '', style_normal),
+                Paragraph(config.direccion_empresa or '', style_subtitulo_empresa),
+                Paragraph(f"<b>Teléfono:</b> {config.telefono_empresa}" if config.telefono_empresa else '', style_subtitulo_empresa),
+                Paragraph(f"<b>Email:</b> {config.email_empresa}" if config.email_empresa else '', style_subtitulo_empresa),
             ]
             encabezado_data = [[logo, info_empresa]]
         except:
             pass
     
     if not encabezado_data:
-        # Sin logo
+        # Sin logo - diseño centralizado y elegante
         elements.append(Paragraph(f"<b>{config.nombre_empresa}</b>", style_titulo))
         if config.direccion_empresa:
-            elements.append(Paragraph(config.direccion_empresa, style_normal))
-        elements.append(Spacer(1, 0.5*cm))
+            elements.append(Paragraph(config.direccion_empresa, style_subtitulo_empresa))
+        if config.telefono_empresa:
+            elements.append(Paragraph(f"Teléfono: {config.telefono_empresa}", style_subtitulo_empresa))
+        if config.email_empresa:
+            elements.append(Paragraph(f"Email: {config.email_empresa}", style_subtitulo_empresa))
+        elements.append(Spacer(1, 0.4*cm))
     else:
-        table_encabezado = Table(encabezado_data, colWidths=[4*cm, 12*cm])
+        table_encabezado = Table(encabezado_data, colWidths=[4*cm, 13*cm])
         table_encabezado.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
         ]))
         elements.append(table_encabezado)
-        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Spacer(1, 0.4*cm))
     
     # === LÍNEA DECORATIVA CON COLOR PERSONALIZADO ===
     line_table = Table([['']], colWidths=[17*cm])
@@ -665,7 +857,7 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
     
     # Segunda fila: Teléfono (si existe)
     if telefono_cliente:
-        segunda_fila = [Paragraph(f"<b>Tel:</b> {telefono_cliente}", style_normal), Paragraph("", style_normal)]
+        segunda_fila = [Paragraph(f"<b>Teléfono:</b> {telefono_cliente}", style_normal), Paragraph("", style_normal)]
         info_data.append(segunda_fila)
     
     # Tercera fila: Dirección (solo si existe)
@@ -687,7 +879,7 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
     elements.append(Spacer(1, 0.8*cm))
     
     # === TABLA DE PRODUCTOS SEPARADOS ===
-    productos_data = [['#', 'Producto', 'Categoría', 'Talla', 'Fecha Separado', 'Precio']]
+    productos_data = [['#', 'Producto', 'Categoría', 'Talla', 'Fecha', 'Precio']]
     
     total_deuda = 0
     for idx, producto in enumerate(productos, 1):
@@ -701,38 +893,47 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
         ])
         total_deuda += producto.precio or 0
     
-    productos_table = Table(productos_data, colWidths=[1*cm, 5*cm, 2.8*cm, 1.8*cm, 3.2*cm, 3.2*cm])
+    # Anchos optimizados: Más espacio a Categoría, menos a Precio
+    productos_table = Table(productos_data, colWidths=[1*cm, 4.8*cm, 3.8*cm, 1.8*cm, 3*cm, 2.6*cm])
     productos_table.setStyle(TableStyle([
+        # Encabezado con degradado visual
         ('BACKGROUND', (0, 0), (-1, 0), color_principal),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('ALIGN', (0, 0), (0, -1), 'CENTER'),  # # centrado
-        ('ALIGN', (1, 0), (1, -1), 'LEFT'),    # Producto a la izquierda
-        ('ALIGN', (2, 0), (2, -1), 'CENTER'),  # Categoría centrada
-        ('ALIGN', (3, 0), (3, -1), 'CENTER'),  # Talla centrada
-        ('ALIGN', (4, 0), (4, -1), 'CENTER'),  # Fecha centrada
-        ('ALIGN', (5, 0), (5, -1), 'CENTER'),  # Precio centrado
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),  # Todos los encabezados centrados
+        ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # # centrado
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),    # Producto a la izquierda
+        ('ALIGN', (2, 1), (2, -1), 'CENTER'),  # Categoría centrada
+        ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Talla centrada
+        ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Fecha centrada
+        ('ALIGN', (5, 1), (5, -1), 'CENTER'),  # Precio centrado
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('TOPPADDING', (0, 0), (-1, 0), 10),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 1), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        # Bordes y líneas
+        ('BOX', (0, 0), (-1, -1), 1.5, color_borde),
+        ('LINEBELOW', (0, 0), (-1, 0), 2, colors.white),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        # Filas alternas con colores sutiles
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+        # Padding mejorado
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     elements.append(productos_table)
-    elements.append(Spacer(1, 0.5*cm))
+    elements.append(Spacer(1, 0.7*cm))
     
-    # === TOTAL DE DEUDA ===
+    # === TOTAL DE DEUDA CON DISEÑO DESTACADO ===
     style_total = ParagraphStyle(
         'Total',
         parent=styles['Normal'],
         fontSize=14,
         fontName='Helvetica-Bold',
-        textColor=color_alerta
+        textColor=colors.white
     )
     
     totales_data = [
@@ -740,16 +941,21 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
          Paragraph(f'<b>${total_deuda:.2f}</b>', style_total)]
     ]
     
-    totales_table = Table(totales_data, colWidths=[14*cm, 3*cm])
+    totales_table = Table(totales_data, colWidths=[13.5*cm, 3.5*cm])
     totales_table.setStyle(TableStyle([
+        # Alineación
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        # Fondo destacado con color de alerta
+        ('BACKGROUND', (0, 0), (-1, -1), color_alerta),
         ('LINEABOVE', (0, 0), (-1, 0), 2, color_alerta),
-        ('TOPPADDING', (0, 0), (-1, 0), 10),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9ff')),  # Fondo lavanda
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        # Padding generoso
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        # Borde para destacar
+        ('BOX', (0, 0), (-1, -1), 1.5, color_alerta),
     ]))
     elements.append(totales_table)
     
@@ -765,8 +971,33 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
   
     # === MENSAJE PIE DE PÁGINA ===
     if config.mensaje_factura:
-        elements.append(Spacer(1, 0.5*cm))
-        elements.append(Paragraph(config.mensaje_factura, style_normal))
+        elements.append(Spacer(1, 0.8*cm))
+        # Registrar fuentes con soporte Unicode
+        fuentes_ok = registrar_fuentes_unicode()
+        
+        # Convertir emojis a símbolos Unicode compatibles
+        mensaje_procesado = convertir_emojis_a_unicode(config.mensaje_factura)
+        
+        # Estilo para mensaje de factura - centrado y elegante
+        style_mensaje = ParagraphStyle(
+            'MensajePie',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=color_texto,
+            alignment=1,  # Centrado
+            spaceAfter=6,
+            fontName='segoeui' if fuentes_ok and 'segoeui' in pdfmetrics.getRegisteredFontNames() else 'Helvetica',
+            leading=15
+        )
+        # Agregar línea decorativa antes del mensaje
+        line_mensaje = Table([['']], colWidths=[12*cm])
+        line_mensaje.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, -1), 0.5, color_borde),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        elements.append(line_mensaje)
+        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Paragraph(mensaje_procesado, style_mensaje))
     
     # Generar PDF
     doc.build(elements)
@@ -812,3 +1043,29 @@ def configuracion_facturas(request):
     }
     
     return render(request, 'ventas/configuracion_facturas.html', context)
+
+
+# CAMBIO 3.3: Vista para generar PDF de factura con WeasyPrint
+@login_required
+def factura_pdf(request, venta_id):
+    """Genera PDF de factura usando WeasyPrint basado en HTML template"""
+    venta = get_object_or_404(
+        Venta.objects.select_related('cliente').prefetch_related(
+            'detalles__producto'
+        ),
+        pk=venta_id
+    )
+    config = ConfiguracionFactura.obtener_configuracion()
+    
+    html_string = render_to_string('ventas/factura_pdf.html', {
+        'venta': venta,
+        'config': config,
+    })
+    
+    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'inline; filename="factura-{venta.numero_factura}.pdf"'
+    )
+    return response

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Onboarding - Tiendita{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <h1 class="card-title text-center mb-4">¡Bienvenida a Tiendita! 🎉</h1>
+                    <p class="text-center text-muted mb-5">
+                        Cuéntanos qué tipo de negocio tienes para personalizar la app según tus necesidades.
+                    </p>
+
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="nombre_negocio" class="form-label fw-bold">Nombre de tu negocio</label>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-lg" 
+                                id="nombre_negocio" 
+                                name="nombre_negocio" 
+                                placeholder="Ej: La Boutique de Sofia"
+                                required
+                            >
+                            <div class="invalid-feedback">
+                                Por favor ingresa el nombre de tu negocio.
+                            </div>
+                        </div>
+
+                        <div class="mb-5">
+                            <label class="form-label fw-bold">¿Qué tipo de negocio tienes?</label>
+                            <div class="row g-3">
+                                {% for value, label in tipos_negocio %}
+                                <div class="col-sm-6">
+                                    <div class="form-check">
+                                        <input 
+                                            class="form-check-input" 
+                                            type="radio" 
+                                            name="negocio_tipo" 
+                                            id="tipo_{{ value }}" 
+                                            value="{{ value }}"
+                                            required
+                                        >
+                                        <label class="form-check-label" for="tipo_{{ value }}">
+                                            <span class="fw-bold">{{ label }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="invalid-feedback d-block">
+                                Por favor selecciona un tipo de negocio.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            Comenzar ✨
+                        </button>
+                    </form>
+
+                    <div class="alert alert-info mt-4" role="alert">
+                        <strong>💡 Tip:</strong> Puedes cambiar esto después en la configuración de tu perfil.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Validación de formulario Bootstrap
+    (function() {
+        'use strict';
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.prototype.slice.call(forms).forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    })();
+</script>
+{% endblock %}

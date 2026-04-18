@@ -7,7 +7,7 @@ from .models import Sorteo, Participante, Premio, ResultadoSorteo, Cupon
 import random
 import string 
 from .models import SorteoPremio
-
+from ventas.models import Cliente
 
 @login_required
 def lista_sorteos(request):
@@ -251,9 +251,6 @@ def registrar_resultado(request, sorteo_id):
         
         if not cliente_id:
             return JsonResponse({'success': False, 'error': 'ID de cliente no proporcionado'}, status=400)
-        
-        from ventas.models import Cliente
-        from .models import SorteoPremio
         
         cliente = get_object_or_404(Cliente, id=cliente_id)
         sorteo_premio = None
