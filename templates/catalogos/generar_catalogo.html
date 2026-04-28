@@ -15,23 +15,23 @@
         <div class="col-md-8">
             <div class="card shadow">
                 <div class="card-body">
-                    <form method="get" action="{% url 'preview_catalogo' %}" id="catalogoForm">
+                    <form method="get" action="{% url 'descargar_catalogo' %}" id="catalogoForm">
                         <h5 class="mb-3">Filtros del Catálogo</h5>
                         
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
-                                    <i class="bi bi-people"></i> Categoría de Grupo
+                                    <i class="bi bi-tag"></i> Categoría
                                 </label>
-                                {{ filtro_form.categoria_grupo }}
+                                {{ filtro_form.categoria }}
                                 <small class="text-muted">Deja en blanco para incluir todas</small>
                             </div>
                             
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
-                                    <i class="bi bi-tags"></i> Tipo de Prenda
+                                    <i class="bi bi-tags"></i> Tipo de Producto
                                 </label>
-                                {{ filtro_form.tipo_prenda }}
+                                {{ filtro_form.tipo_producto }}
                                 <small class="text-muted">Opcional</small>
                             </div>
                         </div>
@@ -45,7 +45,8 @@
                         
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i>
-                            <strong>Nota:</strong> Los productos marcados como "Vendidos" no se incluirán en el catálogo.
+                            <strong>Categorías Personalizadas</strong> 
+                            <small>Los productos marcados como "Vendidos" o "Separados" no aparecerán en el catálogo.</small>
                         </div>
                         
                         <div class="d-grid">
@@ -69,34 +70,35 @@
                         <p class="mb-1 text-muted">Total de productos</p>
                         <h3 class="mb-0">{{ total_productos }}</h3>
                     </div>
-                    
+                    <a href="{% url 'preview_catalogo' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-eye"></i> Vista Previa
+                    </a>
                     <hr>
                     
-                    <h6 class="mb-3">Formato del Catálogo</h6>
+                    <h6 class="mb-3">Características del Catálogo</h6>
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <i class="bi bi-check-circle text-success"></i>
-                            Portada personalizada
+                            Portada personalizable
                         </li>
                         <li class="mb-2">
                             <i class="bi bi-check-circle text-success"></i>
-                            3 productos por página
+                            Productos con imagen
                         </li>
                         <li class="mb-2">
                             <i class="bi bi-check-circle text-success"></i>
-                            Diseño alternado
+                            Información completa (precio, marca, etc.)
                         </li>
                         <li class="mb-2">
                             <i class="bi bi-check-circle text-success"></i>
-                            Imágenes y descripciones
+                            Filtrado por categoría
                         </li>
                     </ul>
                     
                     <div class="alert alert-light">
                         <small>
                             <i class="bi bi-lightbulb"></i>
-                            <strong>Tip:</strong> Usa los filtros para crear catálogos específicos 
-                            (por ejemplo, solo ropa de bebé).
+                            <strong>Tip:</strong> Usa los filtros para crear catálogos específicos por categoría o tipo de producto.
                         </small>
                     </div>
                 </div>

@@ -392,7 +392,27 @@
                             </div>
                         </div>
                         
-                        
+                        <hr class="my-4">
+
+                        <h6 class="fw-bold mb-3"><i class="bi bi-shop"></i> Información del Negocio</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Nombre del Negocio</label>
+                                <input type="text" class="form-control" name="nombre_negocio" 
+                                       value="{{ config_diseno.nombre_negocio|default:'Mi Tienda' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Subtítulo / Descripción</label>
+                                <input type="text" class="form-control" name="subtitulo_negocio" 
+                                       value="{{ config_diseno.subtitulo_negocio|default:'Productos de Excelente Calidad' }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Lema / Slogan</label>
+                                <input type="text" class="form-control" name="lema_negocio" 
+                                       value="{{ config_diseno.lema_negocio|default:'Calidad y Estilo' }}">
+                            </div>
+                        </div>
+
                         <div class="mt-4">
                             <div class="row g-2">
                                 <div class="col-md-8">

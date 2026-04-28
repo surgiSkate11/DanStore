@@ -37,8 +37,13 @@
                             <label for="id_password" class="form-label">
                                 <i class="bi bi-lock"></i> Contraseña
                             </label>
-                            <input type="password" name="password" class="form-control form-control-lg" 
-                                   id="id_password" required>
+                            <div class="input-group">
+                                <input type="password" name="password" class="form-control form-control-lg" 
+                                       id="id_password" required>
+                                <button class="btn btn-outline-secondary d-flex align-items-center" type="button" id="btnTogglePassword">
+                                    <i class="bi bi-eye" id="eyeIcon"></i>
+                                </button>
+                            </div>
                         </div>
                         
                         <button type="submit" class="btn btn-primary btn-lg w-100">
@@ -54,4 +59,27 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnTogglePassword = document.getElementById('btnTogglePassword');
+        const passwordInput = document.getElementById('id_password');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        btnTogglePassword.addEventListener('click', function () {
+            // Alternar ente 'text' y 'password'
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Alternar clases de ícono (ojo cerrado vs ojo abierto)
+            if (type === 'password') {
+                eyeIcon.classList.remove('bi-eye-slash');
+                eyeIcon.classList.add('bi-eye');
+            } else {
+                eyeIcon.classList.remove('bi-eye');
+                eyeIcon.classList.add('bi-eye-slash');
+            }
+        });
+    });
+</script>
 {% endblock %}

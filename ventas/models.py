@@ -1,68 +1,17 @@
 from django.db import models
 from django.utils import timezone
 from productos.models import Producto
-
-
-class Cliente(models.Model):
-    """Modelo de clientes para gestión de ventas"""
-    nombre = models.CharField(max_length=200, unique=True, verbose_name="Nombre completo")
-    telefono = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
-    email = models.EmailField(blank=True, verbose_name="Email")
-    direccion = models.TextField(blank=True, verbose_name="Dirección")
-    # CAMBIO 3.2: RUC/Cédula
-    ruc_cedula = models.CharField(
-        max_length=20,
-        blank=True,
-        verbose_name="RUC / Cédula"
-    )
-    notas = models.TextField(blank=True, verbose_name="Notas adicionales")
-    creado_en = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de registro")
-    
-    class Meta:
-        verbose_name = "Cliente"
-        verbose_name_plural = "Clientes"
-        ordering = ['nombre']
-    
-    def __str__(self):
-        return self.nombre
-    
-    def total_compras(self):
-        """Calcula el total de compras del cliente"""
-        return self.ventas.aggregate(models.Sum('total'))['total__sum'] or 0
-    
-    def cantidad_ventas(self):
-        """Cuenta las ventas del cliente"""
-        return self.ventas.count()
-    
-    def separaciones_sin_pagar(self):
-        """Cuenta productos separados que aún no tienen factura"""
-        return Producto.objects.filter(
-            vendido_a=self.nombre,
-            estado='separado'
-        ).count()
-    
-    def ultima_compra(self):
-        """Retorna la fecha de la última compra"""
-        ultima_venta = self.ventas.order_by('-fecha').first()
-        return ultima_venta.fecha if ultima_venta else None
-    
-    def get_comportamiento(self):
-        """Retorna diccionario con info de comportamiento del cliente"""
-        return {
-            'total_comprado': self.total_compras(),
-            'cantidad_compras': self.cantidad_ventas(),
-            'separaciones_sin_pagar': self.separaciones_sin_pagar(),
-            'ultima_compra': self.ultima_compra(),
-        }
+from empresas.models import Empresa
+from clientes.models import Cliente
 
 
 class Venta(models.Model):
     """Modelo de ventas/facturas - Solo se crean cuando hay pago"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, default=1, related_name='ventas')
     
     # CAMBIO 3.1: Numeración oficial
     numero_factura = models.CharField(
         max_length=20,
-        unique=True,
         blank=True,
         verbose_name="Número de factura"
     )
@@ -114,14 +63,16 @@ class Venta(models.Model):
             self.numero_factura = self._generar_numero()
         super().save(*args, **kwargs)
     
+# ventas/models.py — reemplaza _generar_numero():
     def _generar_numero(self):
-        """Genera número de factura secuencial"""
         from django.db import transaction
         with transaction.atomic():
+            # Ordenar por numero_factura es más confiable que por fecha
             ultima = (
-                Venta.objects
+                Venta.objects.filter(empresa=self.empresa)
                 .select_for_update()
-                .order_by('-creado_en')
+                .exclude(numero_factura='')
+                .order_by('-id')  # id es siempre único y creciente
                 .first()
             )
             if ultima and ultima.numero_factura:
@@ -139,13 +90,15 @@ class Venta(models.Model):
         self.total = self.subtotal - self.descuento + self.envio + self.otros_gastos
         self.save()
     
-    def numero_factura(self):
-        """Genera número de factura formateado"""
-        return f"FAC-{self.id:06d}"
     
     def cantidad_productos(self):
         """Cuenta la cantidad de productos en la venta"""
         return self.detalles.count()
+
+    class Meta:
+        verbose_name = "Venta"
+        verbose_name_plural = "Ventas"
+        unique_together = ('empresa', 'numero_factura')
 
 
 class DetalleVenta(models.Model):
@@ -159,26 +112,30 @@ class DetalleVenta(models.Model):
         verbose_name_plural = "Detalles de Venta"
     
     def __str__(self):
-        return f"{self.producto.tipo_prenda} - ${self.precio_unitario}"
+        return f"{self.producto.tipo_producto} - ${self.precio_unitario}"
 
 
 class ConfiguracionFactura(models.Model):
     """Configuración personalizable para facturas"""
-    # Solo habrá un registro (singleton)
+    empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, default=1, related_name='configuracion_factura')
     nombre_empresa = models.CharField(max_length=200, default="Tiendita", verbose_name="Nombre de la empresa")
+    nombre_personalizado = models.BooleanField(default=False, verbose_name="Nombre personalizado manualmente")
+    ruc_empresa = models.CharField(max_length=20, blank=True, verbose_name="RUC de la empresa")
     direccion_empresa = models.TextField(blank=True, verbose_name="Dirección")
     telefono_empresa = models.CharField(max_length=50, blank=True, verbose_name="Teléfono")
     email_empresa = models.EmailField(blank=True, verbose_name="Email")
     logo = models.ImageField(upload_to='facturas/logos/', blank=True, null=True, verbose_name="Logo de la empresa")
     
-    # Colores personalizables
-    color_borde = models.CharField(max_length=7, default="#667eea", verbose_name="Color del borde lateral")
-    color_principal = models.CharField(max_length=7, default="#667eea", verbose_name="Color principal")
-    color_texto = models.CharField(max_length=7, default="#333333", verbose_name="Color del texto")
+    # Configuración de Impuestos y Cliente por defecto
+    porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, verbose_name="Porcentaje de IVA")
+    texto_consumidor_final = models.CharField(max_length=100, default="CONSUMIDOR FINAL", verbose_name="Texto Consumidor Final")
+    id_consumidor_final = models.CharField(max_length=20, default="9999999999", verbose_name="ID Consumidor Final")
     
     # Información adicional
     mensaje_factura = models.TextField(blank=True, verbose_name="Mensaje en factura", 
                                        help_text="Mensaje que aparece al pie de la factura")
+    mensaje_deuda = models.TextField(blank=True, verbose_name="Mensaje para deudas", 
+                                       help_text="Mensaje predeterminado al compartir comprobantes de deuda por WhatsApp")
     
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
@@ -191,7 +148,13 @@ class ConfiguracionFactura(models.Model):
         return f"Configuración de {self.nombre_empresa}"
     
     @classmethod
-    def obtener_configuracion(cls):
-        """Obtiene o crea la configuración única"""
-        config, created = cls.objects.get_or_create(pk=1)
+    def obtener_configuracion(cls, empresa_id):
+        """Obtiene o crea la configuración para la empresa"""
+        config, created = cls.objects.get_or_create(empresa_id=empresa_id)
+        
+        # Sincronizar automáticamente si NO ha sido personalizado y es distinto al de la BD principal
+        if config.empresa and not config.nombre_personalizado and config.nombre_empresa != config.empresa.nombre:
+            config.nombre_empresa = config.empresa.nombre
+            config.save(update_fields=['nombre_empresa'])
+            
         return config

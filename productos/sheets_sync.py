@@ -1,15 +1,22 @@
 import gspread
-from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials as OAuthCredentials
+from google.auth.transport.requests import Request
+from google_auth_oauthlib.flow import Flow
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from productos.models import Producto, TipoPrenda
+from productos.models import Producto, TipoProducto
+from clientes.models import Cliente
 import os
 import json
 import re
+
+
+# Permitir OAuth sobre HTTP (solo para entorno de desarrollo local)
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
 def limpiar_precio(valor):
@@ -35,37 +42,108 @@ def limpiar_precio(valor):
     return None
 
 
-def conectar_google_sheets():
-    """Conecta con Google Sheets usando credenciales (solo lectura)"""
+def conectar_google_sheets(empresa=None):
+    """Conecta con Google Sheets usando OAuth 2.0 por usuario (empresa)"""
     try:
-        # Configurar scopes (lectura y escritura)
-        scopes = [
-            'https://www.googleapis.com/auth/spreadsheets',  # Lectura y escritura
-            'https://www.googleapis.com/auth/drive'  # Lectura y escritura Drive
-        ]
-
-        # 1. Intentar leer de variable de entorno
-        credentials_json = os.environ.get('GOOGLE_CREDENTIALS_JSON')
-        if credentials_json:
-            credentials_dict = json.loads(credentials_json)
-            creds = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
-            client = gspread.authorize(creds)
-            return client, None
-
-        # 2. Si no existe variable, buscar archivo local
-        credentials_path = os.path.join(settings.BASE_DIR, 'credentials.json')
-        if not os.path.exists(credentials_path):
-            return None, "No se encontró el archivo credentials.json ni la variable GOOGLE_CREDENTIALS_JSON"
-        creds = Credentials.from_service_account_file(credentials_path, scopes=scopes)
+        if not empresa:
+            return None, "Error interno: Empresa no especificada para la conexión."
+            
+        creds_path = os.path.join(settings.MEDIA_ROOT, f'google_oauth_{empresa.id}.json')
+        if not os.path.exists(creds_path):
+            return None, "No has iniciado sesión en Google Sheets. Por favor, conecta tu cuenta."
+            
+        with open(creds_path, 'r') as f:
+            creds_data = json.load(f)
+            
+        creds = OAuthCredentials(
+            token=creds_data['token'],
+            refresh_token=creds_data['refresh_token'],
+            token_uri=creds_data['token_uri'],
+            client_id=creds_data['client_id'],
+            client_secret=creds_data['client_secret'],
+            scopes=creds_data['scopes']
+        )
+        
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            # Guardar el token actualizado
+            creds_data['token'] = creds.token
+            with open(creds_path, 'w') as f:
+                json.dump(creds_data, f)
+                
         client = gspread.authorize(creds)
         return client, None
     except Exception as e:
-        return None, f"Error de conexión: {str(e)}"
+        return None, f"Error de conexión OAuth: La sesión puede haber expirado. Vuelve a conectar tu cuenta."
 
 
 @login_required
 def sincronizar_sheets(request):
     """Vista para sincronizar productos desde Google Sheets"""
+    if not getattr(request, 'empresa', None):
+        messages.error(request, "Tu usuario no tiene una empresa asociada o la cuenta está suspendida.")
+        return redirect('home')
+
+    creds_path = os.path.join(settings.MEDIA_ROOT, f'google_oauth_{request.empresa.id}.json')
+    client_secrets_file = os.path.join(settings.BASE_DIR, 'client_secrets.json')
+    scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+
+    # ── 1. CALLBACK OAUTH: El usuario regresa de Google con el token ──
+    if 'code' in request.GET:
+        try:
+            state = request.session.get('oauth_state')
+            flow = Flow.from_client_secrets_file(
+                client_secrets_file,
+                scopes=scopes,
+                state=state,
+                redirect_uri=request.build_absolute_uri(request.path)
+            )
+            flow.fetch_token(authorization_response=request.build_absolute_uri())
+            credentials = flow.credentials
+            
+            creds_data = {
+                'token': credentials.token,
+                'refresh_token': credentials.refresh_token,
+                'token_uri': credentials.token_uri,
+                'client_id': credentials.client_id,
+                'client_secret': credentials.client_secret,
+                'scopes': credentials.scopes
+            }
+            os.makedirs(os.path.dirname(creds_path), exist_ok=True)
+            with open(creds_path, 'w') as f:
+                json.dump(creds_data, f)
+                
+            messages.success(request, '✅ ¡Cuenta de Google conectada exitosamente!')
+            return redirect('sincronizar_sheets')
+        except Exception as e:
+            messages.error(request, f'Error al conectar con Google: {str(e)}')
+            return redirect('sincronizar_sheets')
+
+    # ── 2. INICIAR LOGIN OAUTH ──
+    if request.GET.get('action') == 'login':
+        if not os.path.exists(client_secrets_file):
+            messages.error(request, 'Falta el archivo client_secrets.json en el servidor. Contacta a soporte.')
+            return redirect('sincronizar_sheets')
+            
+        flow = Flow.from_client_secrets_file(
+            client_secrets_file,
+            scopes=scopes,
+            redirect_uri=request.build_absolute_uri(request.path)
+        )
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true',
+            prompt='consent' # Fuerza la emisión de refresh_token
+        )
+        request.session['oauth_state'] = state
+        return redirect(authorization_url)
+        
+    # ── 3. DESCONECTAR CUENTA ──
+    if request.GET.get('action') == 'logout':
+        if os.path.exists(creds_path):
+            os.remove(creds_path)
+        messages.info(request, 'Cuenta de Google desconectada.')
+        return redirect('sincronizar_sheets')
     
     if request.method == 'POST':
         sheet_url = request.POST.get('sheet_url', '').strip()
@@ -79,7 +157,7 @@ def sincronizar_sheets(request):
         guardar_sheet_url(sheet_url)
         
         # Conectar con Google Sheets
-        client, error = conectar_google_sheets()
+        client, error = conectar_google_sheets(request.empresa)
         if error:
             messages.error(request, f'{error}')
             return redirect('sincronizar_sheets')
@@ -108,23 +186,30 @@ def sincronizar_sheets(request):
             
             # Buscar índices de columnas por NOMBRE (no por posición)
             # El orden de las columnas puede cambiar, pero los nombres deben existir
+            idx_nombre = next((i for i, h in enumerate(headers) if any(k in h.lower() for k in ['nombre', 'producto', 'artículo', 'articulo'])), None)
             idx_tipo = next((i for i, h in enumerate(headers) if 'tipo' in h.lower()), None)
             idx_categoria = next((i for i, h in enumerate(headers) if 'categoria' in h.lower() or 'categoría' in h.lower()), None)
             idx_marca = next((i for i, h in enumerate(headers) if 'marca' in h.lower()), None)
             idx_color = next((i for i, h in enumerate(headers) if 'color' in h.lower()), None)
-            idx_talla = next((i for i, h in enumerate(headers) if 'talla' in h.lower()), None)
-            idx_precio = next((i for i, h in enumerate(headers) if 'precio venta' in h.lower()), None)  # Columna "Precio Venta"
-            idx_observacion = next((i for i, h in enumerate(headers) if 'observación' in h.lower() or 'observacion' in h.lower()), None)
-            idx_vendido_a = next((i for i, h in enumerate(headers) if 'vendido' in h.lower()), None)  # Columna "Vendido a"
+            idx_talla = next((i for i, h in enumerate(headers) if any(k in h.lower() for k in ['talla', 'variante', 'modelo', 'sabor', 'peso', 'medida', 'versión', 'version'])), None)
+            
+            # Distinguir entre precio de venta y precio real
+            idx_precio = next((i for i, h in enumerate(headers) if 'precio venta' in h.lower()), None)
+            if idx_precio is None:
+                # Fallback: buscar cualquier columna que tenga "precio" y no diga "real"
+                idx_precio = next((i for i, h in enumerate(headers) if 'precio' in h.lower() and 'real' not in h.lower()), None)
+                
+            idx_observacion = next((i for i, h in enumerate(headers) if 'observación' in h.lower() or 'observacion' in h.lower() or 'descripción' in h.lower() or 'descripcion' in h.lower()), None)
+            idx_vendido_a = next((i for i, h in enumerate(headers) if 'vendido' in h.lower() or 'cliente' in h.lower()), None)  # Columna "Vendido a"
             idx_precio_real = next((i for i, h in enumerate(headers) if 'precio real' in h.lower()), None)  # Columna "Precio Real"
             idx_estado = next((i for i, h in enumerate(headers) if 'estado' in h.lower()), None)  # Columna "Estado"
             
-            if idx_tipo is None or idx_categoria is None or idx_talla is None or idx_precio is None:
-                messages.error(request, f'Faltan columnas obligatorias. Ajusta el rango para incluir: Tipo, Categoría, Talla, Precio Venta')
+            if (idx_nombre is None and idx_tipo is None) or idx_categoria is None or idx_talla is None or idx_precio is None:
+                messages.error(request, f'Faltan columnas obligatorias. Tu hoja debe incluir al menos: Nombre (o Tipo), Categoría, Variante (o Talla) y Precio.')
                 return redirect('sincronizar_sheets')
             
             # VALIDACIÓN: Verificar si hay productos existentes y advertir sobre columnas faltantes
-            productos_existentes_count = Producto.objects.filter(google_sheets_row__isnull=False).count()
+            productos_existentes_count = Producto.objects.filter(empresa=request.empresa, google_sheets_row__isnull=False).count()
             
             if productos_existentes_count > 0:
                 # Si ya hay productos sincronizados, validar que no falten columnas importantes
@@ -144,11 +229,11 @@ def sincronizar_sheets(request):
                         return redirect('sincronizar_sheets')
             
             # OPTIMIZACIÓN: Obtener todos los productos existentes de una sola vez
-            productos_existentes = {p.google_sheets_row: p for p in Producto.objects.filter(google_sheets_row__isnull=False).select_related('tipo_prenda')}
+            productos_existentes = {p.google_sheets_row: p for p in Producto.objects.filter(empresa=request.empresa, google_sheets_row__isnull=False).select_related('tipo_producto')}
             
-            # OPTIMIZACIÓN: Obtener o crear todos los tipos de prenda de una vez
-            tipos_prenda_cache = {tp.nombre: tp for tp in TipoPrenda.objects.all()}
-            tipos_prenda_nuevos = set()
+            # OPTIMIZACIÓN: Obtener o crear todos los tipos de producto de una vez
+            tipos_producto_cache = {tp.nombre: tp for tp in TipoProducto.objects.filter(empresa=request.empresa)}
+            tipos_producto_nuevos = set()
             
             # Listas para bulk operations
             productos_a_crear = []
@@ -157,6 +242,7 @@ def sincronizar_sheets(request):
             for idx, fila in enumerate(valores[1:], start=2):  # Empezar desde fila 2
                 try:
                     # Obtener valores usando los índices encontrados
+                    nombre_prod = str(fila[idx_nombre]).strip() if idx_nombre is not None and len(fila) > idx_nombre and fila[idx_nombre] else ''
                     tipo_str = str(fila[idx_tipo]).strip() if len(fila) > idx_tipo and fila[idx_tipo] else ''
                     categoria_str = str(fila[idx_categoria]).strip() if len(fila) > idx_categoria and fila[idx_categoria] else ''
                     marca = str(fila[idx_marca]).strip() if idx_marca is not None and len(fila) > idx_marca and fila[idx_marca] else ''
@@ -168,25 +254,31 @@ def sincronizar_sheets(request):
                     precio_real = limpiar_precio(fila[idx_precio_real]) if idx_precio_real is not None and len(fila) > idx_precio_real else None
                     estado_sheets = str(fila[idx_estado]).strip().lower() if idx_estado is not None and len(fila) > idx_estado and fila[idx_estado] else ''
                     
-                    # Validar SOLO campos obligatorios: Tipo, Categoría, Talla, Precio
-                    if not tipo_str or not categoria_str or not talla or not precio_venta:
-                        errores.append(f"Fila {idx}: Faltan datos obligatorios (Tipo: '{tipo_str}', Categoría: '{categoria_str}', Talla: '{talla}', Precio: '{precio_venta}')")
+                    # Inteligencia: Si no hay "nombre" pero hay "tipo", usamos tipo como nombre
+                    if not nombre_prod and tipo_str:
+                        nombre_prod = tipo_str
+                    elif not tipo_str and nombre_prod:
+                        tipo_str = "General"
+                        
+                    # Validar SOLO campos obligatorios: Nombre, Categoría, Variante, Precio
+                    if not nombre_prod or not categoria_str or not talla or not precio_venta:
+                        errores.append(f"Fila {idx}: Faltan datos obligatorios (Nombre: '{nombre_prod}', Categoría: '{categoria_str}', Variante: '{talla}', Precio: '{precio_venta}')")
                         continue
                     
-                    # OPTIMIZACIÓN: Obtener o crear tipo de prenda usando cache
-                    if tipo_str not in tipos_prenda_cache:
-                        if tipo_str not in tipos_prenda_nuevos:
-                            tipo_prenda = TipoPrenda.objects.create(nombre=tipo_str)
-                            tipos_prenda_cache[tipo_str] = tipo_prenda
-                            tipos_prenda_nuevos.add(tipo_str)
-                    tipo_prenda = tipos_prenda_cache[tipo_str]
+                    # OPTIMIZACIÓN: Obtener o crear tipo de producto usando cache
+                    if tipo_str not in tipos_producto_cache:
+                        if tipo_str not in tipos_producto_nuevos:
+                            tipo_producto = TipoProducto.objects.create(nombre=tipo_str, empresa=request.empresa)
+                            tipos_producto_cache[tipo_str] = tipo_producto
+                            tipos_producto_nuevos.add(tipo_str)
+                    tipo_producto = tipos_producto_cache[tipo_str]
                     
 
                     # Guardar la categoría exactamente como viene del Sheets
-                    categoria_grupo = categoria_str.strip()
+                    categoria_nueva = categoria_str.strip()
 
                     # Rango de edad es el mismo valor de talla
-                    rango_edad = talla
+                    variante_nueva = talla
                     
                     # Determinar estado desde la columna "Estado" del Sheet
                     mapeo_estado = {
@@ -217,11 +309,11 @@ def sincronizar_sheets(request):
                     if producto_existente:
                         # OPTIMIZACIÓN: Solo actualizar si hay cambios reales
                         cambios_detectados = (
-                            producto_existente.tipo_prenda != tipo_prenda or
+                            producto_existente.tipo_producto != tipo_producto or
                             producto_existente.marca != marca or
                             producto_existente.color != color or
-                            producto_existente.categoria_grupo != categoria_grupo or
-                            producto_existente.rango_edad != rango_edad or
+                            producto_existente.categoria != categoria_nueva or
+                            producto_existente.variante != variante_nueva or
                             producto_existente.precio != precio_venta or
                             producto_existente.precio_real != precio_real or
                             producto_existente.descripcion != descripcion or
@@ -260,11 +352,12 @@ def sincronizar_sheets(request):
                                         pass
                             
                             # Actualizar solo si hubo cambios
-                            producto_existente.tipo_prenda = tipo_prenda
+                            producto_existente.nombre = nombre_prod
+                            producto_existente.tipo_producto = tipo_producto
                             producto_existente.marca = marca
                             producto_existente.color = color
-                            producto_existente.categoria_grupo = categoria_grupo
-                            producto_existente.rango_edad = rango_edad
+                            producto_existente.categoria = categoria_nueva
+                            producto_existente.variante = variante_nueva
                             producto_existente.precio = precio_venta
                             producto_existente.precio_real = precio_real
                             producto_existente.descripcion = descripcion
@@ -278,11 +371,13 @@ def sincronizar_sheets(request):
                         # Preparar producto nuevo para bulk_create
                         productos_a_crear.append(
                             Producto(
-                                tipo_prenda=tipo_prenda,
+                                empresa=request.empresa,
+                                nombre=nombre_prod,
+                                tipo_producto=tipo_producto,
                                 marca=marca,
                                 color=color,
-                                categoria_grupo=categoria_grupo,
-                                rango_edad=rango_edad,
+                                categoria=categoria_nueva,
+                                variante=variante_nueva,
                                 precio=precio_venta,
                                 precio_real=precio_real,
                                 descripcion=descripcion,
@@ -294,7 +389,6 @@ def sincronizar_sheets(request):
                                 fecha_importacion=timezone.now(),
                             )
                         )
-                    
                 except Exception as e:
                     errores.append(f"Fila {idx}: {str(e)}")
             
@@ -306,7 +400,7 @@ def sincronizar_sheets(request):
             if productos_a_actualizar:
                 Producto.objects.bulk_update(
                     productos_a_actualizar,
-                    ['tipo_prenda', 'marca', 'color', 'categoria_grupo', 'rango_edad', 
+                    ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante', 
                      'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'sincronizado_sheets',
                      'origen', 'fecha_importacion'],
                     batch_size=500
@@ -319,7 +413,7 @@ def sincronizar_sheets(request):
                 'rango_celdas': rango_celdas,
                 'ultima_sincronizacion': str(timezone.now())
             }
-            config_file = os.path.join(settings.MEDIA_ROOT, 'sheets_config.json')
+            config_file = os.path.join(settings.MEDIA_ROOT, f'sheets_config_{request.empresa.id}.json')
             os.makedirs(os.path.dirname(config_file), exist_ok=True)
             with open(config_file, 'w') as f:
                 json.dump(config_data, f)
@@ -351,6 +445,7 @@ def sincronizar_sheets(request):
             
             # Buscar productos en estado 'separado' o 'disponible' que tengan facturas
             productos_no_vendidos = Producto.objects.filter(
+                empresa=request.empresa,
                 estado__in=['separado', 'disponible']
             ).values_list('id', flat=True)
             
@@ -395,14 +490,14 @@ def sincronizar_sheets(request):
             # ========================================
             # Después de sincronizar productos Y limpiar facturas inconsistentes,
             # crear facturas automáticamente para productos vendidos (con vendido_a)
-            estadisticas_ventas = sincronizar_ventas_desde_sheets()
+            estadisticas_ventas = sincronizar_ventas_desde_sheets(request.empresa)
             
             # Mostrar resultados de sincronización de facturas SOLO si hay actividad
             if estadisticas_ventas['ventas_creadas'] > 0:
                 messages.success(request, f"Facturas: {estadisticas_ventas['ventas_creadas']} factura(s) creada(s) automáticamente con {estadisticas_ventas['productos_nuevos']} producto(s)")
             
             if estadisticas_ventas['clientes_creados'] > 0:
-                messages.success(request, f"Clientes: {estadisticas_ventas['clientes_creados']} cliente(s) nuevo(s) registrado(s)")
+                messages.warning(request, f"⚠️ Se registraron {estadisticas_ventas['clientes_creados']} cliente(s) nuevo(s) solo con el nombre desde Sheets. Por favor, edítalos luego para completar su Cédula/RUC.")
             
             # Solo mostrar errores REALES como warning
             if estadisticas_ventas['errores']:
@@ -413,26 +508,28 @@ def sincronizar_sheets(request):
             # cuando solo se están actualizando productos existentes
             
         except Exception as e:
-            messages.error(request, f'Error al procesar Google Sheets: {str(e)}')
+            messages.error(request, f'Hubo un problema procesando los datos. Comprueba que tu hoja no tenga celdas combinadas o datos inválidos. (Detalle técnico: {str(e)})')
         
         return redirect('sincronizar_sheets')
     
     # GET: Mostrar formulario
-    # Contar productos con y sin imagen
-    total_productos = Producto.objects.filter(sincronizado_sheets=True).count()
-    # Productos sin foto: campo imagen vacío o NULL
-    productos_sin_foto = Producto.objects.filter(
-        sincronizado_sheets=True
-    ).filter(
-        models.Q(imagen='') | models.Q(imagen__isnull=True)
+    total_productos = Producto.objects.filter(empresa=request.empresa, sincronizado_sheets=True).count()
+    
+    from django.db.models import Sum
+    
+    # Filtramos solo los clientes que provienen de la sincronización de Google Sheets
+    total_clientes = Cliente.objects.filter(
+        empresas=request.empresa, notas__icontains='Google Sheets'
     ).count()
-    productos_con_foto = total_productos - productos_sin_foto
+    valor_total = Producto.objects.filter(
+        empresa=request.empresa, sincronizado_sheets=True
+    ).aggregate(total=Sum('precio'))['total'] or 0
     
     context = {
         'total_productos': total_productos,
-        'productos_sin_foto': productos_sin_foto,
-        'productos_con_foto': productos_con_foto,
-        'tiene_credentials': os.path.exists(os.path.join(settings.BASE_DIR, 'credentials.json')),
+        'total_clientes': total_clientes,
+        'valor_total': valor_total,
+        'tiene_credentials': os.path.exists(creds_path),
     }
     
     return render(request, 'productos/sincronizar_sheets.html', context)
@@ -505,6 +602,9 @@ def mapear_talla(talla, categoria):
 @login_required
 def subir_fotos_productos(request):
     """Vista para subir fotos a productos sincronizados desde Sheets"""
+    if not getattr(request, 'empresa', None):
+        messages.error(request, "Tu usuario no tiene una empresa asociada.")
+        return redirect('home')
     
     if request.method == 'POST':
         producto_id = request.POST.get('producto_id')
@@ -512,17 +612,18 @@ def subir_fotos_productos(request):
         
         if producto_id and imagen:
             try:
-                producto = Producto.objects.get(id=producto_id, sincronizado_sheets=True)
+                producto = Producto.objects.get(id=producto_id, sincronizado_sheets=True, empresa=request.empresa)
                 producto.imagen = imagen
                 producto.save()
-                messages.success(request, f'Foto subida para {producto.tipo_prenda}')
+                messages.success(request, f'Foto subida para el producto')
             except Producto.DoesNotExist:
                 messages.error(request, 'Producto no encontrado')
         
         return redirect('subir_fotos_productos')
     
     # GET: Listar productos sin foto (campo vacío o NULL) - Limitar a 100 más recientes
-    productos_sin_foto = Producto.objects.select_related('tipo_prenda').filter(
+    productos_sin_foto = Producto.objects.select_related('tipo_producto').filter(
+        empresa=request.empresa,
         sincronizado_sheets=True
     ).filter(
         models.Q(imagen='') | models.Q(imagen__isnull=True)
@@ -535,7 +636,7 @@ def subir_fotos_productos(request):
     return render(request, 'productos/subir_fotos.html', context)
 
 
-def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None):
+def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None, empresa=None):
     """
     Agrega un nuevo cliente al Google Sheets en la columna de validación de datos.
     Esto permite que aparezca en el dropdown del campo 'vendido_a' en futuros productos.
@@ -549,7 +650,7 @@ def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None):
     """
     try:
         # Conectar con Google Sheets (ahora con permisos de escritura)
-        client, error = conectar_google_sheets()
+        client, error = conectar_google_sheets(empresa)
         if error:
             return False, f"Error de conexión: {error}"
         
@@ -605,7 +706,7 @@ def guardar_sheet_url(sheet_url):
     cache.set('last_sheet_url', sheet_url, timeout=None)  # Sin expiración
 
 
-def sincronizar_ventas_desde_sheets():
+def sincronizar_ventas_desde_sheets(empresa):
     """
     Sincroniza ventas desde Google Sheets.
     SOLO crea facturas para productos que NO estén ya facturados.
@@ -614,7 +715,8 @@ def sincronizar_ventas_desde_sheets():
     Returns:
         dict: Estadísticas de sincronización (ventas_creadas, productos_nuevos, errores)
     """
-    from ventas.models import Cliente, Venta, DetalleVenta
+    from ventas.models import Venta, DetalleVenta
+    from clientes.models import Cliente
     from decimal import Decimal
     from collections import defaultdict
     
@@ -630,18 +732,19 @@ def sincronizar_ventas_desde_sheets():
     try:
         # OPTIMIZACIÓN: Obtener productos con estado 'vendido' que NO estén ya en una factura
         # Usar set() para búsqueda O(1) en lugar de lista
-        productos_ya_facturados_ids = set(DetalleVenta.objects.values_list('producto_id', flat=True))
+        productos_ya_facturados_ids = set(DetalleVenta.objects.filter(venta__empresa=empresa).values_list('producto_id', flat=True))
         
         # OPTIMIZACIÓN: select_related evita N+1 queries, only() reduce campos cargados
         productos_nuevos = Producto.objects.filter(
+            empresa=empresa,
             estado='vendido',  # SOLO productos con estado vendido
             vendido_a__isnull=False
         ).exclude(
             vendido_a=''
         ).exclude(
             id__in=productos_ya_facturados_ids
-        ).select_related('tipo_prenda').only(
-            'id', 'vendido_a', 'precio', 'precio_real', 'tipo_prenda__nombre'
+        ).select_related('tipo_producto').only(
+            'id', 'vendido_a', 'precio', 'precio_real', 'tipo_producto__nombre'
         )
         
         if not productos_nuevos.exists():
@@ -650,6 +753,7 @@ def sincronizar_ventas_desde_sheets():
         
         # Contar productos ya facturados para estadísticas
         productos_vendidos_total = Producto.objects.filter(
+            empresa=empresa,
             vendido_a__isnull=False
         ).exclude(vendido_a='').count()
         estadisticas['productos_ya_facturados'] = productos_vendidos_total - productos_nuevos.count()
@@ -665,26 +769,30 @@ def sincronizar_ventas_desde_sheets():
         # OPTIMIZACIÓN: Obtener o crear todos los clientes de una vez
         clientes_cache = {}
         nombres_clientes = list(ventas_por_cliente.keys())
-        clientes_existentes = Cliente.objects.filter(nombre__in=nombres_clientes)
+        clientes_existentes = Cliente.objects.filter(empresas=empresa, nombre__in=nombres_clientes)
         for cliente in clientes_existentes:
             clientes_cache[cliente.nombre] = cliente
         
         # Crear clientes nuevos en batch
+        import uuid
         clientes_nuevos = []
         for nombre in nombres_clientes:
             if nombre not in clientes_cache:
-                clientes_nuevos.append(
-                    Cliente(
-                        nombre=nombre,
-                        notas='Cliente creado desde sincronización con Google Sheets'
-                    )
+                nuevo_cliente = Cliente(
+                    nombre=nombre,
+                    ruc_cedula=f"SYS-{uuid.uuid4().hex[:8].upper()}",
+                    notas='Cliente incompleto desde Google Sheets. Requiere actualización.'
                 )
+                clientes_nuevos.append(nuevo_cliente)
         
         if clientes_nuevos:
             Cliente.objects.bulk_create(clientes_nuevos, batch_size=100)
+            nuevos_salvados = Cliente.objects.filter(nombre__in=[c.nombre for c in clientes_nuevos])
+            for nc in nuevos_salvados:
+                nc.empresas.add(empresa)
             estadisticas['clientes_creados'] = len(clientes_nuevos)
             # Actualizar cache con clientes nuevos
-            for cliente in Cliente.objects.filter(nombre__in=[c.nombre for c in clientes_nuevos]):
+            for cliente in Cliente.objects.filter(empresas=empresa, nombre__in=[c.nombre for c in clientes_nuevos]):
                 clientes_cache[cliente.nombre] = cliente
         
         # Crear facturas por cada cliente (solo con productos nuevos)
@@ -694,6 +802,7 @@ def sincronizar_ventas_desde_sheets():
                 
                 # Crear nueva venta para estos productos (solo se crea cuando hay pago)
                 venta = Venta.objects.create(
+                    empresa=empresa,
                     cliente=cliente,
                     notas=''
                 )

@@ -1,175 +1,195 @@
 {% extends 'base.html' %}
 
-{% block title %}Cliente: {{ nombre_cliente }}{% endblock %}
+{% block title %}Perfil de {{ cliente.nombre }} - Tiendita{% endblock %}
 
 {% block extra_css %}
 <style>
-    .cliente-header {
+    .gradient-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 12px;
-        padding: 2rem;
         color: white;
+        padding: 2.5rem 0;
+        border-radius: 16px;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        position: relative;
+        overflow: hidden;
     }
     
+    .gradient-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -5%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+    }
+
     .stats-card {
         background: white;
         border-radius: 12px;
         padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
+        text-align: center;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     
     .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .filter-section {
+        background: linear-gradient(to right, #ffffff, #f8f9ff);
+        border-radius: 16px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+        border-left: 4px solid #667eea;
+        margin-bottom: 2rem;
     }
     
     .producto-card {
         background: white;
         border-radius: 12px;
-        padding: 1.5rem;
+        padding: 1.25rem;
         margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 4px solid #667eea;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #f3f4f6;
+        border-left: 4px solid #10b981;
         transition: all 0.3s ease;
     }
     
     .producto-card:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        transform: translateX(5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transform: translateY(-3px);
+        border-left-color: #667eea;
+    }
+
+    .avatar-circle-large {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        font-weight: bold;
+        color: white;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        flex-shrink: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid px-4">
     <!-- Header del Cliente -->
-    <div class="cliente-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h2 class="mb-2">
-                    <i class="bi bi-person-circle"></i> {{ nombre_cliente }}
-                </h2>
-                <p class="mb-0 opacity-75">Cliente desde Google Sheets</p>
-                {% if cliente_info %}
-                <div class="mt-2">
-                    {% if cliente_info.telefono %}
-                    <small><i class="bi bi-telephone"></i> {{ cliente_info.telefono }}</small><br>
-                    {% endif %}
-                    {% if cliente_info.direccion %}
-                    <small><i class="bi bi-geo-alt"></i> {{ cliente_info.direccion }}</small>
-                    {% endif %}
+    <div class="gradient-header">
+        <div class="container-fluid">
+            <div class="row align-items-center position-relative z-1">
+                <div class="col-md-8 d-flex align-items-center">
+                    <div class="avatar-circle-large me-4 d-none d-md-flex">
+                        {{ cliente.nombre|make_list|first|upper }}
+                    </div>
+                    <div>
+                        <h1 class="mb-1 fw-bold">{{ cliente.nombre }}</h1>
+                        <p class="mb-0 opacity-90 fs-6">
+                            <i class="bi bi-person-vcard me-1"></i> CI/RUC: <strong>{{ cliente.ruc_cedula }}</strong> | 
+                            <i class="bi bi-telephone me-1"></i> {{ cliente.telefono|default:"Sin teléfono" }}
+                        </p>
+                        {% if cliente.direccion %}
+                        <p class="mb-0 opacity-90 mt-1 small">
+                            <i class="bi bi-geo-alt me-1"></i> {{ cliente.direccion }}
+                        </p>
+                        {% endif %}
+                    </div>
                 </div>
-                {% endif %}
-            </div>
-            <div>
-                <a href="{% url 'editar_info_cliente' nombre_cliente %}" class="btn btn-warning me-2">
-                    <i class="bi bi-pencil-square"></i> Editar Info
-                </a>
-                <a href="{% url 'top_clientes' %}" class="btn btn-light">
-                    <i class="bi bi-arrow-left"></i> Volver
-                </a>
+                <div class="col-md-4 text-md-end mt-4 mt-md-0 d-flex justify-content-md-end gap-2">
+                    <a href="{% url 'editar_cliente' cliente.id %}" class="btn btn-light btn-lg shadow-sm">
+                        <i class="bi bi-pencil-square"></i> Editar Cliente
+                    </a>
+                    <a href="{% url 'lista_clientes' %}" class="btn btn-outline-light btn-lg shadow-sm">
+                        <i class="bi bi-arrow-left-circle"></i> Volver a Clientes
+                    </a>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Estadísticas -->
-    <div class="row mb-4">
-        <div class="col-md-6 mb-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-currency-dollar" style="font-size: 24px; color: white;"></i>
-                        </div>
-                    </div>
-                    <div class="ms-3">
-                        <p class="mb-0 text-muted small">Total Gastado</p>
-                        <h4 class="mb-0" style="color: #10b981;">${{ total_gastado|floatformat:2 }}</h4>
-                    </div>
-                </div>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="stats-card" style="border-left-color: #10b981;">
+                <i class="bi bi-cash-stack" style="font-size: 2.5rem; color: #10b981;"></i>
+                <h3 class="mt-3 mb-0" style="color: #10b981;">${{ total_gastado|floatformat:2 }}</h3>
+                <p class="text-muted mb-0 fw-semibold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">Total Gastado</p>
             </div>
         </div>
         
-        <div class="col-md-6 mb-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-bag" style="font-size: 24px; color: white;"></i>
-                        </div>
-                    </div>
-                    <div class="ms-3">
-                        <p class="mb-0 text-muted small">Productos Comprados</p>
-                        <h4 class="mb-0" style="color: #f59e0b;">{{ cantidad_productos }}</h4>
-                    </div>
-                </div>
+        <div class="col-12 col-md-6">
+            <div class="stats-card" style="border-left-color: #667eea;">
+                <i class="bi bi-bag-heart-fill" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h3 class="mt-3 mb-0" style="color: #667eea;">{{ cantidad_productos }}</h3>
+                <p class="text-muted mb-0 fw-semibold text-uppercase" style="font-size: 0.8rem; letter-spacing: 0.5px;">Productos Comprados</p>
             </div>
         </div>
     </div>
     
     <!-- Filtros de Fecha -->
-    <div class="card shadow-sm mb-4" style="border-radius: 12px; border: none;">
-        <div class="card-body">
-            <h5 class="mb-3">
-                <i class="bi bi-funnel"></i> Filtrar Compras
+    <div class="filter-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 fw-bold" style="color: #1f2937;">
+                <i class="bi bi-funnel" style="color: #667eea;"></i> Filtrar Compras
             </h5>
-            <form method="get" action="" id="formFiltros">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-calendar-range"></i> Período
-                        </label>
-                        <select name="filtro" id="selectFiltro" class="form-select" onchange="toggleFechasPersonalizadas()">
-                            <option value="todos" {% if filtro_actual == 'todos' %}selected{% endif %}>Todos</option>
-                            <option value="hoy" {% if filtro_actual == 'hoy' %}selected{% endif %}>Hoy</option>
-                            <option value="semana" {% if filtro_actual == 'semana' %}selected{% endif %}>Esta Semana</option>
-                            <option value="mes" {% if filtro_actual == 'mes' %}selected{% endif %}>Este Mes</option>
-                            <option value="año" {% if filtro_actual == 'año' %}selected{% endif %}>Este Año</option>
-                            <option value="personalizado" {% if filtro_actual == 'personalizado' %}selected{% endif %}>Personalizado</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-3" id="fechaInicioDiv" style="display: {% if filtro_actual == 'personalizado' %}block{% else %}none{% endif %};">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-calendar-event"></i> Fecha Inicio
-                        </label>
-                        <input type="date" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}" max="{{ today|date:'Y-m-d' }}">
-                    </div>
-                    
-                    <div class="col-md-3" id="fechaFinDiv" style="display: {% if filtro_actual == 'personalizado' %}block{% else %}none{% endif %};">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-calendar-check"></i> Fecha Fin
-                        </label>
-                        <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}" max="{{ today|date:'Y-m-d' }}">
-                    </div>
-                    
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search"></i> Filtrar
-                        </button>
-                    </div>
-                </div>
-            </form>
-            
             {% if filtro_actual != 'todos' %}
-            <div class="mt-3">
-                <a href="?filtro=todos" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-x-circle"></i> Limpiar Filtros
-                </a>
-            </div>
+            <a href="?filtro=todos" class="btn btn-sm btn-outline-secondary rounded-pill">
+                <i class="bi bi-x-circle"></i> Limpiar
+            </a>
             {% endif %}
         </div>
+        
+        <form method="get" action="" id="formFiltros">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label text-muted fw-semibold small text-uppercase">Período de Tiempo</label>
+                    <select name="filtro" id="selectFiltro" class="form-select bg-light border-0 shadow-none" onchange="toggleFechasPersonalizadas()" style="border-radius: 10px;">
+                        <option value="todos" {% if filtro_actual == 'todos' %}selected{% endif %}>Todo el historial</option>
+                        <option value="hoy" {% if filtro_actual == 'hoy' %}selected{% endif %}>El día de hoy</option>
+                        <option value="semana" {% if filtro_actual == 'semana' %}selected{% endif %}>Esta semana</option>
+                        <option value="mes" {% if filtro_actual == 'mes' %}selected{% endif %}>Este mes</option>
+                        <option value="año" {% if filtro_actual == 'año' %}selected{% endif %}>Este año</option>
+                        <option value="personalizado" {% if filtro_actual == 'personalizado' %}selected{% endif %}>Fechas personalizadas...</option>
+                    </select>
+                </div>
+                
+                <div class="col-12 col-md-3" id="fechaInicioDiv" style="display: {% if filtro_actual == 'personalizado' %}block{% else %}none{% endif %};">
+                    <label class="form-label text-muted fw-semibold small text-uppercase">Desde</label>
+                    <input type="date" name="fecha_inicio" class="form-control bg-light border-0 shadow-none" value="{{ fecha_inicio }}" max="{{ today|date:'Y-m-d' }}" style="border-radius: 10px;">
+                </div>
+                
+                <div class="col-12 col-md-3" id="fechaFinDiv" style="display: {% if filtro_actual == 'personalizado' %}block{% else %}none{% endif %};">
+                    <label class="form-label text-muted fw-semibold small text-uppercase">Hasta</label>
+                    <input type="date" name="fecha_fin" class="form-control bg-light border-0 shadow-none" value="{{ fecha_fin }}" max="{{ today|date:'Y-m-d' }}" style="border-radius: 10px;">
+                </div>
+                
+                <div class="col-12 col-md-2" id="btnBuscarDiv" style="display: {% if filtro_actual == 'personalizado' %}block{% else %}none{% endif %};">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm" style="border-radius: 10px;">
+                        <i class="bi bi-search me-1"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
     
     <!-- Productos Comprados -->
     <div class="mb-4">
-        <h4 class="mb-3">
-            <i class="bi bi-bag-check"></i> Productos Comprados
+        <h5 class="mb-3 fw-bold" style="color: #1f2937;">
+            <i class="bi bi-card-checklist" style="color: #667eea;"></i> Historial de Artículos
             {% if filtro_actual != 'todos' %}
-                <span class="badge bg-info">
+                <span class="badge bg-primary bg-opacity-10 text-primary ms-2 fs-6">
                     {% if filtro_actual == 'hoy' %}Hoy
                     {% elif filtro_actual == 'semana' %}Esta Semana
                     {% elif filtro_actual == 'mes' %}Este Mes
@@ -178,44 +198,42 @@
                     {% endif %}
                 </span>
             {% endif %}
-        </h4>
+        </h5>
         
         {% if productos %}
             {% for producto in productos %}
             <div class="producto-card">
                 <div class="row align-items-center">
-                    <div class="col-auto">
+                    <div class="col-12 col-sm-auto mb-3 mb-sm-0 text-center">
                         {% if producto.imagen %}
-                        <img src="{{ producto.imagen.url }}" alt="{{ producto.tipo_prenda }}"
-                             style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
+                        <img src="{{ producto.imagen.url }}" alt="{{ producto.tipo_producto|default:producto.nombre }}"
+                             style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         {% else %}
                         <div class="bg-light rounded d-flex align-items-center justify-content-center"
-                             style="width: 100px; height: 100px;">
-                            <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                             style="width: 80px; height: 80px; border: 1px dashed #cbd5e1;">
+                            <i class="bi bi-box-seam text-muted" style="font-size: 2rem;"></i>
                         </div>
                         {% endif %}
                     </div>
-                    <div class="col">
-                        <h5 class="mb-1">{{ producto.tipo_prenda }}</h5>
-                        <p class="mb-0 text-muted">
-                            <small>
-                                <span class="badge bg-secondary">{{ producto.get_categoria_grupo_display }}</span>
-                                {% if producto.rango_edad %}
-                                | Talla: {{ producto.rango_edad }}
-                                {% endif %}
-                                {% if producto.color %}
-                                | Color: {{ producto.color }}
-                                {% endif %}
-                                {% if producto.marca %}
-                                | Marca: {{ producto.marca }}
-                                {% endif %}
-                            </small>
+                    <div class="col-12 col-sm text-center text-sm-start">
+                        <h6 class="mb-1 fw-bold text-dark">{{ producto.tipo_producto|default:producto.nombre }}</h6>
+                        <p class="mb-1 text-muted small">
+                            <span class="badge bg-light text-secondary border me-1">{{ producto.categoria|default:"General" }}</span>
+                            {% if producto.variante %}
+                            <span class="me-2"><i class="bi bi-tag"></i> {{ producto.variante }}</span>
+                            {% endif %}
+                            {% if producto.color %}
+                            <span class="me-2"><i class="bi bi-palette"></i> {{ producto.color }}</span>
+                            {% endif %}
+                            {% if producto.marca %}
+                            <span><i class="bi bi-award"></i> {{ producto.marca }}</span>
+                            {% endif %}
                         </p>
                         <p class="mb-0 text-muted small">
-                            <i class="bi bi-calendar3"></i> {{ producto.creado_en|date:"d/m/Y" }}
+                            <i class="bi bi-calendar3"></i> Registrado: {{ producto.creado_en|date:"d/m/Y H:i" }}
                         </p>
                     </div>
-                    <div class="col-auto text-end">
+                    <div class="col-12 col-sm-auto text-center text-sm-end mt-3 mt-sm-0">
                         <h4 class="mb-0" style="color: #10b981;">
                             ${{ producto.precio|floatformat:2 }}
                         </h4>
@@ -243,22 +261,27 @@
         {% endif %}
     </div>
 </div>
-
-<script>
-function toggleFechasPersonalizadas() {
-    const filtro = document.getElementById('selectFiltro').value;
-    const fechaInicioDiv = document.getElementById('fechaInicioDiv');
-    const fechaFinDiv = document.getElementById('fechaFinDiv');
-    
-    if (filtro === 'personalizado') {
-        fechaInicioDiv.style.display = 'block';
-        fechaFinDiv.style.display = 'block';
-    } else {
-        fechaInicioDiv.style.display = 'none';
-        fechaFinDiv.style.display = 'none';
-        // Auto-submit cuando se selecciona un filtro predefinido
-        document.getElementById('formFiltros').submit();
-    }
-}
-</script>
 {% endblock %}
+
+    {% block extra_js %}
+        <script>
+        function toggleFechasPersonalizadas() {
+            const filtro = document.getElementById('selectFiltro').value;
+            const fechaInicioDiv = document.getElementById('fechaInicioDiv');
+            const fechaFinDiv = document.getElementById('fechaFinDiv');
+            const btnBuscarDiv = document.getElementById('btnBuscarDiv');
+            
+            if (filtro === 'personalizado') {
+                fechaInicioDiv.style.display = 'block';
+                fechaFinDiv.style.display = 'block';
+                btnBuscarDiv.style.display = 'block';
+            } else {
+                fechaInicioDiv.style.display = 'none';
+                fechaFinDiv.style.display = 'none';
+                btnBuscarDiv.style.display = 'none';
+                // Auto-submit cuando se selecciona un filtro predefinido
+                document.getElementById('formFiltros').submit();
+            }
+        }
+        </script>
+    {% endblock %}

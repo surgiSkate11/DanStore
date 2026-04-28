@@ -2,8 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Clientes (from Google Sheets vendido_a dropdown)
-    path('', views.top_clientes, name='top_clientes'),
-    path('<str:cliente_nombre>/', views.detalle_cliente, name='detalle_cliente'),
-    path('<str:cliente_nombre>/editar/', views.editar_info_cliente, name='editar_info_cliente'),
+    path('', views.lista_clientes, name='lista_clientes'),
+    path('crear/', views.crear_cliente, name='crear_cliente'),
+    path('<int:cliente_id>/', views.detalle_cliente, name='detalle_cliente'),
+    path('<int:cliente_id>/editar/', views.editar_cliente, name='editar_cliente'),
 ]

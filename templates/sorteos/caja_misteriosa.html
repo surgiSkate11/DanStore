@@ -4,747 +4,799 @@
 
 {% block extra_css %}
 <style>
-    /* Toast Notification */
-    .toast-notification {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: white;
-        padding: 20px 30px;
-        border-radius: 12px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-        z-index: 9999;
-        max-width: 400px;
-        width: 90%;
-        opacity: 0;
-        animation: slideDown 0.4s ease forwards;
-        overflow: hidden;
+    main.container, main.container.mt-4 {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+        height: auto !important;
+    }
+    footer, .footer, .mt-2 { display: none !important; }
+    html, body { overflow: hidden !important; height: 100% !important; }
+
+    body {
+        background: radial-gradient(circle at 50% 0%, #4c1d95 0%, #1e1b4b 70%, #0f172a 100%) !important;
+    }
+
+    .caja-page {
+        height: calc(100vh - 56px);
+        padding: 20px 30px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
     }
     
-    .toast-notification::before {
+    .caja-page::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+') repeat;
+        opacity: 0.3;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .wrapper {
+        max-width: 1200px;
         width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
-        animation: shrinkBorder 3s linear forwards;
-    }
-    
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translate(-50%, -30px);
-        }
-        to {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-    }
-    
-    @keyframes shrinkBorder {
-        from {
-            width: 100%;
-        }
-        to {
-            width: 0%;
-        }
-    }
-    
-    @keyframes slideUp {
-        from {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-        to {
-            opacity: 0;
-            transform: translate(-50%, -30px);
-        }
-    }
-    
-    .toast-notification.hiding {
-        animation: slideUp 0.3s ease forwards;
-    }
-    
-    .toast-content {
         display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 1;
+    }
+    
+    .header {
+        text-align: center;
+        margin-bottom: 25px;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .header-title-wrapper {
+        display: inline-flex;
         align-items: center;
         gap: 15px;
+        padding: 8px 12px 8px 24px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
-    
-    .toast-icon {
-        font-size: 2rem;
+
+    .header h1 {
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .header h1 i { color: #fcd34d; }
+
+    .live-badge {
+        background: #ef4444;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        animation: pulse-live 2s infinite;
+        white-space: nowrap;
         flex-shrink: 0;
     }
-    
-    .toast-message {
-        flex: 1;
+
+    .live-badge::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
     }
-    
-    .toast-message h6 {
-        margin: 0 0 5px 0;
-        font-size: 1rem;
-        font-weight: 600;
+
+    @keyframes pulse-live {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
-    
-    .toast-message p {
-        margin: 0;
-        font-size: 0.875rem;
-        color: #6b7280;
-    }
-    body {
-        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
-        min-height: 100vh;
-        overflow-x: hidden;
-    }
-    
-    .container-fluid {
-        background: transparent !important;
-    }
-    
-    .caja-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem;
-        padding-bottom: 4rem;
-        min-height: calc(100vh - 100px);
-        position: relative;
-    }
-    
-    .mystery-box-wrapper {
-        position: relative;
-        width: 400px;
-        height: 400px;
-        margin: 3rem auto;
-        perspective: 1000px;
-    }
-    
-    .mystery-box {
-        position: relative;
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 390px;
+        gap: 40px;
         width: 100%;
-        height: 100%;
-        transform-style: preserve-3d;
-        animation: float 3s ease-in-out infinite;
+        align-items: start;
     }
-    
-    @keyframes float {
-        0%, 100% {
-            transform: translateY(0px) rotateY(0deg);
-        }
-        50% {
-            transform: translateY(-20px) rotateY(10deg);
-        }
-    }
-    
-    .box-body {
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #2d1b69 0%, #1a0e3e 100%);
-        border: 8px solid #8b5cf6;
-        border-radius: 20px;
+
+    .validation-alert {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #6ee7b7;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10rem;
-        box-shadow: 
-            0 0 60px rgba(139, 92, 246, 0.6),
-            inset 0 0 50px rgba(139, 92, 246, 0.2);
+        gap: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        width: 100%;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .validation-alert.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+    }
+
+    .instruction-banner {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 100px;
+        padding: 14px 40px;
+        color: white;
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin-bottom: 30px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .instruction-banner.active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #34d399;
+        box-shadow: 0 12px 40px rgba(16, 185, 129, 0.5);
+        transform: scale(1.05);
+    }
+
+    /* Cajas Grid */
+    .cajas-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .cajas-grid {
+        display: grid;
+        grid-template-columns: repeat(3, auto);
+        gap: 30px;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .caja-item {
+        width: 165px; 
+        height: 165px;
+        background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+        border-radius: 20px;
+        border: 3px solid #818cf8;
+        box-shadow: 0 10px 25px rgba(67, 56, 202, 0.4), inset 0 4px 15px rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: not-allowed;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        position: relative;
+        opacity: 0.9;
+    }
+    
+    .caja-item::before {
+        content: '?';
+        position: absolute;
+        color: rgba(255,255,255,0.9);
+        text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .caja-item.selectable {
+        cursor: pointer;
+        animation: pulse-caja 2s infinite;
+        opacity: 1;
+    }
+    
+    .caja-item.selectable:hover {
+        transform: translateY(-10px) scale(1.05);
+        border-color: #fcd34d;
+        box-shadow: 0 15px 35px rgba(252, 211, 77, 0.5);
+    }
+
+    .caja-item.opened {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        border-color: #4b5563;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.6;
+        animation: none;
+    }
+    
+    .caja-item.opened::before {
+        content: '📦';
+        font-size: 4.5rem;
+        filter: grayscale(1);
+    }
+
+    .caja-item.highlight {
+        transform: translateY(-15px) scale(1.1);
+        border-color: #fcd34d;
+        box-shadow: 0 15px 40px rgba(252, 211, 77, 0.8), 0 0 20px rgba(255,255,255,0.5);
+        z-index: 10;
+        opacity: 1;
+        animation: pulse-caja-fast 0.5s infinite;
+    }
+    
+    @keyframes pulse-caja-fast {
+        0% { box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6); }
+        50% { box-shadow: 0 15px 50px rgba(129, 140, 248, 1); }
+        100% { box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6); }
+    }
+
+    .caja-item.shaking {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        border-color: #10b981;
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+    }
+
+    @keyframes pulse-caja {
+        0% { box-shadow: 0 10px 25px rgba(67, 56, 202, 0.4); }
+        50% { box-shadow: 0 10px 35px rgba(99, 102, 241, 0.7); }
+        100% { box-shadow: 0 10px 25px rgba(67, 56, 202, 0.4); }
+    }
+
+    @keyframes shake {
+        10%, 90% { transform: translate3d(-2px, 0, 0); }
+        20%, 80% { transform: translate3d(4px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+        40%, 60% { transform: translate3d(8px, 0, 0); }
+    }
+
+    /* Side Panel & Elements */
+    .side-panel {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        height: fit-content;
+        max-height: 100%;
+    }
+
+    .stat-row { display: flex; gap: 15px; margin-top: 5px; }
+    .stat-card {
+        flex: 1;
+        background: rgba(255,255,255,0.9);
+        border-radius: 16px;
+        padding: 18px 12px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         position: relative;
         overflow: hidden;
     }
-    
-    .box-body::before {
-        content: '?';
-        position: absolute;
-        font-size: 15rem;
-        color: rgba(139, 92, 246, 0.1);
-        animation: pulse-question 2s infinite;
-    }
-    
-    @keyframes pulse-question {
-        0%, 100% {
-            transform: scale(1);
-            opacity: 0.1;
-        }
-        50% {
-            transform: scale(1.2);
-            opacity: 0.3;
-        }
-    }
-    
-    .box-glow {
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
-        animation: rotate-glow 8s linear infinite;
-    }
-    
-    @keyframes rotate-glow {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .mystery-particles {
-        position: absolute;
-        width: 10px;
-        height: 10px;
-        background: #8b5cf6;
-        border-radius: 50%;
-        box-shadow: 0 0 20px rgba(139, 92, 246, 0.8);
-        animation: particle-float 3s ease-in-out infinite;
-    }
-    
-    @keyframes particle-float {
-        0%, 100% {
-            transform: translate(0, 0) scale(1);
-            opacity: 0;
-        }
-        50% {
-            opacity: 1;
-        }
-    }
-    
-    .countdown-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.95);
-        display: none;
+    .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+    .stat-card:first-child::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-card:last-child::after { background: linear-gradient(90deg, #22c55e, #10b981); }
+    .stat-card i { font-size: 1.4rem; margin-bottom: 4px; }
+    .stat-card:first-child i { color: #f59e0b; }
+    .stat-card:last-child i { color: #22c55e; }
+    .stat-card .num { font-size: 1.8rem; font-weight: 900; color: #1f2937; line-height: 1; }
+    .stat-card .label { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-top: 4px; }
+
+    /* Config Panel Integrado */
+    .btn-config-toggle {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 14px 20px;
+        border-radius: 16px;
+        display: flex;
         align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        animation: fadeIn 0.3s ease;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    .countdown-number {
-        font-size: 20rem;
-        font-weight: 900;
-        color: #8b5cf6;
-        text-shadow: 0 0 100px rgba(139, 92, 246, 1);
-        animation: countdown-pulse 1s ease;
-    }
-    
-    @keyframes countdown-pulse {
-        0% {
-            transform: scale(0);
-            opacity: 0;
-        }
-        50% {
-            transform: scale(1.2);
-        }
-        100% {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-    
-    .reveal-animation {
-        animation: box-open 2s ease forwards;
-    }
-    
-    @keyframes box-open {
-        0% {
-            transform: translateY(0) rotateX(0deg);
-        }
-        50% {
-            transform: translateY(-100px) rotateX(20deg);
-        }
-        100% {
-            transform: translateY(-200px) rotateX(45deg) scale(0.5);
-            opacity: 0;
-        }
-    }
-    
-    .premio-emergente {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(0);
-        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-        border-radius: 30px;
-        padding: 3rem;
-        text-align: center;
-        box-shadow: 0 0 100px rgba(255, 215, 0, 0.8);
-        animation: premio-appear 1s ease forwards;
-        animation-delay: 2s;
-        z-index: 10;
-        color: #1a1a2e;
-    }
-    
-    @keyframes premio-appear {
-        0% {
-            transform: translate(-50%, -50%) scale(0) rotate(180deg);
-            opacity: 0;
-        }
-        100% {
-            transform: translate(-50%, -50%) scale(1) rotate(0deg);
-            opacity: 1;
-        }
-    }
-    
-    .premio-emergente .premio-icon {
-        font-size: 8rem;
-        margin-bottom: 1rem;
-        animation: bounce 0.5s ease infinite alternate;
-    }
-    
-    @keyframes bounce {
-        from { transform: translateY(0); }
-        to { transform: translateY(-15px); }
-    }
-    
-    .premio-emergente .premio-nombre {
-        font-size: 3rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    
-    .ganador-info {
-        background: rgba(139, 92, 246, 0.2);
-        backdrop-filter: blur(10px);
-        border: 2px solid #8b5cf6;
-        border-radius: 20px;
-        padding: 2rem;
-        color: white;
-        text-align: center;
-        margin-bottom: 2rem;
-        display: none;
-    }
-    
-    .ganador-info.show {
-        display: block;
-        animation: slideDown 0.5s ease;
-    }
-    
-    @keyframes slideDown {
-        from {
-            transform: translateY(-50px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-    
-    .btn-misterioso {
-        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        border: none;
-        color: white;
-        font-size: 1.8rem;
-        padding: 1.2rem 4rem;
-        border-radius: 50px;
-        box-shadow: 0 10px 40px rgba(139, 92, 246, 0.6);
+        justify-content: space-between;
+        cursor: pointer;
         transition: all 0.3s ease;
         font-weight: 700;
+        font-size: 0.95rem;
+        width: 100%;
+        backdrop-filter: blur(5px);
+    }
+    .btn-config-toggle:hover { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.4); }
+    .btn-config-toggle.active { background: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-config-toggle .icon-gear, .btn-config-toggle .icon-chevron { transition: transform 0.3s ease; }
+    .btn-config-toggle.active .icon-gear, .btn-config-toggle.active .icon-chevron { transform: rotate(180deg); }
+    
+    .config-container { display: grid; grid-template-rows: 0fr; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; visibility: hidden; }
+    .config-container.open { grid-template-rows: 1fr; opacity: 1; visibility: visible; margin-bottom: 5px; }
+    .config-inner { overflow: hidden; }
+    .config-wrapper { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 10px; }
+    
+    .config-group { display: flex; align-items: center; justify-content: space-between; }
+    .config-group label { font-size: 0.85rem; font-weight: 700; color: #374151; margin: 0; }
+    .config-group input { width: 80px; text-align: center; border: 2px solid #e5e7eb; border-radius: 10px; padding: 6px; font-weight: 800; color: #1f2937; transition: all 0.2s ease; }
+    .config-group input:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+
+    .spin-icon {
+        animation: spin-icon-anim 1s linear infinite;
+    }
+    @keyframes spin-icon-anim {
+        100% { transform: rotate(360deg); }
+    }
+
+    .btn-spin {
+        width: 100%;
+        padding: 18px;
+        font-size: 1.1rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 1px;
+        border: none;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4), inset 0 2px 4px rgba(255,255,255,0.3);
     }
+    .btn-spin:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(34, 197, 94, 0.5); }
+    .btn-spin:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(50%); }
+    .btn-spin.completed { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4); }
+
+    .participants-box .title { font-size: 0.8rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.5px; }
+    .participants-box .title-left { display: flex; align-items: center; gap: 5px; color: white; }
+    .participants-list { min-height: 50px; }
+    .p-item { background: rgba(255,255,255,0.9); padding: 8px 10px; border-radius: 10px; margin-bottom: 6px; font-size: 0.85rem; color: #1f2937; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); animation: slideInRight 0.3s ease forwards; opacity: 0; transform: translateX(20px); }
+    @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
+    .p-item i { color: #f59e0b; font-size: 0.85rem; }
     
-    .btn-misterioso:hover:not(:disabled) {
-        transform: scale(1.05);
-        box-shadow: 0 15px 50px rgba(139, 92, 246, 0.8);
+    .pagination-controls { display: flex; align-items: center; gap: 8px; }
+    .pagination-controls button { width: 24px; height: 24px; border: none; background: rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: white; padding: 0; }
+    .pagination-controls button:hover:not(:disabled) { background: rgba(255,255,255,0.4); }
+    .pagination-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pagination-info { font-size: 0.75rem; color: rgba(255,255,255,0.8); font-weight: 700; }
+
+    .back-link { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 12px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; font-weight: 700; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); transition: all 0.15s; margin-top: auto; }
+    .back-link:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* Modal (Trophy design) */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(12px); }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 24px; padding: 40px 35px; text-align: center; max-width: 380px; width: 90%; animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 70px rgba(0,0,0,0.4), 0 0 0 4px rgba(255,255,255,0.2); }
+    @keyframes pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .trophy-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 10px 30px rgba(251, 191, 36, 0.4); animation: bounce-trophy 1s ease-in-out infinite; }
+    @keyframes bounce-trophy { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .trophy-icon i { font-size: 2.2rem; color: #fff; }
+    .modal-title { font-size: 1rem; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .winner-name { font-size: 1.8rem; font-weight: 900; color: #1f2937; margin-bottom: 16px; line-height: 1.1; text-transform: uppercase; background: linear-gradient(135deg, #1e3a8a, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .prize-card { background: linear-gradient(135deg, #fef9c3, #fef08a); border-radius: 14px; padding: 14px; margin-bottom: 24px; border: 1px solid rgba(234, 179, 8, 0.3); }
+    .prize-card .lbl { font-size: 0.65rem; color: #a16207; text-transform: uppercase; font-weight: 800; margin-bottom: 3px; letter-spacing: 0.5px; }
+    .prize-card .val { font-size: 1.1rem; font-weight: 900; color: #78350f; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .prize-card .val i { color: #eab308; }
+    .btn-continue { background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; padding: 14px 30px; font-size: 1rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 3px 12px rgba(34, 197, 94, 0.35); width: 100%; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-continue:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(34, 197, 94, 0.45); }
+    .btn-continue.final { background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35); }
+    .btn-continue.final:hover { box-shadow: 0 6px 15px rgba(99, 102, 241, 0.45); }
+
+    /* Confetti */
+    .confetti { position: fixed; z-index: 10001; animation: fall 3s linear forwards; }
+    @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+    @media (max-width: 900px) {
+        .main-grid { grid-template-columns: 1fr; gap: 20px; }
+        .side-panel { max-width: 450px; margin: 0 auto; }
+        .caja-page { padding: 20px; justify-content: flex-start; height: auto; min-height: calc(100vh - 56px); }
     }
-    
-    .btn-misterioso:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    .light-rays {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 400px;
-        height: 400px;
-        transform: translate(-50%, -50%);
-        display: none;
-    }
-    
-    .light-rays.active {
-        display: block;
-        animation: rotate-rays 3s linear infinite;
-    }
-    
-    @keyframes rotate-rays {
-        0% { transform: translate(-50%, -50%) rotate(0deg); }
-        100% { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-    
-    .ray {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 200px;
-        height: 4px;
-        background: linear-gradient(90deg, rgba(255, 215, 0, 0) 0%, rgba(255, 215, 0, 1) 50%, rgba(255, 215, 0, 0) 100%);
-        transform-origin: 0 50%;
+    @media (max-width: 500px) {
+        .header h1 { font-size: 1.1rem; }
+        .header-title-wrapper { padding: 6px 10px 6px 18px; gap: 10px; }
+        .side-panel { padding: 18px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="caja-container">
-    <!-- Header -->
-    <div class="text-center mb-5">
-        <h1 class="text-white mb-3" style="font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 30px rgba(139,92,246,0.7), 0 4px 20px rgba(0,0,0,0.6);">
-            😱 {{ sorteo.nombre }}
-        </h1>
-        <p class="text-white" style="font-size: 1.3rem; opacity: 0.95; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">¿Qué misterio esconde la caja?</p>
-        {% if sorteo.descripcion %}
-        <p class="text-white-50" style="font-size: 1.1rem; margin-top: 0.5rem;">{{ sorteo.descripcion }}</p>
-        {% endif %}
-    </div>
-    
-    <!-- Ganador Info -->
-    <div class="ganador-info" id="ganadorInfo" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-        <h3 style="font-size: 2.5rem; margin-bottom: 1.5rem; color: white; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">🏆 ¡GANADOR!</h3>
-        <div style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 4px 15px rgba(0,0,0,0.5); animation: pulse-glow 2s ease-in-out infinite;" id="nombreGanador"></div>
-        <p style="font-size: 1.8rem; margin-top: 1.5rem; color: white; font-weight: 600;" id="telefonoGanador"></p>
-    </div>
-    
-    <!-- Mystery Box -->
-    <div class="mystery-box-wrapper">
-        <div class="light-rays" id="lightRays">
-            <div class="ray" style="transform: rotate(0deg);"></div>
-            <div class="ray" style="transform: rotate(45deg);"></div>
-            <div class="ray" style="transform: rotate(90deg);"></div>
-            <div class="ray" style="transform: rotate(135deg);"></div>
-            <div class="ray" style="transform: rotate(180deg);"></div>
-            <div class="ray" style="transform: rotate(225deg);"></div>
-            <div class="ray" style="transform: rotate(270deg);"></div>
-            <div class="ray" style="transform: rotate(315deg);"></div>
-        </div>
-        
-        <div class="mystery-box" id="mysteryBox">
-            <div class="box-glow"></div>
-            <div class="box-body">
-                <span style="position: relative; z-index: 5;">📦</span>
+<div class="caja-page">
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-title-wrapper">
+                <h1><i class="bi bi-box-seam-fill"></i> {{ sorteo.nombre }}</h1>
+                <div class="live-badge">EN VIVO</div>
             </div>
         </div>
-        
-        <!-- Premio Emergente -->
-        <div class="premio-emergente" id="premioEmergente" style="display: none;">
-            <div class="premio-icon" id="premioIcon"></div>
-            <div class="premio-nombre" id="premioNombre"></div>
-            <p style="font-size: 1.3rem; margin-bottom: 2rem;" id="premioDescripcion"></p>
+
+        <div class="main-grid">
+            <div class="cajas-area">
+                <div id="instructionBanner" class="instruction-banner">
+                    <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                </div>
+
+                <div class="cajas-grid" id="cajasGrid"></div>
+            </div>
             
-            <button class="btn btn-success btn-lg" onclick="registrarResultado()">
-                <i class="bi bi-check-circle"></i> Registrar
-            </button>
+            <div class="side-panel">
+                <!-- Panel de Configuración de Tiempos -->
+                <button class="btn-config-toggle" onclick="toggleConfig()" title="Ajustes de Animación">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="bi bi-gear-fill icon-gear"></i> Ajustes de Animación
+                    </span>
+                    <i class="bi bi-chevron-down icon-chevron"></i>
+                </button>
+                
+                <div class="config-container" id="configContainer">
+                    <div class="config-inner">
+                        <div class="config-wrapper">
+                            <div class="config-group">
+                                <label for="spinDuration">Sorteo Cliente (seg)</label>
+                                <input type="number" id="spinDuration" value="3" min="1" max="10">
+                            </div>
+                            <div class="config-group">
+                                <label for="boxDuration">Sorteo Caja (seg)</label>
+                                <input type="number" id="boxDuration" value="4" min="1" max="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-row">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill"></i>
+                        <div class="num" id="numPart">0</div>
+                        <div class="label">Participantes</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="bi bi-box-seam-fill"></i>
+                        <div class="num" id="numPremios">{{ sorteo.cantidad_cofres }}</div>
+                        <div class="label">Cajas</div>
+                    </div>
+                </div>
+
+                <button id="btnSpin" class="btn-spin" onclick="spin()">
+                    <i class="bi bi-play-circle-fill"></i> INICIAR SORTEO
+                </button>
+
+                <div class="participants-box">
+                    <div class="title">
+                        <div class="title-left"><i class="bi bi-people"></i> Lista</div>
+                        <div class="pagination-controls">
+                            <button id="prevPage" onclick="prevPage()" disabled><i class="bi bi-chevron-left"></i></button>
+                            <span class="pagination-info" id="pageInfo">1/1</span>
+                            <button id="nextPage" onclick="nextPage()"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="participants-list" id="partList"></div>
+                </div>
+
+                <a href="{% url 'detalle_sorteo' sorteo.id %}" class="back-link">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
         </div>
     </div>
-    
-    <!-- Partículas -->
-    <div id="particlesContainer"></div>
-    
-    <!-- Control Button -->
-    <div class="text-center mt-5">
-        <button class="btn-misterioso" id="btnAbrir" onclick="iniciarRevelacion()">
-            🔮 Abrir Caja Misteriosa
-        </button>
-    </div>
-    
-    <!-- Navigation -->
-    <div class="text-center mt-5">
-        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg me-3" style="min-width: 150px; padding: 0.75rem 2rem; font-weight: 600; border-width: 2px;">
-            <i class="bi bi-arrow-left"></i> Volver
-        </a>
-        <button class="btn btn-danger btn-lg" onclick="finalizarSorteo()" style="min-width: 180px; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
-            <i class="bi bi-stop-circle"></i> Finalizar Sorteo
-        </button>
-    </div>
 </div>
 
-<!-- Countdown Overlay -->
-<div class="countdown-overlay" id="countdownOverlay">
-    <div class="countdown-number" id="countdownNumber"></div>
+<!-- Modal Resultado -->
+<div id="modal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="trophy-icon"><i class="bi bi-trophy-fill"></i></div>
+        <div class="modal-title">🎉 ¡Felicitaciones!</div>
+        <div class="winner-name" id="winnerName"></div>
+        <div class="prize-card">
+            <div class="lbl">Ha ganado</div>
+            <div class="val"><i id="prizeIcon" class="bi bi-gift-fill me-1"></i><span id="prizeName"></span></div>
+        </div>
+        <button id="btnModalContinue" class="btn-continue" onclick="closeModal()">Continuar</button>
+    </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-const sorteoId = {{ sorteo.id }};
-const participantes = {{ participantes_json|safe }};
-const premios = {{ premios_json|safe }};
+    const sorteoId = {{ sorteo.id }};
+    const participantes = {{ participantes_json|safe }};
+    const premios = {{ premios_json|safe }};
+    const cantidadCajas = {{ sorteo.cantidad_cofres }};
 
-let ganadorActual = null;
-let premioActual = null;
-
-// Nota: La función showToast está definida en base.html
-
-// Generar partículas misteriosas
-function generarParticulas() {
-    const container = document.getElementById('particlesContainer');
+    let premiosDisponibles = premios.filter(p => !p.asignado);
+    let ganadorActual = null;
+    let premioActual = null;
     
-    for (let i = 0; i < 20; i++) {
-        const particula = document.createElement('div');
-        particula.className = 'mystery-particles';
-        
-        const angle = (Math.PI * 2 * i) / 20;
-        const radius = 250;
-        const x = Math.cos(angle) * radius;
-        const y = Math.sin(angle) * radius;
-        
-        particula.style.left = `calc(50% + ${x}px)`;
-        particula.style.top = `calc(50% + ${y}px)`;
-        particula.style.animationDelay = `${i * 0.1}s`;
-        
-        container.appendChild(particula);
+    let btnSpin = document.getElementById('btnSpin');
+    let instructionBanner = document.getElementById('instructionBanner');
+    
+    let currentPage = 0;
+    const itemsPerPage = 5;
+
+    function init() {
+        document.getElementById('numPart').textContent = participantes.length;
+        renderList();
+        renderCajas();
+        checkValidation();
     }
-}
 
-// Iniciar revelación
-function iniciarRevelacion() {
-    if (participantes.length === 0) {
-        showToast('No hay participantes elegibles para este sorteo', 'warning');
-        return;
+    function toggleConfig() {
+        document.getElementById('configContainer').classList.toggle('open');
+        document.querySelector('.btn-config-toggle').classList.toggle('active');
     }
-    
-    document.getElementById('btnAbrir').disabled = true;
-    
-    // Primero sortear ganador
-    fetch(`/sorteos/${sorteoId}/sortear/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
+
+    function checkValidation() {
+        if (premios.length !== cantidadCajas) {
+            btnSpin.disabled = true;
+            btnSpin.innerHTML = '<i class="bi bi-lock-fill"></i> FALTAN PREMIOS';
+            
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast(`Sorteo bloqueado: Hay ${cantidadCajas} cajas, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
+                }
+            }, 500);
+        } else if (premiosDisponibles.length === 0) {
+            btnSpin.disabled = false;
+            btnSpin.classList.add('completed');
+            btnSpin.innerHTML = '<i class="bi bi-list-stars"></i> VER RESULTADOS';
+            btnSpin.onclick = () => window.location.href = `/sorteos/${sorteoId}/`;
+            
+            instructionBanner.innerHTML = '<i class="bi bi-stars"></i> SORTEO FINALIZADO';
+            instructionBanner.className = 'instruction-banner';
+        } else {
+            btnSpin.disabled = false;
         }
-    })
-    .then(res => res.json())
-    .then(data => {
-        ganadorActual = data.ganador;
-        mostrarGanador();
+    }
+
+    function renderCajas() {
+        const grid = document.getElementById('cajasGrid');
+        grid.innerHTML = '';
         
-        // Esperar 2 segundos y comenzar countdown
+        const cajasAbiertasCount = cantidadCajas - premiosDisponibles.length;
+        
+        for (let i = 1; i <= cantidadCajas; i++) {
+            const box = document.createElement('div');
+            box.id = `caja-${i}`;
+            if (i <= cajasAbiertasCount) {
+                box.className = 'caja-item opened';
+            } else {
+                box.className = 'caja-item';
+            }
+            grid.appendChild(box);
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function spin() {
+        if (premios.length !== cantidadCajas) {
+            if (typeof showToast === 'function') {
+                showToast(`Sorteo bloqueado: Hay ${cantidadCajas} cajas, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
+            }
+            return;
+        }
+        if (participantes.length === 0) {
+            if (typeof showToast === 'function') showToast('No hay participantes elegibles para este sorteo', 'warning');
+            return;
+        }
+        
+        btnSpin.disabled = true;
+        btnSpin.innerHTML = '<i class="bi bi-arrow-repeat spin-icon"></i> SORTEANDO...';
+        
+        const durationCliente = (parseInt(document.getElementById('spinDuration').value) || 3) * 1000;
+        const durationCaja = (parseInt(document.getElementById('boxDuration').value) || 4) * 1000;
+        
+        let cycleInterval = setInterval(() => {
+            const randomPart = participantes[Math.floor(Math.random() * participantes.length)];
+            instructionBanner.innerHTML = `<i class="bi bi-person"></i> ${randomPart.nombre.toUpperCase()}`;
+            instructionBanner.classList.add('active');
+        }, 100);
+
+        fetch(`/sorteos/${sorteoId}/sortear/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
+            ganadorActual = data.ganador;
+            
+            setTimeout(() => {
+                clearInterval(cycleInterval);
+                instructionBanner.innerHTML = `<i class="bi bi-person-check-fill"></i> ¡GANADOR: ${ganadorActual.nombre.toUpperCase()}!`;
+                
+                setTimeout(() => {
+                    autoSelectBox(durationCaja);
+                }, 1500);
+                
+            }, durationCliente);
+        })
+        .catch(err => {
+            clearInterval(cycleInterval);
+            if (typeof showToast === 'function') showToast('Error al sortear ganador. Intente de nuevo.', 'error');
+            resetUI();
+        });
+    }
+
+    function autoSelectBox(durationCaja) {
+        instructionBanner.innerHTML = `<i class="bi bi-box-seam"></i> ELIGIENDO CAJA AL AZAR...`;
+        
+        const availableBoxes = document.querySelectorAll('.caja-item:not(.opened)');
+        if (availableBoxes.length === 0) return;
+        
+        let boxCycleInterval = setInterval(() => {
+            availableBoxes.forEach(b => b.classList.remove('highlight'));
+            const randomBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
+            randomBox.classList.add('highlight');
+        }, 150);
+
         setTimeout(() => {
-            iniciarCountdown();
-        }, 2000);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('No se pudo sortear. Intenta nuevamente.', 'error');
-        document.getElementById('btnAbrir').disabled = false;
-    });
-}
-
-// Mostrar ganador
-function mostrarGanador() {
-    const ganadorInfo = document.getElementById('ganadorInfo');
-    document.getElementById('nombreGanador').textContent = ganadorActual.nombre || 'Ganador';
-    document.getElementById('telefonoGanador').textContent = `📞 ${ganadorActual.telefono || 'N/A'}`;
-    ganadorInfo.style.display = 'block';
-    ganadorInfo.classList.add('show');
-    console.log('Ganador mostrado:', ganadorActual);
-}
-
-// Countdown dramático
-function iniciarCountdown() {
-    const overlay = document.getElementById('countdownOverlay');
-    const number = document.getElementById('countdownNumber');
-    
-    overlay.style.display = 'flex';
-    
-    let count = 3;
-    
-    function mostrarNumero() {
-        if (count > 0) {
-            number.textContent = count;
-            number.style.animation = 'none';
+            clearInterval(boxCycleInterval);
+            availableBoxes.forEach(b => b.classList.remove('highlight'));
+            
+            const finalBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
+            finalBox.classList.add('highlight');
+            
+            const boxId = finalBox.id.split('-')[1];
+            
             setTimeout(() => {
-                number.style.animation = 'countdown-pulse 1s ease';
-            }, 10);
-            count--;
-            setTimeout(mostrarNumero, 1000);
+                selectBox(boxId);
+            }, 800); 
+            
+        }, durationCaja);
+    }
+
+    function selectBox(boxIndex) {
+        
+        const box = document.getElementById(`caja-${boxIndex}`);
+        box.classList.add('shaking'); // Animación de apertura
+        
+        // Seleccionar premio aleatorio disponible
+        premioActual = premiosDisponibles[Math.floor(Math.random() * premiosDisponibles.length)];
+        
+        instructionBanner.innerHTML = '<i class="bi bi-stars"></i> ABRIENDO LA CAJA MISTERIOSA...';
+        
+        setTimeout(() => {
+            registrarResultado(box);
+        }, 1500); // 1.5s delay dramático
+    }
+
+    function registrarResultado(boxElement) {
+        const formData = new FormData();
+        formData.append('cliente_id', ganadorActual.id);
+        formData.append('premio_id', premioActual.id);
+        
+        fetch(`/sorteos/${sorteoId}/registrar/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                // Quitar premio del pool
+                premiosDisponibles = premiosDisponibles.filter(p => p.id !== premioActual.id);
+                
+                // Marcar caja abierta
+                boxElement.className = 'caja-item opened';
+                
+                // Mostrar Modal
+                showWinnerModal();
+            } else {
+                if (typeof showToast === 'function') showToast(data.error, 'error');
+                resetUI();
+            }
+        })
+        .catch(() => {
+            if (typeof showToast === 'function') showToast('Error de red al registrar premio', 'error');
+            resetUI();
+        });
+    }
+
+    function showWinnerModal() {
+        document.getElementById('winnerName').textContent = ganadorActual.nombre;
+        document.getElementById('prizeName').textContent = premioActual.nombre;
+        
+        const btnContinue = document.getElementById('btnModalContinue');
+        if (premiosDisponibles.length === 0) {
+            btnContinue.innerHTML = '<i class="bi bi-check-circle-fill"></i> Aceptar y Finalizar';
+            btnContinue.className = 'btn-continue final';
         } else {
-            overlay.style.display = 'none';
-            abrirCaja();
+            btnContinue.innerHTML = '<i class="bi bi-play-fill"></i> Siguiente Sorteo';
+            btnContinue.className = 'btn-continue';
+        }
+        
+        document.getElementById('modal').classList.add('show');
+        confetti();
+    }
+
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+        checkValidation(); // Actualiza estados de botones e interface
+        if (premiosDisponibles.length > 0) {
+            resetUI();
         }
     }
-    
-    mostrarNumero();
-}
 
-// Abrir caja
-function abrirCaja() {
-    const box = document.getElementById('mysteryBox');
-    const rays = document.getElementById('lightRays');
-    
-    // Activar rayos de luz
-    rays.classList.add('active');
-    
-    // Animación de apertura
-    box.classList.add('reveal-animation');
-    
-    // Seleccionar premio aleatorio
-    premioActual = premios[Math.floor(Math.random() * premios.length)];
-    
-    // Mostrar premio después de la animación
-    setTimeout(() => {
-        revelarPremio();
-    }, 2500);
-}
-
-// Revelar premio
-function revelarPremio() {
-    const iconos = {
-        'descuento_porcentaje': '💰',
-        'descuento_fijo': '💵',
-        'producto_gratis': '🎁',
-        'envio_gratis': '🚚',
-        'cupon': '🎟️',
-        'combo': '📦'
-    };
-    
-    document.getElementById('premioIcon').textContent = iconos[premioActual.tipo] || '🎁';
-    document.getElementById('premioNombre').textContent = premioActual.nombre;
-    document.getElementById('premioDescripcion').textContent = premioActual.descripcion || '¡Felicidades por tu premio!';
-    document.getElementById('premioEmergente').style.display = 'block';
-    
-    // Generar confetti
-    generarConfetti();
-}
-
-// Generar confetti
-function generarConfetti() {
-    const colores = ['#ffd700', '#ff6b6b', '#4ecdc4', '#8b5cf6', '#a8dadc', '#f1a7f5'];
-    
-    for (let i = 0; i < 100; i++) {
-        const confetti = document.createElement('div');
-        confetti.style.position = 'fixed';
-        confetti.style.width = '10px';
-        confetti.style.height = '10px';
-        confetti.style.background = colores[Math.floor(Math.random() * colores.length)];
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.top = '-10px';
-        confetti.style.borderRadius = '50%';
-        confetti.style.animation = `confetti-fall ${2 + Math.random() * 2}s linear`;
-        confetti.style.animationDelay = Math.random() * 0.5 + 's';
-        confetti.style.zIndex = '999';
-        
-        document.body.appendChild(confetti);
-        
-        setTimeout(() => confetti.remove(), 4000);
+    function resetUI() {
+        btnSpin.disabled = false;
+        btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+        instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+        instructionBanner.classList.remove('active');
     }
-}
 
-// Registrar resultado
-function registrarResultado() {
-    if (!ganadorActual || !premioActual) {
-        showToast('Faltan datos del ganador o premio', 'error');
-        return;
+    function renderList() {
+        const list = document.getElementById('partList');
+        if (participantes.length === 0) {
+            list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:10px;font-size:0.7rem;">Sin participantes</div>';
+            return;
+        }
+        const totalPages = Math.ceil(participantes.length / itemsPerPage);
+        const start = currentPage * itemsPerPage;
+        const pageItems = participantes.slice(start, start + itemsPerPage);
+        list.innerHTML = pageItems.map((p, i) => `<div class="p-item" style="animation-delay: ${i * 0.05}s"><i class="bi bi-person-fill"></i>${p.nombre}</div>`).join('');
+        
+        document.getElementById('pageInfo').textContent = `${currentPage + 1}/${totalPages}`;
+        document.getElementById('prevPage').disabled = currentPage === 0;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages - 1;
     }
-    
-    console.log('Registrando resultado:', {
-        ganador: ganadorActual,
-        premio: premioActual
-    });
-    
-    const formData = new FormData();
-    formData.append('cliente_id', ganadorActual.id);
-    formData.append('premio_id', premioActual.id);
-    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-    
-    const button = event.target;
-    button.disabled = true;
-    button.innerHTML = '<i class="bi bi-hourglass-split"></i> Registrando...';
-    
-    fetch(`/sorteos/${sorteoId}/registrar/`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.mensaje || '¡Resultado registrado exitosamente!', 'success', '¡Registrado!');
+
+    function prevPage() { if (currentPage > 0) { currentPage--; renderList(); } }
+    function nextPage() { if (currentPage < Math.ceil(participantes.length / itemsPerPage) - 1) { currentPage++; renderList(); } }
+
+    function confetti() {
+        const cols = ['#facc15', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#ffffff'];
+        for (let i = 0; i < 100; i++) {
             setTimeout(() => {
-                window.location.href = `/sorteos/${sorteoId}/`;
-            }, 1500);
-        } else {
-            showToast(data.error || 'Error al registrar', 'error');
-            button.disabled = false;
-            button.innerHTML = '<i class="bi bi-check-circle"></i> Registrar';
-        }
-    })
-    .catch(error => {
-        console.error('Error al registrar:', error);
-        showToast('No se pudo registrar. Intenta nuevamente.', 'error');
-        button.disabled = false;
-        button.innerHTML = '<i class="bi bi-check-circle"></i> Registrar';
-    });
-}
-
-// Finalizar sorteo
-function finalizarSorteo() {
-    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarSorteo'));
-    modal.show();
-}
-
-// Inicializar
-document.addEventListener('DOMContentLoaded', function() {
-    generarParticulas();
-});
-
-// Keyframe para confetti
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes confetti-fall {
-        0% {
-            top: -10%;
-            transform: translateX(0) rotate(0deg);
-            opacity: 1;
-        }
-        100% {
-            top: 110%;
-            transform: translateX(${Math.random() * 200 - 100}px) rotate(${Math.random() * 720}deg);
-            opacity: 0;
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = '-10px';
+                c.style.background = cols[Math.floor(Math.random() * cols.length)];
+                c.style.width = (5 + Math.random() * 8) + 'px';
+                c.style.height = (5 + Math.random() * 8) + 'px';
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                c.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }, i * 20);
         }
     }
-`;
-document.head.appendChild(style);
-</script>
 
-<!-- Modal Finalizar Sorteo -->
-<div class="modal fade" id="modalFinalizarSorteo" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-stop-circle-fill"></i> Finalizar Sorteo
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #dc3545;"></i>
-                <h5 class="mt-3">¿Finalizar sorteo?</h5>
-                <p class="text-muted">No se podrán realizar más sorteos después de finalizarlo.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="button" class="btn btn-danger" onclick="confirmarFinalizarSorteo()">
-                    <i class="bi bi-stop-circle"></i> Sí, Finalizar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-function confirmarFinalizarSorteo() {
-    window.location.href = `/sorteos/${sorteoId}/finalizar/`;
-}
+    window.addEventListener('load', init);
 </script>
 {% endblock %}

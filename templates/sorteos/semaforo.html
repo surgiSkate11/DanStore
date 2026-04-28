@@ -4,294 +4,179 @@
 
 {% block extra_css %}
 <style>
-    /* Configuración global */
-    body {
-        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
-        min-height: 100vh;
-        max-height: 100vh;
-        overflow-x: hidden;
-        overflow-y: auto;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-    
     main.container, main.container.mt-4 {
         max-width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
         background: transparent !important;
+        height: auto !important;
     }
-    
-    .container, .container-fluid {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
-    }
-    
     footer, .footer, .mt-2 { display: none !important; }
-    
-    .semaforo-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 1rem 1.5rem;
-        min-height: calc(100vh - 80px);
+    html, body { overflow: hidden !important; height: 100% !important; }
+
+    body {
+        background: radial-gradient(circle at 50% 0%, #0f172a 0%, #1e1b4b 40%, #020617 100%) !important;
+    }
+
+    .semaforo-page {
+        height: calc(100vh - 56px);
+        padding: 20px 30px 0;
         display: flex;
         flex-direction: column;
-    }
-    
-    .header-live {
-        text-align: center;
-        margin: 0.5rem auto 1rem auto;
-        padding: 1.2rem 2rem;
-        max-width: 800px;
-        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%);
-        backdrop-filter: blur(25px);
-        border-radius: 20px;
-        border: 2px solid rgba(255,255,255,0.2);
-        box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        align-items: center;
         position: relative;
-        overflow: hidden;
     }
     
-    .header-live::before {
+    .semaforo-page::before {
         content: '';
         position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-        animation: headerShine 3s infinite;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+') repeat;
+        opacity: 0.15;
+        pointer-events: none;
+        z-index: 0;
     }
-    
-    @keyframes headerShine {
-        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-    }
-    
-    .header-live h1 {
-        font-size: 2.2rem;
-        font-weight: 900;
-        margin-bottom: 0.5rem;
-        position: relative;
+
+    .wrapper {
+        max-width: 1200px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         z-index: 1;
+    }
+    
+    .header {
+        text-align: center;
+        margin-bottom: 25px;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .header-title-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 15px;
+        padding: 8px 12px 8px 24px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .header h1 {
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .header h1 i { color: #fcd34d; }
+
+    .live-badge {
+        background: #ef4444;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 1px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
+        gap: 6px;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        animation: pulse-live 2s infinite;
+        white-space: nowrap;
+        flex-shrink: 0;
     }
-    
-    .header-live h1 .emoji {
-        font-size: 2.4rem;
+
+    .live-badge::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
     }
-    
-    .header-live h1 .text {
-        background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #ff6b6b);
-        background-size: 400% 400%;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: gradient-animate 2s ease infinite;
+
+    @keyframes pulse-live {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
-    
-    .header-live p {
-        font-size: 1rem;
-        color: rgba(255,255,255,0.9);
-        font-weight: 600;
-        margin: 0;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 390px;
+        gap: 40px;
+        width: 100%;
+        align-items: center;
     }
-    
-    @keyframes gradient-animate {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
-    
-    .btn-live {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border: none;
+
+    /* Banner Instructivo */
+    .instruction-banner {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 100px;
+        padding: 14px 40px;
         color: white;
-        font-size: 1.2rem;
-        padding: 0.8rem 2.5rem;
-        border-radius: 50px;
-        box-shadow: 0 10px 25px rgba(16,185,129,0.4);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-weight: 700;
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin-bottom: 30px;
         text-transform: uppercase;
         letter-spacing: 1px;
-        position: relative;
-        overflow: hidden;
-        margin: 0.3rem auto;
-        max-width: 280px;
-        width: 100%;
-    }
-    
-    .btn-live:hover:not(:disabled) {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 20px 50px rgba(16,185,129,0.6);
-    }
-    
-    .btn-live:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    
-    .btn-warning {
-        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%) !important;
-        border: none !important;
-        color: white !important;
-        font-size: 1.1rem !important;
-        padding: 0.6rem 2rem !important;
-        border-radius: 50px !important;
-        box-shadow: 0 10px 25px rgba(255, 193, 7, 0.4) !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important;
-        margin: 0.3rem !important;
-    }
-    
-    /* Layout centrado y optimizado */
-    .sorteo-layout {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 3rem;
-        max-width: 1100px;
-        margin: 0 auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: inline-flex;
         align-items: center;
-        padding: 2rem 0;
-        flex: 1;
-        min-height: 0;
+        gap: 10px;
     }
     
-    .semaforo-section {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1.5rem;
-        justify-content: center;
-        height: 100%;
-    }
-    
-    .sorteo-box {
-        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%);
-        border: 2px solid rgba(255,255,255,0.2);
-        border-radius: 20px;
-        padding: 1.5rem;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        width: 100%;
-        max-width: 500px;
-        min-width: 450px;
-    }
-    
-    .sorteo-display {
-        background: rgba(0,0,0,0.6);
-        border-radius: 15px;
-        padding: 2rem 1.5rem;
-        margin: 1rem 0;
-        min-height: 180px;
-        height: 180px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid rgba(255,255,255,0.1);
-        backdrop-filter: blur(5px);
-        overflow: hidden;
-    }
-    
-    .nombre-girando {
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: #fff;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        transition: all 0.3s ease;
-        font-family: 'Segoe UI', sans-serif;
-        letter-spacing: 0.5px;
-        line-height: 1.4;
-        word-wrap: break-word;
-        max-width: 100%;
-        text-align: center;
-    }
-    
-    .nombre-girando.instruccion {
-        font-size: 1.3rem;
-        color: rgba(255,255,255,0.95);
-        opacity: 0.95;
-    }
-    
-    .nombre-girando.cycling {
-        animation: nombre-spin 0.1s ease infinite;
-        color: #feca57;
-        text-shadow: 0 0 20px rgba(254, 202, 87, 0.8);
+    .instruction-banner.active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #34d399;
+        box-shadow: 0 12px 40px rgba(16, 185, 129, 0.5);
         transform: scale(1.05);
     }
-    
-    .nombre-girando.ganador {
-        color: #ffd700;
-        font-size: 1.8rem;
-        animation: ganador-glow-epico 1.5s ease infinite;
-        text-shadow: 0 0 40px rgba(255,215,0,1);
-        transform: scale(1.15);
+
+    /* Semáforo Visuals */
+    .semaforo-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
     }
-    
-    @keyframes ganador-glow-epico {
-        0%, 100% { 
-            text-shadow: 0 0 40px rgba(255,215,0,1), 0 0 60px rgba(255,215,0,0.8);
-            transform: scale(1.15);
-        }
-        50% { 
-            text-shadow: 0 0 60px rgba(255,215,0,1), 0 0 100px rgba(255,215,0,0.9);
-            transform: scale(1.2);
-        }
-    }
-    
+
     .semaforo-post {
-        width: auto;
-        height: auto;
-        background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%);
-        backdrop-filter: blur(25px);
-        border-radius: 50px;
-        padding: 3rem 1.5rem;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-        border: 3px solid rgba(255,255,255,0.2);
-        position: relative;
-        transition: all 0.3s ease;
-    }
-    
-    .semaforo-post.zoom-effect {
-        animation: pulse-zoom 0.8s ease-in-out;
-    }
-    
-    @keyframes pulse-zoom {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
-    
-    .semaforo-body {
         background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
-        border: 5px solid #3a3a3a;
-        border-radius: 30px;
-        padding: 2rem 1.5rem;
-        box-shadow: inset 0 5px 15px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.3);
+        border: 6px solid #475569;
+        border-radius: 50px;
+        padding: 2.5rem 1.5rem;
+        box-shadow: inset 0 5px 20px rgba(0,0,0,0.8), 0 15px 40px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.1);
+        margin: 0 auto;
     }
     
     .luz-container {
         display: flex;
         flex-direction: column;
-        gap: 1.8rem;
-        margin: 1rem 0;
+        gap: 25px;
     }
     
     .luz {
-        width: 140px;
-        height: 140px;
+        width: 120px;
+        height: 120px;
         border-radius: 50%;
-        margin: 0 auto;
         border: 8px solid rgba(255,255,255,0.15);
         box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 5px 15px rgba(0,0,0,0.7);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         position: relative;
-        overflow: hidden;
+        opacity: 0.4;
     }
     
     .luz::before {
@@ -318,287 +203,211 @@
     }
     
     .luz.active {
-        transform: scale(1.15);
+        transform: scale(1.1);
         border-color: rgba(255,255,255,0.5);
+        opacity: 1;
     }
     
     #luz-rojo.active {
         background: radial-gradient(circle, #ff0000 0%, #cc0000 40%, #990000 100%);
-        box-shadow: 0 0 60px rgba(255, 0, 0, 0.9), 0 0 100px rgba(255, 0, 0, 0.7), inset 0 0 30px rgba(255, 0, 0, 0.8);
+        box-shadow: 0 0 50px rgba(239, 68, 68, 0.9), 0 0 80px rgba(239, 68, 68, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.8);
         animation: glow-rojo 1s ease-in-out infinite;
     }
     
     #luz-amarillo.active {
         background: radial-gradient(circle, #ffff00 0%, #ffcc00 40%, #ff9900 100%);
-        box-shadow: 0 0 60px rgba(255, 255, 0, 0.9), 0 0 100px rgba(255, 255, 0, 0.7), inset 0 0 30px rgba(255, 255, 0, 0.8);
+        box-shadow: 0 0 50px rgba(250, 204, 21, 0.9), 0 0 80px rgba(250, 204, 21, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.8);
         animation: glow-amarillo 1s ease-in-out infinite;
     }
     
     #luz-verde.active {
         background: radial-gradient(circle, #00ff00 0%, #00cc00 40%, #009900 100%);
-        box-shadow: 0 0 60px rgba(0, 255, 0, 0.9), 0 0 100px rgba(0, 255, 0, 0.7), inset 0 0 30px rgba(0, 255, 0, 0.8);
+        box-shadow: 0 0 50px rgba(34, 197, 94, 0.9), 0 0 80px rgba(34, 197, 94, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.8);
         animation: glow-verde 1s ease-in-out infinite;
     }
     
     @keyframes glow-rojo {
-        0%, 100% { box-shadow: 0 0 60px rgba(255, 0, 0, 0.9), 0 0 100px rgba(255, 0, 0, 0.7); }
-        50% { box-shadow: 0 0 80px rgba(255, 0, 0, 1), 0 0 120px rgba(255, 0, 0, 0.9); }
+        0%, 100% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.8); }
+        50% { box-shadow: 0 0 80px rgba(239, 68, 68, 1), inset 0 0 30px rgba(255, 255, 255, 1); }
     }
     
     @keyframes glow-amarillo {
-        0%, 100% { box-shadow: 0 0 60px rgba(255, 255, 0, 0.9), 0 0 100px rgba(255, 255, 0, 0.7); }
-        50% { box-shadow: 0 0 80px rgba(255, 255, 0, 1), 0 0 120px rgba(255, 255, 0, 0.9); }
+        0%, 100% { box-shadow: 0 0 50px rgba(250, 204, 21, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.8); }
+        50% { box-shadow: 0 0 80px rgba(250, 204, 21, 1), inset 0 0 30px rgba(255, 255, 255, 1); }
     }
     
     @keyframes glow-verde {
-        0%, 100% { box-shadow: 0 0 60px rgba(0, 255, 0, 0.9), 0 0 100px rgba(0, 255, 0, 0.7); }
-        50% { box-shadow: 0 0 80px rgba(0, 255, 0, 1), 0 0 120px rgba(0, 255, 0, 0.9); }
+        0%, 100% { box-shadow: 0 0 50px rgba(34, 197, 94, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.8); }
+        50% { box-shadow: 0 0 80px rgba(34, 197, 94, 1), inset 0 0 30px rgba(255, 255, 255, 1); }
     }
-    
-    .stat-badge {
+
+    /* Side Panel & Elements */
+    .side-panel {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        background: linear-gradient(135deg, rgba(5, 77, 179, 0.2) 0%, rgba(37, 111, 249, 0.1) 100%);
-        padding: 0.8rem 1.5rem;
-        border-radius: 50px;
-        border: 1px solid rgba(255,255,255,0.3);
-        margin: 0 auto 1rem auto;
-        color: white;
-        font-weight: 600;
-        font-size: 1.4rem;
-        max-width: 250px;
-        width: 100%;
+        flex-direction: column;
+        gap: 18px;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        height: fit-content;
+        max-height: 100%;
     }
     
-    .stat-badge i {
-        font-size: 1.3rem;
-    }
-    
-    .stat-number {
-        font-size: 1.4rem;
-        color: #ffffff;
-        text-shadow: 0 0 10px rgba(96,165,250,0.8);
-    }
-
-    /* MODAL DE GANADOR - MISMO DISEÑO QUE LA RULETA */
-    .modal-overlay {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.85);
-        backdrop-filter: blur(12px);
-        z-index: 10000;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .modal-overlay.show {
-        display: flex;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    .modal-box {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 20px;
-        padding: 32px 28px;
-        max-width: 420px;
-        width: 90%;
-        box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+    .stat-row { display: flex; gap: 15px; margin-top: 5px; }
+    .stat-card {
+        flex: 1;
+        background: rgba(255,255,255,0.9);
+        border-radius: 16px;
+        padding: 18px 12px;
         text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         position: relative;
-        animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        overflow: hidden;
     }
+    .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+    .stat-card:first-child::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-card:last-child::after { background: linear-gradient(90deg, #22c55e, #10b981); }
+    .stat-card i { font-size: 1.4rem; margin-bottom: 4px; }
+    .stat-card:first-child i { color: #f59e0b; }
+    .stat-card:last-child i { color: #22c55e; }
+    .stat-card .num { font-size: 1.8rem; font-weight: 900; color: #1f2937; line-height: 1; }
+    .stat-card .label { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-top: 4px; }
 
-    @keyframes slideUp {
-        from { transform: translateY(50px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-
-    .trophy-icon {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 16px;
-        background: linear-gradient(135deg, #fbbf24, #f59e0b);
-        border-radius: 50%;
+    /* Config Panel Integrado */
+    .btn-config-toggle {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 14px 20px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        box-shadow: 0 10px 30px rgba(251, 191, 36, 0.4);
-        animation: bounce 2s ease-in-out infinite;
-    }
-
-    @keyframes bounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-    }
-
-    .trophy-icon i { 
-        font-size: 1.6rem; 
-        color: #fff; 
-    }
-
-    .modal-title {
-        font-size: 0.85rem;
-        color: #6b7280;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .winner-name {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: #1f2937;
-        margin-bottom: 12px;
-        line-height: 1.2;
-    }
-
-    .prize-card {
-        background: linear-gradient(135deg, #fef9c3, #fef08a);
-        border-radius: 10px;
-        padding: 10px 14px;
-        margin-bottom: 15px;
-    }
-
-    .prize-card .lbl {
-        font-size: 0.5rem;
-        color: #a16207;
-        text-transform: uppercase;
-        font-weight: 700;
-        margin-bottom: 3px;
-    }
-
-    .prize-card .val {
-        font-size: 0.9rem;
-        font-weight: 800;
-        color: #78350f;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-    }
-
-    .prize-card .val i { 
-        color: #eab308; 
-    }
-
-    .modal-buttons {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        margin-top: 20px;
-    }
-
-    .btn-continue {
-        background: linear-gradient(135deg, #22c55e, #16a34a);
-        border: none;
-        color: #fff;
-        padding: 10px 30px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        border-radius: 8px;
+        justify-content: space-between;
         cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 3px 12px rgba(34, 197, 94, 0.35);
-        flex: 1;
-    }
-
-    .btn-continue:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 5px 15px rgba(34, 197, 94, 0.45);
-    }
-
-    .btn-resortear {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        border: none;
-        color: #fff;
-        padding: 10px 30px;
-        font-size: 0.8rem;
+        transition: all 0.3s ease;
         font-weight: 700;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
-        flex: 1;
+        font-size: 0.95rem;
+        width: 100%;
+        backdrop-filter: blur(5px);
     }
-
-    .btn-resortear:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 5px 15px rgba(245, 158, 11, 0.45);
-    }
+    .btn-config-toggle:hover { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.4); }
+    .btn-config-toggle.active { background: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-config-toggle .icon-gear, .btn-config-toggle .icon-chevron { transition: transform 0.3s ease; }
+    .btn-config-toggle.active .icon-gear, .btn-config-toggle.active .icon-chevron { transform: rotate(180deg); }
     
+    .config-container { display: grid; grid-template-rows: 0fr; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; visibility: hidden; }
+    .config-container.open { grid-template-rows: 1fr; opacity: 1; visibility: visible; margin-bottom: 5px; }
+    .config-inner { overflow: hidden; }
+    .config-wrapper { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 10px; }
+    
+    .config-group { display: flex; align-items: center; justify-content: space-between; }
+    .config-group label { font-size: 0.85rem; font-weight: 700; color: #374151; margin: 0; }
+    .config-group input { width: 80px; text-align: center; border: 2px solid #e5e7eb; border-radius: 10px; padding: 6px; font-weight: 800; color: #1f2937; transition: all 0.2s ease; }
+    .config-group input:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+
+    .spin-icon {
+        animation: spin-icon-anim 1s linear infinite;
+    }
+    @keyframes spin-icon-anim {
+        100% { transform: rotate(360deg); }
+    }
+
+    .btn-spin {
+        width: 100%;
+        padding: 18px;
+        font-size: 1.1rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: none;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4), inset 0 2px 4px rgba(255,255,255,0.3);
+    }
+    .btn-spin:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(34, 197, 94, 0.5); }
+    .btn-spin:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(50%); }
+    .btn-spin.completed { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4); }
+
+    .participants-box .title { font-size: 0.8rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.5px; }
+    .participants-box .title-left { display: flex; align-items: center; gap: 5px; color: white; }
+    .participants-list { min-height: 50px; }
+    .p-item { background: rgba(255,255,255,0.9); padding: 8px 10px; border-radius: 10px; margin-bottom: 6px; font-size: 0.85rem; color: #1f2937; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); animation: slideInRight 0.3s ease forwards; opacity: 0; transform: translateX(20px); }
+    @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
+    .p-item i { color: #f59e0b; font-size: 0.85rem; }
+    
+    .pagination-controls { display: flex; align-items: center; gap: 8px; }
+    .pagination-controls button { width: 24px; height: 24px; border: none; background: rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: white; padding: 0; }
+    .pagination-controls button:hover:not(:disabled) { background: rgba(255,255,255,0.4); }
+    .pagination-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pagination-info { font-size: 0.75rem; color: rgba(255,255,255,0.8); font-weight: 700; }
+
+    .back-link { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 12px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; font-weight: 700; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); transition: all 0.15s; margin-top: auto; }
+    .back-link:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* Modal (Trophy design) */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(12px); }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 24px; padding: 40px 35px; text-align: center; max-width: 380px; width: 90%; animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 70px rgba(0,0,0,0.4), 0 0 0 4px rgba(255,255,255,0.2); }
+    @keyframes pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .trophy-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 10px 30px rgba(251, 191, 36, 0.4); animation: bounce-trophy 1s ease-in-out infinite; }
+    @keyframes bounce-trophy { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .trophy-icon i { font-size: 2.2rem; color: #fff; }
+    .modal-title { font-size: 1rem; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .winner-name { font-size: 1.8rem; font-weight: 900; color: #1f2937; margin-bottom: 16px; line-height: 1.1; text-transform: uppercase; background: linear-gradient(135deg, #1e3a8a, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .prize-card { background: linear-gradient(135deg, #fef9c3, #fef08a); border-radius: 14px; padding: 14px; margin-bottom: 24px; border: 1px solid rgba(234, 179, 8, 0.3); }
+    .prize-card .lbl { font-size: 0.65rem; color: #a16207; text-transform: uppercase; font-weight: 800; margin-bottom: 3px; letter-spacing: 0.5px; }
+    .prize-card .val { font-size: 1.1rem; font-weight: 900; color: #78350f; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .prize-card .val i { color: #eab308; }
+    .btn-continue { background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; padding: 14px 30px; font-size: 1rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 3px 12px rgba(34, 197, 94, 0.35); width: 100%; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-continue:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(34, 197, 94, 0.45); }
+    .btn-continue.final { background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35); }
+    .btn-continue.final:hover { box-shadow: 0 6px 15px rgba(99, 102, 241, 0.45); }
+
+    /* Confetti */
+    .confetti { position: fixed; z-index: 10001; animation: fall 3s linear forwards; }
+    @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
     @media (max-width: 900px) {
-        .sorteo-layout {
-            grid-template-columns: 1fr;
-            gap: 2rem;
-        }
-        
-        .sorteo-box {
-            min-width: 100%;
-            max-width: 100%;
-        }
-        
-        .luz {
-            width: 120px;
-            height: 120px;
-        }
+        .main-grid { grid-template-columns: 1fr; gap: 20px; }
+        .side-panel { max-width: 450px; margin: 0 auto; }
+        .semaforo-page { padding: 20px; justify-content: flex-start; height: auto; min-height: calc(100vh - 56px); }
+    }
+    @media (max-width: 500px) {
+        .header h1 { font-size: 1.1rem; }
+        .header-title-wrapper { padding: 6px 10px 6px 18px; gap: 10px; }
+        .side-panel { padding: 18px; }
+        .luz { width: 90px; height: 90px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="semaforo-container">
-    <div class="header-live">
-        <h1>
-            <span class="emoji">🚦</span>
-            <span class="text">{{ sorteo.nombre }}</span>
-        </h1>
-        <p>¡Descubre qué premio te toca!</p>
-    </div>
-
-   
-
-    <div class="sorteo-layout">
-        <!-- Sección Izquierda: Participante -->
-        <div class="semaforo-section">
-            <div class="sorteo-box">       
-                <div class="stat-badge">
-                    <i class="bi bi-people-fill"></i>
-                    <span>Participantes:</span>
-                    <span class="stat-number" id="totalParticipantes">0</span>
-                </div>
-                
-                <div class="sorteo-display">
-                    <div class="nombre-girando instruccion" id="nombreGirando">
-                        ¿Quién será el ganador?
-                    </div>
-                </div>
-                <button class="btn-live" id="iniciarSorteo">
-                        <i class="bi bi-play-circle-fill"></i> Iniciar 
-                </button>
-                
-                <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
-                    
-                    <button class="btn-live btn-warning" id="reiniciarSorteo" style="display: none;">
-                        <i class="bi bi-arrow-clockwise"></i> Reiniciar Sorteo
-                    </button>
-                </div>
+<div class="semaforo-page">
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-title-wrapper">
+                <h1><i class="bi bi-stoplights-fill"></i> {{ sorteo.nombre }}</h1>
+                <div class="live-badge">EN VIVO</div>
             </div>
         </div>
-        
-        <!-- Sección Derecha: Semáforo -->
-        <div class="semaforo-section">
-            <div class="semaforo-post">
-                <div class="semaforo-body">
+
+        <div class="main-grid">
+            <div class="semaforo-area">
+                <div id="instructionBanner" class="instruction-banner">
+                    <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                </div>
+                
+                <div class="semaforo-post">
                     <div class="luz-container">
                         <div class="luz" id="luz-rojo"></div>
                         <div class="luz" id="luz-amarillo"></div>
@@ -606,352 +415,339 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="side-panel">
+                <!-- Panel de Configuración de Tiempos -->
+                <button class="btn-config-toggle" onclick="toggleConfig()" title="Ajustes de Animación">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="bi bi-gear-fill icon-gear"></i> Ajustes de Animación
+                    </span>
+                    <i class="bi bi-chevron-down icon-chevron"></i>
+                </button>
+                
+                <div class="config-container" id="configContainer">
+                    <div class="config-inner">
+                        <div class="config-wrapper">
+                            <div class="config-group">
+                                <label for="spinDuration">Sorteo Cliente (seg)</label>
+                                <input type="number" id="spinDuration" value="3" min="1" max="10">
+                            </div>
+                            <div class="config-group">
+                                <label for="colorDuration">Sorteo Color (seg)</label>
+                                <input type="number" id="colorDuration" value="4" min="1" max="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
+                <div class="stat-row">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill"></i>
+                        <div class="num" id="numPart">0</div>
+                        <div class="label">Participantes</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="bi bi-stoplights-fill"></i>
+                        <div class="num" id="numPremios">0</div>
+                        <div class="label">Colores</div>
+                    </div>
+                </div>
+
+                <button id="btnSpin" class="btn-spin" onclick="spin()">
+                    <i class="bi bi-play-circle-fill"></i> INICIAR SORTEO
+                </button>
+
+                <div class="participants-box">
+                    <div class="title">
+                        <div class="title-left"><i class="bi bi-people"></i> Lista</div>
+                        <div class="pagination-controls">
+                            <button id="prevPage" onclick="prevPage()" disabled><i class="bi bi-chevron-left"></i></button>
+                            <span class="pagination-info" id="pageInfo">1/1</span>
+                            <button id="nextPage" onclick="nextPage()"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="participants-list" id="partList"></div>
+                </div>
+
+                <a href="{% url 'detalle_sorteo' sorteo.id %}" class="back-link">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL DE GANADOR CON DISEÑO DE RULETA -->
-<div id="modalGanador" class="modal-overlay">
+<!-- Modal Resultado -->
+<div id="modal" class="modal-overlay">
     <div class="modal-box">
-        <div class="trophy-icon">
-            <i class="bi bi-trophy-fill"></i>
-        </div>
+        <div class="trophy-icon"><i class="bi bi-trophy-fill"></i></div>
         <div class="modal-title">🎉 ¡Felicitaciones!</div>
-        <div class="winner-name" id="modalNombreGanador"></div>
+        <div class="winner-name" id="winnerName"></div>
         <div class="prize-card">
             <div class="lbl">Ha ganado</div>
-            <div class="val">
-                <i class="bi bi-gift-fill"></i>
-                <span id="modalPremioNombre"></span>
-            </div>
+            <div class="val"><i id="prizeIcon" class="bi bi-gift-fill me-1"></i><span id="prizeName"></span></div>
         </div>
-        <div class="modal-buttons">
-            <button class="btn-continue" onclick="registrarYContinuar()">
-                <i class="bi bi-check-circle"></i> Registrar y Continuar
-            </button>
-            <button class="btn-resortear" onclick="sortearNuevamente()">
-                <i class="bi bi-arrow-repeat"></i> Sortear de nuevo
-            </button>
-        </div>
+        <button id="btnModalContinue" class="btn-continue" onclick="closeModal()">Continuar</button>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 <script>
-// ============== VARIABLES GLOBALES ==============
-const sorteoId = {{ sorteo.id }};
-const participantesData = {{ participantes_json|safe }};
-const premiosData = {{ premios_json|safe }};
+    const sorteoId = {{ sorteo.id }};
+    const participantes = {{ participantes_json|safe }};
+    const premiosData = {{ premios_json|safe }};
 
-// Crear mapa de premios por color
-const premiosPorColor = {};
-premiosData.forEach(premio => {
-    if (premio.color) {
-        premiosPorColor[premio.color] = {
-            id: premio.premio_id,
-            nombre: premio.nombre,
-            tipo: premio.tipo,
-            sorteo_premio_id: premio.id
-        };
-    }
-});
+    // Filtrar premios no asignados dinámicamente
+    let premios = premiosData.filter(p => !p.asignado);
+    let ganadorActual = null;
+    let premioActual = null;
+    
+    let btnSpin = document.getElementById('btnSpin');
+    let instructionBanner = document.getElementById('instructionBanner');
+    
+    let currentPage = 0;
+    const itemsPerPage = 5;
 
-console.log('Premios por color configurados:', premiosPorColor);
+    function init() {
+        document.getElementById('numPart').textContent = participantes.length;
+        document.getElementById('numPremios').textContent = premios.length;
+        renderList();
+        checkValidation();
+    }
 
-let participantesDisponibles = [...participantesData];
-const participantesOriginales = [...participantesData];
-let ganadorActual = null;
-let premioGanador = null;
-let colorGanador = null;
-let sorteoCorriendo = false;
-let intervaloNombres = null;
-let intervaloPremio = null;
+    function toggleConfig() {
+        document.getElementById('configContainer').classList.toggle('open');
+        document.querySelector('.btn-config-toggle').classList.toggle('active');
+    }
 
-// Orden de las luces del semáforo (de arriba hacia abajo)
-const ordenLuces = ['rojo', 'amarillo', 'verde'];
-
-// ============== FUNCIONES PRINCIPALES ==============
-function iniciarSorteoCompleto() {
-    if (sorteoCorriendo || participantesDisponibles.length === 0) return;
-    
-    console.log('Iniciando sorteo con premios:', premiosPorColor);
-    
-    sorteoCorriendo = true;
-    document.getElementById('iniciarSorteo').disabled = true;
-    
-    sortearParticipante();
-}
-
-function sortearParticipante() {
-    const nombreDisplay = document.getElementById('nombreGirando');
-    nombreDisplay.classList.remove('instruccion', 'ganador');
-    nombreDisplay.classList.add('cycling');
-    
-    let indice = 0;
-    const velocidadInicial = 100;
-    const duracionTotal = 8000;
-    const tiempoInicio = Date.now();
-    
-    function ciclarNombres() {
-        const tiempoTranscurrido = Date.now() - tiempoInicio;
-        
-        if (tiempoTranscurrido >= duracionTotal) {
-            clearInterval(intervaloNombres);
-            finalizarSorteoParticipante();
-            return;
-        }
-        
-        nombreDisplay.textContent = participantesDisponibles[indice].nombre;
-        indice = (indice + 1) % participantesDisponibles.length;
-    }
-    
-    intervaloNombres = setInterval(ciclarNombres, velocidadInicial);
-}
-
-function finalizarSorteoParticipante() {
-    if (intervaloNombres) {
-        clearInterval(intervaloNombres);
-        intervaloNombres = null;
-    }
-    
-    const indiceAleatorio = Math.floor(Math.random() * participantesDisponibles.length);
-    ganadorActual = participantesDisponibles[indiceAleatorio];
-    
-    const nombreDisplay = document.getElementById('nombreGirando');
-    nombreDisplay.classList.remove('cycling');
-    nombreDisplay.classList.add('ganador');
-    nombreDisplay.textContent = ganadorActual.nombre;
-    
-    console.log('Ganador seleccionado:', ganadorActual);
-    
-    // Iniciar sorteo de premio después de 3 segundos
-    setTimeout(() => {
-        sortearPremio();
-    }, 3000);
-}
-
-function sortearPremio() {
-    document.querySelector('.semaforo-post').classList.add('zoom-effect');
-    
-    let indiceActual = 0;
-    let velocidad = 200;
-    const duracionTotal = 10000;
-    const inicioAceleracion = 7000;
-    const tiempoInicio = Date.now();
-    
-    function ciclarLuces() {
-        const tiempoTranscurrido = Date.now() - tiempoInicio;
-        
-        if (tiempoTranscurrido >= duracionTotal) {
-            clearInterval(intervaloPremio);
-            finalizarSorteoPremio();
-            return;
-        }
-        
-        document.querySelectorAll('.luz').forEach(luz => {
-            luz.classList.remove('active');
-        });
-        
-        const luzActual = ordenLuces[indiceActual];
-        const elementoLuz = document.getElementById(`luz-${luzActual}`);
-        if (elementoLuz) {
-            elementoLuz.classList.add('active');
-        }
-        
-        indiceActual = (indiceActual + 1) % ordenLuces.length;
-        
-        if (tiempoTranscurrido > inicioAceleracion && intervaloPremio) {
-            const factorAceleracion = (tiempoTranscurrido - inicioAceleracion) / (duracionTotal - inicioAceleracion);
-            velocidad = 200 - (150 * factorAceleracion);
-            clearInterval(intervaloPremio);
-            intervaloPremio = setInterval(ciclarLuces, Math.max(50, velocidad));
-        }
-    }
-    
-    intervaloPremio = setInterval(ciclarLuces, velocidad);
-}
-
-function finalizarSorteoPremio() {
-    if (intervaloPremio) {
-        clearInterval(intervaloPremio);
-        intervaloPremio = null;
-    }
-    
-    const semaforoPost = document.querySelector('.semaforo-post');
-    if (semaforoPost) {
-        semaforoPost.classList.remove('zoom-effect');
-    }
-    
-    if (!ganadorActual) {
-        console.error('No hay ganador definido');
-        return;
-    }
-    
-    const coloresDisponibles = Object.keys(premiosPorColor);
-    if (coloresDisponibles.length === 0) {
-        console.error('No hay premios definidos');
-        return;
-    }
-    
-    // Seleccionar color aleatorio
-    colorGanador = coloresDisponibles[Math.floor(Math.random() * coloresDisponibles.length)];
-    premioGanador = premiosPorColor[colorGanador];
-    
-    console.log('Premio ganador:', premioGanador, 'Color:', colorGanador);
-    
-    // Apagar todas las luces y encender solo la ganadora
-    document.querySelectorAll('.luz').forEach(luz => luz.classList.remove('active'));
-    
-    const luzGanadora = document.getElementById(`luz-${colorGanador}`);
-    if (luzGanadora) {
-        luzGanadora.classList.add('active');
-    }
-    
-    // Confetti
-    setTimeout(() => {
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => {
-                confetti({
-                    particleCount: 150,
-                    spread: 100,
-                    origin: { y: 0.6 }
-                });
-            }, i * 300);
-        }
-    }, 500);
-    
-    // Mostrar modal después de 2 segundos
-    setTimeout(() => {
-        if (ganadorActual && premioGanador) {
-            mostrarModalGanador();
-        }
-    }, 2000);
-}
-
-function mostrarModalGanador() {
-    if (!ganadorActual || !premioGanador) {
-        console.error('Datos de ganador o premio no disponibles');
-        return;
-    }
-    
-    const modal = document.getElementById('modalGanador');
-    const nombreElement = document.getElementById('modalNombreGanador');
-    const premioNombreElement = document.getElementById('modalPremioNombre');
-    
-    nombreElement.textContent = ganadorActual.nombre;
-    premioNombreElement.textContent = premioGanador.nombre;
-    
-    modal.classList.add('show');
-    
-    setTimeout(() => {
-        confetti({
-            particleCount: 200,
-            spread: 120,
-            origin: { y: 0.5 }
-        });
-    }, 300);
-}
-
-function registrarYContinuar() {
-    if (!ganadorActual || !premioGanador) {
-        console.error('No hay datos para registrar');
-        return;
-    }
-    
-    // Registrar y redirigir SIEMPRE a la página de detalle
-    const formData = new FormData();
-    formData.append('cliente_id', ganadorActual.id);
-    formData.append('premio_id', premioGanador.sorteo_premio_id);
-    formData.append('posicion', 1);
-    
-    fetch('{% url "registrar_resultado" sorteo.pk %}', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('Resultado registrado correctamente. Redirigiendo...');
+    function checkValidation() {
+        if (premiosData.length < 3) {
+            btnSpin.disabled = true;
+            btnSpin.innerHTML = '<i class="bi bi-lock-fill"></i> FALTAN COLORES';
             
-            // SIEMPRE redirigir a la página de detalle después de registrar
-            // El usuario puede decidir allí si quiere hacer otro sorteo
-            window.location.href = '{% url "detalle_sorteo" sorteo.pk %}';
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast(`Sorteo bloqueado: Faltan configurar colores del semáforo. Necesitas exactamente 3 premios (uno para cada color).`, 'warning', 'Acción Requerida');
+                }
+            }, 500);
+        } else if (premios.length === 0) {
+            btnSpin.disabled = false;
+            btnSpin.classList.add('completed');
+            btnSpin.innerHTML = '<i class="bi bi-list-stars"></i> VER RESULTADOS';
+            btnSpin.onclick = () => window.location.href = `/sorteos/${sorteoId}/`;
+            
+            instructionBanner.innerHTML = '<i class="bi bi-stars"></i> SORTEO FINALIZADO';
+            instructionBanner.className = 'instruction-banner';
         } else {
-            console.error('Error al registrar:', data.error);
-            alert('Error al registrar el resultado: ' + (data.error || 'Error desconocido'));
-        }
-    })
-    .catch(error => {
-        console.error('Error en petición:', error);
-        alert('Error de conexión al registrar. Por favor intenta de nuevo.');
-    });
-}
-
-function sortearNuevamente() {
-    const modal = document.getElementById('modalGanador');
-    modal.classList.remove('show');
-    
-    const nombreDisplay = document.getElementById('nombreGirando');
-    nombreDisplay.classList.remove('ganador');
-    nombreDisplay.classList.add('instruccion');
-    nombreDisplay.textContent = 'Haz clic en "Iniciar Sorteo Completo"';
-    
-    // Apagar todas las luces
-    document.querySelectorAll('.luz').forEach(luz => luz.classList.remove('active'));
-    
-    // Resetear variables
-    ganadorActual = null;
-    premioGanador = null;
-    colorGanador = null;
-    sorteoCorriendo = false;
-    
-    document.getElementById('iniciarSorteo').disabled = false;
-}
-
-function reiniciarSorteoCompleto() {
-    participantesDisponibles = [...participantesOriginales];
-    ganadorActual = null;
-    premioGanador = null;
-    colorGanador = null;
-    sorteoCorriendo = false;
-    
-    const nombreDisplay = document.getElementById('nombreGirando');
-    nombreDisplay.className = 'nombre-girando instruccion';
-    nombreDisplay.textContent = '¿Quién será el ganador?';
-    
-    document.getElementById('iniciarSorteo').disabled = false;
-    document.getElementById('iniciarSorteo').style.display = 'inline-block';
-    document.getElementById('reiniciarSorteo').style.display = 'none';
-    
-    document.querySelectorAll('.luz').forEach(luz => {
-        luz.classList.remove('active');
-    });
-    
-    document.getElementById('totalParticipantes').textContent = participantesDisponibles.length;
-    document.getElementById('modalGanador').classList.remove('show');
-}
-
-
-// ============== ASIGNAR EVENTOS A BOTONES ==============
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('iniciarSorteo').addEventListener('click', iniciarSorteoCompleto);
-    document.getElementById('reiniciarSorteo').addEventListener('click', reiniciarSorteoCompleto);
-    
-    document.getElementById('totalParticipantes').textContent = participantesDisponibles.length;
-    
-    // No cerrar el modal al hacer clic fuera
-    window.onclick = function(event) {
-        const modal = document.getElementById('modalGanador');
-        if (event.target == modal) {
-            // No hacer nada - evitar cierre accidental
+            btnSpin.disabled = false;
         }
     }
-});
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function spin() {
+        if (premiosData.length < 3) {
+            if (typeof showToast === 'function') {
+                showToast(`Sorteo bloqueado: Necesitas configurar los 3 colores del semáforo.`, 'warning', 'Acción Requerida');
+            }
+            return;
+        }
+        if (participantes.length === 0) {
+            if (typeof showToast === 'function') showToast('No hay participantes elegibles para este sorteo', 'warning');
+            return;
+        }
+        
+        btnSpin.disabled = true;
+        btnSpin.innerHTML = '<i class="bi bi-arrow-repeat spin-icon"></i> SORTEANDO...';
+        
+        const durationCliente = (parseInt(document.getElementById('spinDuration').value) || 3) * 1000;
+        const durationColor = (parseInt(document.getElementById('colorDuration').value) || 4) * 1000;
+        
+        // Iniciar animación rápida de nombres de clientes
+        let cycleInterval = setInterval(() => {
+            const randomPart = participantes[Math.floor(Math.random() * participantes.length)];
+            instructionBanner.innerHTML = `<i class="bi bi-person"></i> ${randomPart.nombre.toUpperCase()}`;
+            instructionBanner.classList.add('active');
+        }, 100);
+
+        fetch(`/sorteos/${sorteoId}/sortear/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
+            ganadorActual = data.ganador;
+            
+            // Detener la ruleta de nombres después de su duración
+            setTimeout(() => {
+                clearInterval(cycleInterval);
+                instructionBanner.innerHTML = `<i class="bi bi-person-check-fill"></i> ¡GANADOR: ${ganadorActual.nombre.toUpperCase()}!`;
+                
+                // Esperar 1.5s para apreciar el ganador y comenzar animación de luces
+                setTimeout(() => {
+                    autoSelectColor(durationColor);
+                }, 1500);
+                
+            }, durationCliente);
+        })
+        .catch(err => {
+            clearInterval(cycleInterval);
+            if (typeof showToast === 'function') showToast('Error al sortear ganador. Intente de nuevo.', 'error');
+            resetUI();
+        });
+    }
+
+    function autoSelectColor(durationColor) {
+        instructionBanner.innerHTML = `<i class="bi bi-stoplights"></i> ELIGIENDO COLOR GANADOR...`;
+        
+        const ordenLuces = ['rojo', 'amarillo', 'verde'];
+        let currentIndex = 0;
+        
+        // Animación rápida ciclando luces
+        let lightCycleInterval = setInterval(() => {
+            document.querySelectorAll('.luz').forEach(l => l.classList.remove('active'));
+            document.getElementById(`luz-${ordenLuces[currentIndex]}`).classList.add('active');
+            currentIndex = (currentIndex + 1) % 3;
+        }, 150);
+
+        // Detenerse en un color (premio) ganador
+        setTimeout(() => {
+            clearInterval(lightCycleInterval);
+            document.querySelectorAll('.luz').forEach(l => l.classList.remove('active'));
+            
+            // Escoger un premio (color) al azar de los disponibles
+            premioActual = premios[Math.floor(Math.random() * premios.length)];
+            const colorGanador = premioActual.color; // 'rojo', 'amarillo' o 'verde'
+            
+            // Iluminar la luz ganadora
+            document.getElementById(`luz-${colorGanador}`).classList.add('active');
+            
+            instructionBanner.innerHTML = `<i class="bi bi-stars"></i> ¡COLOR ${colorGanador.toUpperCase()} GANADOR!`;
+            
+            setTimeout(() => {
+                registrarResultado();
+            }, 1500); // Pequeña pausa antes de registrar
+            
+        }, durationColor);
+    }
+
+    function registrarResultado() {
+        const formData = new FormData();
+        formData.append('cliente_id', ganadorActual.id);
+        formData.append('premio_id', premioActual.id);
+        
+        fetch(`/sorteos/${sorteoId}/registrar/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                premios = premios.filter(p => p.id !== premioActual.id);
+                showWinnerModal();
+            } else {
+                if (typeof showToast === 'function') showToast(data.error, 'error');
+                resetUI();
+            }
+        })
+        .catch(() => {
+            if (typeof showToast === 'function') showToast('Error de red al registrar premio', 'error');
+            resetUI();
+        });
+    }
+
+    function showWinnerModal() {
+        document.getElementById('winnerName').textContent = ganadorActual.nombre;
+        document.getElementById('prizeName').textContent = premioActual.nombre;
+        
+        const btnContinue = document.getElementById('btnModalContinue');
+        if (premios.length === 0) {
+            btnContinue.innerHTML = '<i class="bi bi-check-circle-fill"></i> Aceptar y Finalizar';
+            btnContinue.className = 'btn-continue final';
+        } else {
+            btnContinue.innerHTML = '<i class="bi bi-play-fill"></i> Siguiente Color';
+            btnContinue.className = 'btn-continue';
+        }
+        
+        document.getElementById('modal').classList.add('show');
+        confetti();
+    }
+
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+        checkValidation();
+        document.getElementById('numPremios').textContent = premios.length;
+        if (premios.length > 0) {
+            resetUI();
+        }
+    }
+
+    function resetUI() {
+        btnSpin.disabled = false;
+        btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+        instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+        instructionBanner.classList.remove('active');
+        document.querySelectorAll('.luz').forEach(l => l.classList.remove('active'));
+    }
+
+    function renderList() {
+        const list = document.getElementById('partList');
+        if (participantes.length === 0) {
+            list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:10px;font-size:0.7rem;">Sin participantes</div>';
+            return;
+        }
+        const totalPages = Math.ceil(participantes.length / itemsPerPage);
+        const start = currentPage * itemsPerPage;
+        const pageItems = participantes.slice(start, start + itemsPerPage);
+        list.innerHTML = pageItems.map((p, i) => `<div class="p-item" style="animation-delay: ${i * 0.05}s"><i class="bi bi-person-fill"></i>${p.nombre}</div>`).join('');
+        
+        document.getElementById('pageInfo').textContent = `${currentPage + 1}/${totalPages}`;
+        document.getElementById('prevPage').disabled = currentPage === 0;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages - 1;
+    }
+
+    function prevPage() { if (currentPage > 0) { currentPage--; renderList(); } }
+    function nextPage() { if (currentPage < Math.ceil(participantes.length / itemsPerPage) - 1) { currentPage++; renderList(); } }
+
+    function confetti() {
+        const cols = ['#ef4444', '#facc15', '#22c55e', '#ffffff'];
+        for (let i = 0; i < 100; i++) {
+            setTimeout(() => {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = '-10px';
+                c.style.background = cols[Math.floor(Math.random() * cols.length)];
+                c.style.width = (5 + Math.random() * 8) + 'px';
+                c.style.height = (5 + Math.random() * 8) + 'px';
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                c.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }, i * 20);
+        }
+    }
+
+    window.addEventListener('load', init);
 </script>
 {% endblock %}

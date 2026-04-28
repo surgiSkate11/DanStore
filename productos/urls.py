@@ -9,9 +9,11 @@ urlpatterns = [
     path('eliminar_productos/<int:pk>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
     path('cambiar-estado/<int:pk>/cambiar-estado/', views.cambiar_estado_producto, name='cambiar_estado_producto'),
     path('cambiar-categoria/<int:pk>/cambiar-categoria/', views.cambiar_categoria_producto, name='cambiar_categoria_producto'),
-    path('cambiar-talla/<int:pk>/cambiar-talla/', views.cambiar_talla_producto, name='cambiar_talla_producto'),
+    path('cambiar-variante/<int:pk>/cambiar-variante/', views.cambiar_variante_producto, name='cambiar_variante_producto'),
     path('subir-foto/<int:pk>/subir-foto/', views.subir_foto_producto, name='subir_foto_producto'),
-    path('api/rangos-edad/', views.get_rangos_edad, name='get_rangos_edad'),
+    
+    # AJAX para TipoProducto
+    path('api/crear-tipo-producto/', views.api_crear_tipo_producto, name='api_crear_tipo_producto'),
     
     # CAMBIO 2: Importación Excel/CSV
     path('importar/', views.importar_excel, name='importar_excel'),

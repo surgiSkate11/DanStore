@@ -5,14 +5,55 @@
 {% block extra_css %}
 <style>
     body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        background-attachment: fixed;
+        background: #f8f9fa;
     }
     
     .premios-page {
         background: transparent;
         min-height: auto;
         padding-bottom: 0;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 2rem 2.5rem 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+    
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .page-subtitle {
+        font-size: 1rem;
+        opacity: 0.95;
+        position: relative;
+        z-index: 1;
     }
     
     .premios-container {
@@ -23,10 +64,12 @@
     
     .section-card {
         background: white;
-        border-radius: 15px;
+        border-radius: 16px;
         padding: 2rem;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
         margin-bottom: 2rem;
+        height: 100%;
     }
     
     .lista-premios-scroll {
@@ -159,26 +202,44 @@
         border-color: #667eea;
         color: white;
     }
+    
+    /* Efecto focus para formularios premium */
+    .form-control:focus, .form-select:focus, .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="premios-page">
     <div class="premios-container">
-        <!-- Header -->
-        <div class="text-center mb-4">
-            <h1 class="text-white mb-2" style="font-size: 2.5rem; font-weight: 800; text-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                🎁 Gestionar Premios
-            </h1>
-            <p class="text-white" style="font-size: 1.1rem;">{{ sorteo.nombre }} - {{ sorteo.get_tipo_display }}</p>
+        <!-- Header Profesional -->
+        <div class="page-header mb-4">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-2 page-title">
+                        <i class="bi bi-gift-fill"></i> Gestionar Premios
+                    </h1>
+                    <p class="page-subtitle mb-0">
+                        <i class="bi bi-info-circle"></i> 
+                        Sorteo: <strong>{{ sorteo.nombre }}</strong> - <span class="badge bg-light text-primary ms-1">{{ sorteo.get_tipo_display }}</span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-arrow-left-circle"></i> Volver al Sorteo
+                    </a>
+                </div>
+            </div>
         </div>
 
-    <div class="row">
+    <div class="row g-4">
         <!-- Premios Configurados -->
         <div class="col-md-5">
             <div class="section-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="mb-0"><i class="bi bi-list-check"></i> Premios Configurados</h4>
+                    <h4 class="mb-0 fw-bold" style="color: #1f2937;"><i class="bi bi-list-check text-primary"></i> Premios Configurados</h4>
                     <div id="contadorPremios" class="badge bg-primary fs-6" style="padding: 0.5rem 1rem;"></div>
                 </div>
                 
@@ -216,19 +277,13 @@
                         </div>
                     {% endif %}
                 </div>
-
-                <div class="mt-4 text-center">
-                    <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left"></i> Volver al Sorteo
-                    </a>
-                </div>
             </div>
         </div>
 
         <!-- Agregar Premios -->
         <div class="col-md-7">
             <div class="section-card">
-                <h4 class="mb-4"><i class="bi bi-plus-circle"></i> Agregar Premios</h4>
+                <h4 class="mb-4 fw-bold" style="color: #1f2937;"><i class="bi bi-plus-circle text-success"></i> Agregar Premios</h4>
                 
                 <!-- Tabs -->
                 <div class="mb-4">
@@ -310,14 +365,9 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3" id="campoValorDescuento" style="display: none;">
+                            <div class="col-12 mb-3" id="campoValorDescuento" style="display: none;">
                                 <label class="form-label fw-bold">Valor del Descuento</label>
                                 <input type="number" class="form-control" id="premioValor" name="valor_descuento" step="0.01" min="0" placeholder="Ej: 10">
-                            </div>
-
-                            <div class="col-md-6 mb-3" id="campoMinCompra" style="display: none;">
-                                <label class="form-label fw-bold">Mínimo de Compra ($)</label>
-                                <input type="number" class="form-control" id="premioMinCompra" name="minimo_compra" step="0.01" min="0" placeholder="Ej: 500">
                             </div>
                         </div>
 
@@ -556,29 +606,31 @@ function confirmarEliminarPremio() {
 function actualizarCamposPremio() {
     const tipo = document.getElementById('premioTipo').value;
     const campoValor = document.getElementById('campoValorDescuento');
-    const campoMin = document.getElementById('campoMinCompra');
     
     if (tipo === 'descuento_porcentaje' || tipo === 'descuento_fijo') {
         campoValor.style.display = 'block';
-        campoMin.style.display = 'block';
     } else {
         campoValor.style.display = 'none';
-        campoMin.style.display = 'none';
     }
 }
 
 function actualizarContador() {
     const contador = document.querySelectorAll('.premio-item').length;
     const badge = document.getElementById('contadorPremios');
-    badge.textContent = `${contador} premios`;
     
-    {% if sorteo.tipo == 'cofre' %}
-        badge.style.background = contador >= {{ sorteo.cantidad_cofres }} ? '#ef4444' : '#10b981';
+    {% if sorteo.tipo == 'cofre' or sorteo.tipo == 'caja' %}
+        const maxPremios = {{ sorteo.cantidad_cofres }};
+        badge.textContent = `${contador} / ${maxPremios} premios`;
+        badge.style.background = contador >= maxPremios ? '#ef4444' : '#10b981';
     {% elif sorteo.tipo == 'semaforo' %}
+        badge.textContent = `${contador} / 3 premios`;
         badge.style.background = contador >= 3 ? '#ef4444' : '#10b981';
         actualizarColoresDisponibles();
     {% elif sorteo.tipo == 'ranking' %}
+        badge.textContent = `${contador} / 3 premios`;
         badge.style.background = contador >= 3 ? '#ef4444' : '#10b981';
+    {% else %}
+        badge.textContent = `${contador} premios`;
     {% endif %}
 }
 

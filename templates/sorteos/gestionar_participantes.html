@@ -4,57 +4,131 @@
 
 {% block extra_css %}
 <style>
+    body {
+        background: #f8f9fa;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
     .participantes-container {
         background: white;
-        border-radius: 15px;
+        border-radius: 16px;
         padding: 2rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+        height: 100%;
     }
     
     .lista-clientes {
         max-height: 500px;
         overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+    
+    .lista-clientes::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .lista-clientes::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    
+    .lista-clientes::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
     }
     
     .cliente-item {
-        padding: 1rem;
-        border-bottom: 1px solid #e9ecef;
+        padding: 1.25rem;
+        border: 2px solid #f1f5f9;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: background 0.2s ease;
+        transition: all 0.3s ease;
+        background: #ffffff;
     }
     
     .cliente-item:hover {
-        background: #f8f9fa;
+        border-color: #667eea;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
     }
     
-    .participante-badge {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
+    .search-wrapper {
+        position: relative;
+    }
+    
+    .search-wrapper i {
+        position: absolute;
+        left: 1.2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
+    
+    .search-input {
+        padding: 0.85rem 1rem 0.85rem 3rem;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+    }
+    
+    .search-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <div class="row mb-4">
-        <div class="col">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'lista_sorteos' %}">Sorteos</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'detalle_sorteo' sorteo.id %}">{{ sorteo.nombre }}</a></li>
-                    <li class="breadcrumb-item active">Gestionar Participantes</li>
-                </ol>
-            </nav>
-            <h2><i class="bi bi-people-fill text-primary"></i> Gestionar Participantes</h2>
-            <p class="text-muted">Selecciona manualmente los clientes que participarán en este sorteo</p>
+    <!-- Header Profesional -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2 fw-bold" style="position: relative; z-index: 1; font-size: 2.2rem;">
+                    <i class="bi bi-people-fill"></i> Gestionar Participantes
+                </h1>
+                <p class="mb-0" style="position: relative; z-index: 1; opacity: 0.9; font-size: 1.05rem;">
+                    Selecciona manualmente los clientes que participarán en el sorteo <strong>{{ sorteo.nombre }}</strong>
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0" style="position: relative; z-index: 1;">
+                <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-light btn-lg text-primary fw-bold" style="border-radius: 12px;">
+                    <i class="bi bi-arrow-left-circle"></i> Volver al Sorteo
+                </a>
+            </div>
         </div>
     </div>
     
@@ -62,7 +136,7 @@
         <!-- Participantes Actuales -->
         <div class="col-lg-6">
             <div class="participantes-container">
-                <h5 class="mb-3">
+                <h5 class="mb-4 fw-bold text-dark border-bottom pb-3">
                     <i class="bi bi-check-circle text-success"></i> Participantes Seleccionados
                     <span class="badge bg-success ms-2">{{ participantes_actuales.count }}</span>
                 </h5>
@@ -72,13 +146,13 @@
                         {% for participante in participantes_actuales %}
                         <div class="cliente-item" id="participante-{{ participante.id }}">
                             <div>
-                                <strong>{{ participante.cliente.nombre }}</strong>
+                                <strong class="fs-5">{{ participante.cliente.nombre }}</strong>
                                 <br>
-                                <small class="text-muted">
+                                <small class="text-secondary fw-semibold">
                                     <i class="bi bi-telephone"></i> {{ participante.cliente.telefono|default:"N/A" }}
                                 </small>
                             </div>
-                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarParticipante({{ participante.id }})">
+                            <button class="btn btn-outline-danger shadow-sm" style="border-radius: 10px;" onclick="eliminarParticipante({{ participante.id }})">
                                 <i class="bi bi-trash"></i> Eliminar
                             </button>
                         </div>
@@ -97,23 +171,26 @@
         <!-- Todos los Clientes -->
         <div class="col-lg-6">
             <div class="participantes-container">
-                <h5 class="mb-3">
-                    <i class="bi bi-person-plus text-primary"></i> Todos los Clientes
+                <h5 class="mb-4 fw-bold text-dark border-bottom pb-3">
+                    <i class="bi bi-person-plus" style="color: #667eea;"></i> Todos los Clientes
                 </h5>
                 
-                <input type="text" class="form-control mb-3" id="buscarCliente" placeholder="Buscar cliente...">
+                <div class="search-wrapper mb-4">
+                    <i class="bi bi-search"></i>
+                    <input type="text" class="form-control search-input" id="buscarCliente" placeholder="Buscar por nombre...">
+                </div>
                 
                 <div id="listaClientes" class="lista-clientes">
                     {% for cliente in todos_clientes %}
                     <div class="cliente-item" data-nombre="{{ cliente.nombre|lower }}">
                         <div>
-                            <strong>{{ cliente.nombre }}</strong>
+                            <strong class="fs-5">{{ cliente.nombre }}</strong>
                             <br>
-                            <small class="text-muted">
+                            <small class="text-secondary fw-semibold">
                                 <i class="bi bi-telephone"></i> {{ cliente.telefono|default:"N/A" }}
                             </small>
                         </div>
-                        <button class="btn btn-sm btn-success" onclick="agregarParticipante({{ cliente.id }}, '{{ cliente.nombre|escapejs }}')">
+                        <button class="btn btn-success shadow-sm" style="border-radius: 10px;" onclick="agregarParticipante({{ cliente.id }}, '{{ cliente.nombre|escapejs }}')">
                             <i class="bi bi-plus-circle"></i> Agregar
                         </button>
                     </div>
@@ -121,12 +198,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    
-    <div class="text-center mt-4">
-        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-primary btn-lg">
-            <i class="bi bi-check-circle"></i> Guardar y Volver
-        </a>
     </div>
 </div>
 

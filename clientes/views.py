@@ -1,151 +1,196 @@
-from django.shortcuts import render, redirect, get_object_or_404
+import json
+from django.http import JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Count
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.db.models import Sum, Count, Q
+from collections import defaultdict
+from django.utils import timezone
+from ventas.models import Venta, DetalleVenta
 from productos.models import Producto
-from ventas.models import Cliente
-
+from .models import Cliente
+from .forms import ClienteForm
 
 @login_required
-def top_clientes(request):
-    """Vista para mostrar el ranking de mejores clientes desde vendido_a (Google Sheets dropdown)"""
+def api_crear_cliente(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Usar el formulario para centralizar las validaciones (letras, números, longitudes)
+            form = ClienteForm(data)
+            
+            if form.is_valid():
+                ruc_cedula = form.cleaned_data['ruc_cedula']
+                
+                # Verificar si existe globalmente para evitar duplicados
+                cliente = Cliente.objects.filter(ruc_cedula=ruc_cedula).first()
+                
+                if not cliente:
+                    cliente = form.save(commit=False)
+                    cliente.save()
+                    
+                # Asociación multitenant
+                if hasattr(request, 'empresa') and request.empresa:
+                    cliente.empresas.add(request.empresa)
+                
+                return JsonResponse({'success': True, 'id': cliente.id, 'nombre': cliente.nombre, 'ruc_cedula': cliente.ruc_cedula, 'telefono': cliente.telefono})
+            else:
+                # Si el formulario no es válido, devolver los errores al frontend
+                errores = {campo: mensajes[0] for campo, mensajes in form.errors.items()}
+                return JsonResponse({'success': False, 'error': errores}, status=400)
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+@login_required
+def lista_clientes(request):
+    """Dashboard unificado de clientes: top compradores, directorio y control de deudas."""
+    empresa = getattr(request, 'empresa', None)
     
-    # Obtener clientes únicos del campo vendido_a de productos vendidos
-    productos_vendidos = Producto.objects.filter(
-        estado='vendido',
-        vendido_a__isnull=False
-    ).exclude(vendido_a='').values('vendido_a').annotate(
-        total_compras=Sum('precio'),
-        cantidad_productos=Count('id')
-    ).order_by('-total_compras')
-    
-    # Convertir a lista de diccionarios con estructura esperada
-    clientes = []
-    for p in productos_vendidos:
-        clientes.append({
-            'nombre': p['vendido_a'],
-            'total_compras': p['total_compras'],
-            'cantidad_productos': p['cantidad_productos'],
+    if not empresa:
+        return render(request, 'clientes/clientes.html', {
+            'clientes_data': [], 'clientes_incompletos': [], 'total_clientes': 0,
+            'total_ventas': 0, 'total_deudas': 0, 'clientes_con_deuda': 0
         })
+        
+    clientes_qs = Cliente.objects.filter(empresas=empresa)
+    clientes_incompletos = clientes_qs.filter(ruc_cedula__startswith='SYS-').order_by('-creado_en')
     
-    # Calcular totales generales
-    total_ventas = sum(c['total_compras'] for c in clientes)
-    total_productos_vendidos = sum(c['cantidad_productos'] for c in clientes)
+    # 1. Agrupar métricas de ventas por cliente (Top compradores)
+    ventas_agrupadas = Venta.objects.filter(empresa=empresa).values('cliente_id').annotate(
+        total=Sum('total'),
+        cantidad=Count('id')
+    )
+    metricas_ventas = {v['cliente_id']: {'total': v['total'] or 0, 'cantidad': v['cantidad']} for v in ventas_agrupadas}
     
+    # 2. Agrupar deudas (productos separados) por nombre del cliente
+    productos_separados = Producto.objects.filter(empresa=empresa, estado='separado', vendido_a__isnull=False).exclude(vendido_a='')
+    deudas_dict = defaultdict(float)
+    for p in productos_separados:
+        deudas_dict[p.vendido_a] += float(p.precio or 0)
+        
+    clientes_data = []
+    total_deuda_general = 0
+    total_ventas_general = 0
+    
+    for c in clientes_qs:
+        v_data = metricas_ventas.get(c.id, {'total': 0, 'cantidad': 0})
+        deuda = deudas_dict.get(c.nombre, 0)
+        
+        total_deuda_general += deuda
+        total_ventas_general += v_data['total']
+        
+        clientes_data.append({
+            'cliente': c,
+            'total_comprado': v_data['total'],
+            'cantidad_compras': v_data['cantidad'],
+            'deuda': deuda
+        })
+        
+    # Ordenar por total comprado (Ranking Top)
+    clientes_data.sort(key=lambda x: x['total_comprado'], reverse=True)
+    for i, data in enumerate(clientes_data):
+        data['ranking'] = i + 1
+        
     context = {
-        'clientes': clientes,
-        'total_ventas': total_ventas,
-        'total_ventas_count': len(clientes),
-        'total_productos_vendidos': total_productos_vendidos,
+        'clientes_data': clientes_data,
+        'clientes_incompletos': clientes_incompletos,
+        'total_clientes': len(clientes_data),
+        'total_ventas': total_ventas_general,
+        'total_deudas': total_deuda_general,
+        'clientes_con_deuda': sum(1 for c in clientes_data if c['deuda'] > 0)
     }
-    
-    return render(request, 'clientes/top_clientes.html', context)
+    return render(request, 'clientes/clientes.html', context)
 
 
 @login_required
-def detalle_cliente(request, cliente_nombre):
-    """Vista para ver el detalle de compras de un cliente desde vendido_a field"""
-    from datetime import datetime, timedelta
-    from django.utils import timezone
-    
-    # Obtener filtros de fecha
+def crear_cliente(request):
+    """Vista para crear un nuevo cliente desde un template dedicado (sin modal)."""
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        if form.is_valid():
+            # La validación de unicidad ahora está en el form. Simplemente guardamos.
+            cliente = form.save()
+            messages.success(request, f'Cliente "{cliente.nombre}" creado exitosamente.')
+
+            # Asociar la empresa (multitenancy)
+            if hasattr(request, 'empresa') and request.empresa:
+                cliente.empresas.add(request.empresa)
+            
+            return redirect('lista_clientes')
+    else:
+        form = ClienteForm()
+
+    return render(request, 'clientes/crear_cliente.html', {'form': form})
+
+@login_required
+def detalle_cliente(request, cliente_id):
+    """Muestra la información de un cliente específico y su historial de compras."""
+    from datetime import timedelta
+
+    empresa = getattr(request, 'empresa', None)
+    cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
+
+    # Obtener todas las ventas del cliente
+    ventas_cliente = Venta.objects.filter(cliente=cliente, empresa=empresa)
+
+    # Lógica de filtrado por fecha
     filtro = request.GET.get('filtro', 'todos')
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
-    
-    # Obtener productos vendidos a este cliente
-    productos = Producto.objects.filter(
-        vendido_a=cliente_nombre,
-        estado='vendido'
-    )
-    
-    # Aplicar filtros de fecha
-    hoy = timezone.now().date()
-    
+    today = timezone.now().date()
+
     if filtro == 'hoy':
-        productos = productos.filter(creado_en__date=hoy)
+        ventas_filtradas = ventas_cliente.filter(fecha__date=today)
     elif filtro == 'semana':
-        inicio_semana = hoy - timedelta(days=hoy.weekday())
-        productos = productos.filter(creado_en__date__gte=inicio_semana)
+        start_of_week = today - timedelta(days=today.weekday())
+        ventas_filtradas = ventas_cliente.filter(fecha__date__gte=start_of_week)
     elif filtro == 'mes':
-        productos = productos.filter(
-            creado_en__year=hoy.year,
-            creado_en__month=hoy.month
-        )
+        ventas_filtradas = ventas_cliente.filter(fecha__year=today.year, fecha__month=today.month)
     elif filtro == 'año':
-        productos = productos.filter(creado_en__year=hoy.year)
+        ventas_filtradas = ventas_cliente.filter(fecha__year=today.year)
     elif filtro == 'personalizado' and fecha_inicio and fecha_fin:
-        try:
-            inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-            fin = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-            productos = productos.filter(creado_en__date__range=[inicio, fin])
-        except ValueError:
-            messages.warning(request, 'Formato de fecha inválido')
-    
-    productos = productos.order_by('-creado_en')
-    
-    if not productos.exists() and filtro == 'todos':
-        messages.error(request, f'No se encontraron productos para el cliente {cliente_nombre}')
-        return redirect('top_clientes')
-    
-    # Calcular estadísticas
-    total_gastado = productos.aggregate(total=Sum('precio'))['total'] or 0
-    cantidad_productos = productos.count()
-    
-    # Intentar obtener información adicional del cliente desde la BD de ventas
-    try:
-        cliente_info = Cliente.objects.get(nombre=cliente_nombre)
-    except Cliente.DoesNotExist:
-        cliente_info = None
-    
+        ventas_filtradas = ventas_cliente.filter(fecha__date__range=[fecha_inicio, fecha_fin])
+    else:
+        ventas_filtradas = ventas_cliente
+
+    # Obtener los productos de las ventas filtradas
+    detalles_venta = DetalleVenta.objects.filter(venta__in=ventas_filtradas).select_related('producto')
+    productos_comprados = [d.producto for d in detalles_venta]
+
     context = {
-        'nombre_cliente': cliente_nombre,
-        'productos': productos,
-        'total_gastado': total_gastado,
-        'cantidad_productos': cantidad_productos,
-        'cliente_info': cliente_info,
+        'cliente': cliente,
+        'productos': productos_comprados,
+        'total_gastado': ventas_filtradas.aggregate(total=Sum('total'))['total'] or 0,
+        'cantidad_productos': len(productos_comprados),
         'filtro_actual': filtro,
         'fecha_inicio': fecha_inicio,
         'fecha_fin': fecha_fin,
+        'today': today,
     }
-    
     return render(request, 'clientes/detalle_cliente.html', context)
 
-
 @login_required
-def editar_info_cliente(request, cliente_nombre):
-    """Vista para editar teléfono y dirección de un cliente"""
-    
+def editar_cliente(request, cliente_id):
+    """Permite editar los datos de un cliente temporal o existente."""
+    empresa = getattr(request, 'empresa', None)
+    cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
+
     if request.method == 'POST':
-        telefono = request.POST.get('telefono', '').strip()
-        direccion = request.POST.get('direccion', '').strip()
-        email = request.POST.get('email', '').strip()
-        notas = request.POST.get('notas', '').strip()
-        
-        # Crear o actualizar cliente en BD
-        cliente, created = Cliente.objects.get_or_create(nombre=cliente_nombre)
-        cliente.telefono = telefono
-        cliente.direccion = direccion
-        cliente.email = email
-        cliente.notas = notas
-        cliente.save()
-        
-        if created:
-            messages.success(request, f'Información de {cliente_nombre} guardada exitosamente')
-        else:
-            messages.success(request, f'Información de {cliente_nombre} actualizada exitosamente')
-        
-        return redirect('detalle_cliente', cliente_nombre=cliente_nombre)
-    
-    # GET: Mostrar formulario
-    try:
-        cliente = Cliente.objects.get(nombre=cliente_nombre)
-    except Cliente.DoesNotExist:
-        cliente = None
-    
+        form = ClienteForm(request.POST, instance=cliente)
+        if form.is_valid():
+            # La validación de unicidad ahora está en el form.
+            form.save()
+            messages.success(request, f'La información de "{cliente.nombre}" ha sido actualizada.')
+            return redirect('lista_clientes')
+    else:
+        form = ClienteForm(instance=cliente)
+
     context = {
-        'nombre_cliente': cliente_nombre,
-        'cliente': cliente,
+        'form': form,
+        'cliente': cliente
     }
-    
-    return render(request, 'clientes/editar_info_cliente.html', context)
+    return render(request, 'clientes/editar_cliente.html', context)

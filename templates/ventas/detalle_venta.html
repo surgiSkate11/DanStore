@@ -57,6 +57,15 @@
             </a>
         </div>
         <div class="col-auto">
+        <button type="button" 
+                data-url="{% url 'generar_factura_pdf' venta.id %}"
+                data-filename="Factura_{{ venta.numero_factura }}.pdf"
+                data-title="Factura {{ venta.numero_factura }}"
+                data-text="Hola, te comparto el comprobante/factura de tu compra."
+                onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)" 
+                class="btn btn-info text-white">
+                <i class="bi bi-share-fill"></i> Compartir
+            </button>
             <a href="{% url 'generar_factura_pdf' venta.id %}" class="btn btn-success">
                 <i class="bi bi-file-pdf"></i> Descargar PDF
             </a>
@@ -120,7 +129,7 @@
                 <div class="row align-items-center">
                     <div class="col-auto">
                         {% if detalle.producto.imagen %}
-                        <img src="{{ detalle.producto.imagen.url }}" alt="{{ detalle.producto.tipo_prenda }}"
+                        <img src="{{ detalle.producto.imagen.url }}" alt="{{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}"
                              style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
                         {% else %}
                         <div class="bg-light rounded d-flex align-items-center justify-content-center"
@@ -130,11 +139,11 @@
                         {% endif %}
                     </div>
                     <div class="col">
-                        <h6 class="mb-1">{{ detalle.producto.tipo_prenda }}</h6>
+                        <h6 class="mb-1">{{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}</h6>
                         <p class="mb-0 text-muted">
                             <small>
-                                {{ detalle.producto.get_categoria_grupo_display }} | 
-                                Talla: {{ detalle.producto.rango_edad|default:"N/A" }}
+                                {{ detalle.producto.categoria|default:"General" }} | 
+                                Variante: {{ detalle.producto.variante|default:"N/A" }}
                             </small>
                         </p>
                     </div>

@@ -2,63 +2,248 @@
 
 {% block title %}{{ titulo }} - Tiendita{% endblock %}
 
+{% block extra_css %}
+<!-- Bootstrap 5 Select2 theme CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2.5rem 0;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
+    .form-card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        background: white;
+        overflow: hidden;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #374151; /* Color más oscuro para mejor legibilidad */
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.025);
+        background-color: #f9fafb !important; /* Fondo gris claro más elegante */
+        color: #374151;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        background-color: #ffffff !important; /* Fondo blanco al enfocar */
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .input-group .form-control, .input-group .form-select {
+        border-radius: 8px 0 0 8px; /* Ajuste para el border-radius del input-group */
+    }
+    
+    /* Correcciones para Select2 para que se alinee perfecto con el botón [+] */
+    .input-group > .select2-container--bootstrap-5 {
+        flex-grow: 1;
+        width: 1% !important; /* Fuerza al contenedor a respetar el flexbox del input-group */
+    }
+    .input-group > .select2-container--bootstrap-5 .select2-selection {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        height: 100% !important; 
+        min-height: calc(1.5em + 1.5rem + 2px); /* Igualar altura de form-control */
+        padding: 0; 
+        display: flex;
+        align-items: center;
+        background-color: #f9fafb;
+        border: 1px solid #d1d5db;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.025);
+    }
+    .select2-container--bootstrap-5.select2-container--open .select2-selection,
+    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+        border-color: #667eea;
+        background-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25) !important;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+        padding-left: 1rem;
+        padding-right: 2rem; /* Espacio para la flecha */
+        color: #374151;
+        line-height: normal; /* Evita que crezca sin control */
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+        position: absolute;
+        right: 15px; /* Mas al centro para mejor look */
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    /* Estructura del dropdown (lista flotante) - Mejorar apariencia */
+    .select2-container--bootstrap-5 .select2-dropdown {
+        border-color: #667eea;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        margin-top: 2px;
+        z-index: 1060; /* Asegurar que flote sobre todo tipo de contenedores */
+    }
+    .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+        background-color: #667eea !important;
+        color: white;
+    }
+    
+    .btn-action {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-2px);
+    }
+    
+    .custom-file-upload {
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        background: #f9fafb;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .custom-file-upload:hover {
+        border-color: #667eea;
+        background: #f3f4f6;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0">{{ titulo }}</h3>
+<div class="container-fluid px-4 pb-5">
+    <!-- Header -->
+    <div class="gradient-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-1 fw-bold">
+                        {% if 'Nuevo' in titulo or 'Crear' in titulo %}
+                            <i class="bi bi-plus-circle-fill"></i>
+                        {% else %}
+                            <i class="bi bi-pencil-square"></i>
+                        {% endif %}
+                        {{ titulo }}
+                    </h1>
+                    <p class="mb-0 opacity-90">
+                        Completa la información del producto para tu inventario
+                    </p>
                 </div>
-                <div class="card-body p-4">
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido del formulario -->
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-11 col-xl-10">
+            <div class="card form-card">
+                <div class="card-body p-4 p-md-5">
                     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
                         {% if form.non_field_errors %}
-                            <div class="alert alert-danger" role="alert">
-                                <h4 class="alert-heading">Error</h4>
+                            <div class="alert alert-danger shadow-sm border-0 rounded-3 mb-4" role="alert">
+                                <h5 class="alert-heading fw-bold"><i class="bi bi-exclamation-octagon"></i> Revisa los siguientes errores:</h5>
+                                <ul class="mb-0">
                                 {% for error in form.non_field_errors %}
-                                    <p>{{ error }}</p>
+                                    <li>{{ error }}</li>
                                 {% endfor %}
+                                </ul>
                             </div>
                         {% endif %}
 
-                        {% for field in form %}
-                            <div class="mb-3">
-                                <label for="{{ field.id_for_label }}" class="form-label fw-bold">
-                                    {{ field.label }}
-                                </label>
-                                
-                                {% if field.field.widget.input_type == "textarea" %}
-                                    {{ field }}
-                                {% elif field.field.widget.input_type == "file" %}
-                                    {{ field }}
+                        <div class="row g-4">
+                            {% for field in form %}
+                                {% if field.name in 'nombre,descripcion,imagen' %}
+                                    <div class="col-12">
+                                {% elif field.name in 'precio,precio_costo,stock' %}
+                                    <div class="col-12 col-md-4">
+                                {% elif field.name in 'categoria,tipo_producto,marca' %}
+                                    <div class="col-12 col-md-4">
+                                {% elif field.name in 'variante,color,estado' %}
+                                    <div class="col-12 col-md-4">
                                 {% else %}
-                                    {{ field }}
+                                    <div class="col-12 col-md-6">
                                 {% endif %}
-                                
-                                {% if field.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in field.errors %}
-                                            {{ error }}
-                                        {% endfor %}
+                                    <div class="form-group position-relative">
+                                        <label for="{{ field.id_for_label }}" class="form-label">
+                                            {{ field.label }}
+                                        </label>
+                                        
+                                        {% if field.field.widget.input_type == "file" %}
+                                            <div class="custom-file-upload">
+                                                <i class="bi bi-cloud-arrow-up-fill fs-3 text-primary mb-2"></i>
+                                                {{ field }}
+                                            </div>
+                                        {% elif field.name in "tipo_producto,categoria" %}
+                                            <div class="input-group">
+                                                {{ field }}
+                                                {% if field.name == "tipo_producto" %}
+                                                <button type="button" class="btn btn-outline-primary shadow-sm" style="border-radius: 0 8px 8px 0;" data-bs-toggle="modal" data-bs-target="#modalNuevoTipo" title="Agregar nuevo tipo">
+                                                    <i class="bi bi-plus-lg fw-bold"></i>
+                                                </button>
+                                                {% else %}
+                                                <button type="button" class="btn btn-outline-primary shadow-sm" style="border-radius: 0 8px 8px 0;" data-bs-toggle="modal" data-bs-target="#modalNuevaCategoria" title="Agregar nueva categoría">
+                                                    <i class="bi bi-plus-lg fw-bold"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            {{ field }}
+                                        {% endif %}
+                                        
+                                        <!-- Feedback si hay error (Boostrap Validación) -->
+                                        <div class="invalid-feedback fw-bold mt-1">
+                                            <i class="bi bi-exclamation-circle"></i> Este campo es obligatorio.
+                                        </div>
+                                        
+                                        {% if field.errors %}
+                                            <div class="invalid-feedback d-block fw-bold mt-1">
+                                                <i class="bi bi-exclamation-circle text-danger"></i> 
+                                                {% for error in field.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {% if field.help_text %}
+                                            <small class="form-text text-muted d-block mt-2">
+                                                <i class="bi bi-info-circle"></i> {{ field.help_text|safe }}
+                                            </small>
+                                        {% endif %}
                                     </div>
-                                {% endif %}
-                                
-                                {% if field.help_text %}
-                                    <small class="form-text text-muted d-block mt-1">
-                                        {{ field.help_text|safe }}
-                                    </small>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
 
-                        <div class="d-flex gap-2 justify-content-between mt-5">
-                            <a href="{% url 'lista_productos' %}" class="btn btn-secondary">
-                                <i class="bi bi-arrow-left"></i> Cancelar
+                        <hr class="my-5" style="opacity: 0.1;">
+
+                        <div class="d-flex gap-3 justify-content-end">
+                            <a href="{% url 'lista_productos' %}" class="btn btn-light btn-action text-secondary border">
+                                <i class="bi bi-x-lg"></i> Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Guardar
+                            <button type="submit" class="btn btn-primary btn-action shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                <i class="bi bi-check2-circle"></i> Guardar Producto
                             </button>
                         </div>
                     </form>
@@ -68,10 +253,264 @@
     </div>
 </div>
 
+<!-- Modal Nuevo Tipo de Producto -->
+<div class="modal fade" id="modalNuevoTipo" tabindex="-1" aria-labelledby="modalNuevoTipoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none; border-radius:16px;">
+      <div class="modal-header d-flex border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalNuevoTipoLabel"><i class="bi bi-plus-circle text-primary me-2"></i>Nuevo Tipo de Producto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNuevoTipo">
+            <div class="mb-3">
+                <label for="nuevoNombreTipo" class="col-form-label fw-bold" style="color: #374151;">Nombre del nuevo tipo:</label>
+                <input type="text" class="form-control bg-light" id="nuevoNombreTipo" placeholder="Ej. Zapatillas, Curso, Botella, etc." required maxlength="100">
+                <div class="invalid-feedback" id="nuevoTipoError"></div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-light border fw-semibold" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold" id="btnGuardarTipo" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">Guardar y Seleccionar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva Categoría -->
+<div class="modal fade" id="modalNuevaCategoria" tabindex="-1" aria-labelledby="modalNuevaCategoriaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none; border-radius:16px;">
+      <div class="modal-header d-flex border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalNuevaCategoriaLabel"><i class="bi bi-tags text-primary me-2"></i>Nueva Categoría</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formNuevaCategoria">
+            <div class="mb-3">
+                <label for="nuevaNombreCategoria" class="col-form-label fw-bold" style="color: #374151;">Nombre de la nueva categoría:</label>
+                <input type="text" class="form-control bg-light" id="nuevaNombreCategoria" placeholder="Ej. Electrónica, Postres, Mujer, etc." required maxlength="100">
+                <div class="invalid-feedback" id="nuevaCategoriaError"></div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-light border fw-semibold" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary fw-semibold" id="btnGuardarCategoria" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">Agregar y Seleccionar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Script global de la página -->
 <script>
-    // Aplicar estilos Bootstrap a los campos del formulario
-    document.querySelectorAll('form input[type="text"], form input[type="number"], form input[type="email"], form textarea, form select, form input[type="file"]').forEach(field => {
-        field.classList.add('form-control');
+    // Validación al enviar el formulario (Toast de base.html)
+    document.addEventListener("DOMContentLoaded", function() {
+        const formPrincipal = document.querySelector('.needs-validation');
+        if (formPrincipal) {
+            formPrincipal.addEventListener('submit', function(event) {
+                if (!formPrincipal.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    // Mostrar notificación usando el Toast de base.html
+                    if (typeof showDjangoToast === 'function') {
+                        showDjangoToast('Por favor, completa los campos requeridos (marcados en rojo).', 'error');
+                    }
+                }
+                formPrincipal.classList.add('was-validated');
+            }, false);
+        }
+    });
+
+    // Configuración para CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Modal Crear TipoProducto con AJAX
+    document.addEventListener("DOMContentLoaded", function() {
+        const btnGuardarTipo = document.getElementById('btnGuardarTipo');
+        const inputNuevoTipo = document.getElementById('nuevoNombreTipo');
+        const errorDiv = document.getElementById('nuevoTipoError');
+        const selectTipo = document.getElementById('id_tipo_producto');
+        const modalEl = document.getElementById('modalNuevoTipo');
+        const csrftoken = getCookie('csrftoken');
+
+        // Limpiar error y input al abrir el modal
+        modalEl.addEventListener('show.bs.modal', function () {
+            inputNuevoTipo.value = '';
+            inputNuevoTipo.classList.remove('is-invalid');
+            errorDiv.textContent = '';
+            setTimeout(() => inputNuevoTipo.focus(), 100); // Enfocar automáticamente
+        });
+
+        // Enviar con Enter
+        inputNuevoTipo.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnGuardarTipo.click();
+            }
+        });
+
+        btnGuardarTipo.addEventListener('click', function() {
+            const nombre = inputNuevoTipo.value.trim();
+            if (!nombre) {
+                inputNuevoTipo.classList.add('is-invalid');
+                errorDiv.textContent = 'El nombre es obligatorio.';
+                return;
+            }
+
+            // Petición AJAX (Fetch API)
+            btnGuardarTipo.disabled = true;
+            btnGuardarTipo.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+            fetch('{% url "api_crear_tipo_producto" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ nombre: nombre })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Crear el nuevo Option para el Select
+                    const newOption = new Option(data.nombre, data.id, true, true);
+                    selectTipo.add(newOption);
+                    $(selectTipo).trigger('change'); // Actualizar Select2
+                    
+                    // Cerrar el modal (se requiere Bootstrap >= 5.0)
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    modalInstance.hide();
+                } else {
+                    inputNuevoTipo.classList.add('is-invalid');
+                    errorDiv.textContent = data.error || 'Ocurrió un error inesperado.';
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                inputNuevoTipo.classList.add('is-invalid');
+                errorDiv.textContent = 'Error de conexión con el servidor.';
+            })
+            .finally(() => {
+                btnGuardarTipo.disabled = false;
+                btnGuardarTipo.innerHTML = 'Guardar y Seleccionar';
+            });
+        });
+    });
+
+    // Modal Crear Categoria
+    document.addEventListener("DOMContentLoaded", function() {
+        const btnGuardarCategoria = document.getElementById('btnGuardarCategoria');
+        const inputNuevaCat = document.getElementById('nuevaNombreCategoria');
+        const errorDivCat = document.getElementById('nuevaCategoriaError');
+        const selectCat = document.getElementById('id_categoria');
+        const modalCatEl = document.getElementById('modalNuevaCategoria');
+
+        modalCatEl.addEventListener('show.bs.modal', function () {
+            inputNuevaCat.value = '';
+            inputNuevaCat.classList.remove('is-invalid');
+            errorDivCat.textContent = '';
+            setTimeout(() => inputNuevaCat.focus(), 100); // Enfocar automáticamente
+        });
+
+        inputNuevaCat.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnGuardarCategoria.click();
+            }
+        });
+
+        btnGuardarCategoria.addEventListener('click', function() {
+            const nombre = inputNuevaCat.value.trim();
+            if (!nombre) {
+                inputNuevaCat.classList.add('is-invalid');
+                errorDivCat.textContent = 'El nombre de la categoría es obligatorio.';
+                return;
+            }
+
+            // Comprobar si ya existe en el select
+            let existe = false;
+            for(let i=0; i<selectCat.options.length; i++) {
+                if(selectCat.options[i].text.toLowerCase() === nombre.toLowerCase()) {
+                    selectCat.selectedIndex = i;
+                    existe = true;
+                    break;
+                }
+            }
+
+            if(!existe) {
+                // Agregarla como nueva opción y seleccionarla
+                const newOption = new Option(nombre, nombre, true, true);
+                selectCat.add(newOption);
+            }
+            $(selectCat).trigger('change'); // Actualizar Select2
+            
+            const modalInstance = bootstrap.Modal.getInstance(modalCatEl);
+            modalInstance.hide();
+        });
+    });
+
+    // Aplicar clases de Bootstrap automáticamente
+    document.addEventListener("DOMContentLoaded", function() {
+        // Encontrar todos los campos de input, textarea y select
+        const formElements = document.querySelectorAll('form input:not([type="file"]):not([type="radio"]):not([type="checkbox"]), form textarea, form select');
+        
+        formElements.forEach(field => {
+            if (!field.classList.contains('form-control') && !field.classList.contains('form-select')) {
+                if (field.tagName === 'SELECT') {
+                    field.classList.add('form-select');
+                } else {
+                    field.classList.add('form-control');
+                    field.classList.add('bg-light');
+                }
+            }
+        });
+
+        // Estilizar los inputs de tipo file
+        const fileInputs = document.querySelectorAll('form input[type="file"]');
+        fileInputs.forEach(field => {
+            field.classList.add('form-control');
+            field.style.border = 'none';
+            field.style.background = 'transparent';
+            field.style.boxShadow = 'none';
+        });
+    });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializar Select2 en los campos de Categoría y Tipo de Producto con el tema de Bootstrap 5
+        $('#id_categoria').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '--- Seleccionar Categoría ---',
+            allowClear: true
+        });
+
+        $('#id_tipo_producto').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '--- Selecciona un Tipo ---',
+            allowClear: true
+        });
     });
 </script>
 {% endblock %}

@@ -216,9 +216,23 @@
                             <li><a class="dropdown-item" href="{% url 'lista_productos' %}">
                                 <i class="bi bi-list-ul"></i> Ver Todos
                             </a></li>
+                            <li><a class="dropdown-item" href="{% url 'crear_producto' %}">
+                                <i class="bi bi-plus-circle"></i> Agregar Producto
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'importar_excel' %}">
+                                <i class="bi bi-file-earmark-excel"></i> Importar Excel / CSV
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'sincronizar_sheets' %}">
-                                <i class="bi bi-cloud-download"></i> Sincronizar Google Sheets
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-cloud-download me-2 fs-5"></i>
+                                    <div>
+                                        Sincronizar Google Sheets
+                                        {% if not tiene_credentials_google %}
+                                        <br><small style="font-size: 0.75rem; opacity: 0.85;"><i class="bi bi-google"></i> Iniciar sesión para continuar</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </a></li>
                         </ul>
                     </li>
@@ -236,8 +250,8 @@
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'top_clientes' %}">
-                            <i class="bi bi-star-fill"></i> Clientes VIP
+                        <a class="nav-link" href="{% url 'lista_clientes' %}">
+                            <i class="bi bi-star-fill"></i> Clientes 
                         </a>
                     </li>
                     <li class="nav-item dropdown">
@@ -247,6 +261,9 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="{% url 'lista_ventas' %}">
                                 <i class="bi bi-list-ul"></i> Ver Facturas
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'crear_venta' %}">
+                                <i class="bi bi-plus-circle"></i> Crear Factura
                             </a></li>
 
                             <li><hr class="dropdown-divider"></li>
@@ -302,8 +319,27 @@
         {% block content %}{% endblock %}
     </main>
     
+    <!-- Modal Genérico de Confirmación -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+                <div class="modal-body p-4 text-center">
+                    <div id="confirmationModalIcon" class="mb-3" style="font-size: 3.5rem;">
+                        <!-- El icono se inserta por JS -->
+                    </div>
+                    <h4 class="modal-title mb-3 fw-bold" id="confirmationModalLabel" style="color: #1f2937;"></h4>
+                    <p id="confirmationModalMessage" class="text-muted mb-4" style="font-size: 1.05rem;"></p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button type="button" class="btn btn-light px-4 py-2 fw-semibold" data-bs-dismiss="modal" style="border-radius: 10px; border: 1px solid #e5e7eb;">Cancelar</button>
+                        <button type="button" class="btn btn-primary px-4 py-2 fw-semibold" id="confirmModalBtn" style="border-radius: 10px;">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
-    {% if user.is_authenticated and url_name != 'gestionar_premios' %}
+    {% if user.is_authenticated and request.resolver_match.url_name != 'gestionar_premios' %}
     <footer class="mt-2">
         <div class="container text-center">
             <p class="text-white mb-0" style="font-size: 0.875rem; opacity: 0.9;">
@@ -320,6 +356,21 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Constantes globales para notificaciones Toast
+        const TOAST_ICONS = {
+            warning: '⚠️',
+            error: '❌',
+            success: '✅',
+            info: 'ℹ️'
+        };
+        
+        const TOAST_TITLES = {
+            warning: 'Atención',
+            error: 'Oops! Algo salió mal',
+            success: '¡Perfecto!',
+            info: 'Información'
+        };
+        
         // Sistema de notificaciones Toast global
         function showDjangoToast(message, tags) {
             // Mapeo de tags de Django a tipos de toast
@@ -339,20 +390,6 @@
             if (existingToast) {
                 existingToast.remove();
             }
-            
-            const icons = {
-                warning: '⚠️',
-                error: '❌',
-                success: '✅',
-                info: 'ℹ️'
-            };
-            
-            const titles = {
-                warning: 'Atención',
-                error: 'Oops! Algo salió mal',
-                success: '¡Perfecto!',
-                info: 'Información'
-            };
             
             // Calcular duración según longitud del mensaje
             const palabras = message.split(' ').length;
@@ -376,9 +413,9 @@
             
             toast.innerHTML = `
                 <div class="toast-content">
-                    <div class="toast-icon">${icons[type]}</div>
+                    <div class="toast-icon">${TOAST_ICONS[type]}</div>
                     <div class="toast-message">
-                        <h6>${titles[type]}</h6>
+                        <h6>${TOAST_TITLES[type]}</h6>
                         <p>${message}</p>
                     </div>
                 </div>
@@ -395,6 +432,34 @@
             }, duracion);
         }
         
+        // Función para mostrar un modal de confirmación genérico y elegante
+        function showConfirmationModal({ title, message, icon, confirmText = 'Confirmar', onConfirm }) {
+            const modalElement = document.getElementById('confirmationModal');
+            if (!modalElement) return;
+            
+            const modal = new bootstrap.Modal(modalElement);
+
+            document.getElementById('confirmationModalLabel').textContent = title;
+            document.getElementById('confirmationModalMessage').innerHTML = message;
+            document.getElementById('confirmationModalIcon').innerHTML = icon;
+
+            const confirmBtn = document.getElementById('confirmModalBtn');
+            confirmBtn.textContent = confirmText;
+            
+            // Clonar y reemplazar el botón para eliminar listeners anteriores
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+            newConfirmBtn.addEventListener('click', () => {
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+                modal.hide();
+            });
+
+            modal.show();
+        }
+        
         // Función showToast para compatibilidad con páginas de sorteos
         function showToast(message, type = 'warning', title = '') {
             const existingToast = document.querySelector('.toast-notification');
@@ -402,19 +467,8 @@
                 existingToast.remove();
             }
             
-            const icons = {
-                warning: '⚠️',
-                error: '❌',
-                success: '✅',
-                info: 'ℹ️'
-            };
-            
-            const titles = {
-                warning: title || 'Atención',
-                error: title || 'Oops! Algo salió mal',
-                success: title || '¡Perfecto!',
-                info: title || 'Información'
-            };
+            // Usar título personalizado si se proporciona, sino usar los títulos globales
+            const finalTitle = title || TOAST_TITLES[type];
             
             // Calcular duración según longitud del mensaje
             const palabras = message.split(' ').length;
@@ -438,9 +492,9 @@
             
             toast.innerHTML = `
                 <div class="toast-content">
-                    <div class="toast-icon">${icons[type]}</div>
+                    <div class="toast-icon">${TOAST_ICONS[type]}</div>
                     <div class="toast-message">
-                        <h6>${titles[type]}</h6>
+                        <h6>${finalTitle}</h6>
                         <p>${message}</p>
                     </div>
                 </div>
@@ -455,6 +509,64 @@
                     style.remove();
                 }, 300);
             }, duracion);
+        }
+        
+        // Función global para compartir documentos PDF usando la Web Share API nativa
+        async function compartirDocumento(url, fileName, title, text, btnElement) {
+            // 1. Efecto visual de carga
+            const originalContent = btnElement.innerHTML;
+            btnElement.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cargando...';
+            btnElement.disabled = true;
+
+            try {
+                // 2. Descargar el archivo PDF en segundo plano
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Error al contactar con el servidor');
+                
+                // FIX 1: Leer como ArrayBuffer en lugar de Blob. Mantiene los 
+                // binarios en memoria evitando que Outlook pierda la referencia.
+                const arrayBuffer = await response.arrayBuffer();
+
+                // 3. ¡VITAL! Verificar que el archivo no esté vacío
+                if (arrayBuffer.byteLength === 0) {
+                    throw new Error('El PDF generado está vacío.');
+                }
+
+                // FIX 2: Limpiar el nombre del archivo de espacios y caracteres raros
+                let cleanFileName = fileName ? String(fileName).trim() : 'documento.pdf';
+                cleanFileName = cleanFileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+
+                // 4. Crear el objeto File forzando metadatos completos
+                const file = new File([arrayBuffer], cleanFileName, { 
+                    type: 'application/pdf',
+                    lastModified: new Date().getTime()
+                });
+
+                // FIX 3 DEFINITIVO: Outlook se rompe si le envías texto y un archivo a la vez.
+                // Solo enviaremos el 'file' para garantizar que sea un adjunto válido.
+                const shareData = { files: [file] };
+                if (title) shareData.title = title;
+                if (text) shareData.text = text;
+
+                // 5. Compartir usando la Web Share API nativa
+                if (navigator.canShare && navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                } else {
+                    // Fallback si el dispositivo no soporta compartir archivos directo
+                    showDjangoToast("Tu dispositivo no soporta compartir este archivo directamente. Se abrirá para descarga.", 'info');
+                    window.open(url, '_blank');
+                }
+            } catch (error) {
+                console.error('Error al compartir:', error);
+                if (error.name !== 'AbortError') {
+                    showDjangoToast("No se pudo compartir el archivo. Abriendo descarga normal...", 'warning');
+                    window.open(url, '_blank'); 
+                }
+            } finally {
+                // Restaurar el botón a su estado original
+                btnElement.innerHTML = originalContent;
+                btnElement.disabled = false;
+            }
         }
     </script>
     

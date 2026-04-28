@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <title>Factura {{ venta.numero_factura }}</title>
     <style>
+        @page {
+            margin: 5mm;
+            size: 80mm auto;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -11,288 +16,186 @@
         }
         
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             font-size: 12px;
-            color: #333;
-            page-break-after: always;
+            color: #000;
+            width: 100%;
+            margin: 0 auto;
+            background: #fff;
         }
         
-        .container {
-            max-width: 21cm;
-            height: 29.7cm;
-            margin: 0 auto;
-            padding: 1.5cm;
-            display: flex;
-            flex-direction: column;
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-left { text-align: left; }
+        
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+        }
+        
+        .divider-solid {
+            border-top: 1px solid #000;
+            margin: 5px 0;
         }
         
         .header {
-            border-bottom: 3px solid #667eea;
-            margin-bottom: 1.5cm;
-            padding-bottom: 0.8cm;
+            text-align: center;
+            margin-bottom: 10px;
         }
         
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+        .header img {
+            max-width: 60%;
+            margin-bottom: 5px;
+            filter: grayscale(100%);
         }
         
-        .company-info h1 {
-            font-size: 24px;
-            color: #667eea;
-            margin-bottom: 0.3cm;
-        }
-        
-        .company-info p {
-            font-size: 11px;
-            color: #666;
-            margin: 0.1cm 0;
-        }
-        
-        .invoice-title {
-            text-align: right;
-        }
-        
-        .invoice-title h2 {
-            font-size: 28px;
-            color: #667eea;
-            margin-bottom: 0.3cm;
-        }
-        
-        .invoice-number {
+        .header h2 {
             font-size: 16px;
+            margin-bottom: 2px;
             font-weight: bold;
-            color: #333;
         }
         
-        .info-section {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 1.2cm;
-            margin-top: 0.8cm;
-        }
-        
-        .info-block {
-            width: 48%;
-        }
-        
-        .info-block h3 {
-            font-size: 12px;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 0.3cm;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 0.2cm;
-        }
-        
-        .info-block p {
-            font-size: 11px;
-            margin: 0.2cm 0;
-            line-height: 1.4;
-        }
-        
-        .details-table {
+        table {
             width: 100%;
             border-collapse: collapse;
-            margin: 1cm 0;
             font-size: 11px;
         }
         
-        .details-table thead {
-            background-color: #667eea;
-            color: white;
+        th, td {
+            padding: 2px 0;
+            vertical-align: top;
         }
         
-        .details-table th {
-            padding: 0.4cm;
-            text-align: left;
-            font-weight: bold;
-            border: 1px solid #667eea;
+        th {
+            border-bottom: 1px dashed #000;
+            border-top: 1px dashed #000;
+            font-weight: normal;
         }
         
-        .details-table td {
-            padding: 0.4cm;
-            border: 1px solid #ddd;
-        }
-        
-        .details-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        
-        .text-right {
-            text-align: right;
-        }
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .totals {
-            margin-top: 1cm;
+        .totals-table {
             width: 100%;
-            text-align: right;
+            margin-top: 5px;
         }
         
-        .total-row {
-            display: flex;
-            justify-content: flex-end;
-            margin: 0.3cm 0;
-            font-size: 12px;
+        .totals-table td {
+            padding: 2px 0;
         }
         
-        .total-row .label {
-            width: 8cm;
-            text-align: right;
-            padding-right: 0.5cm;
-        }
-        
-        .total-row .value {
-            width: 2cm;
-            text-align: right;
+        .grand-total {
             font-weight: bold;
-        }
-        
-        .total-row.grand-total {
-            border-top: 2px solid #667eea;
-            border-bottom: 2px solid #667eea;
-            font-size: 14px;
-            font-weight: bold;
-            color: #667eea;
-            margin-top: 0.5cm;
-            padding: 0.3cm 0;
-        }
-        
-        .payment-info {
-            font-size: 11px;
-            margin-top: 0.8cm;
-            padding: 0.5cm;
-            background-color: #f0f0f0;
-            border-left: 3px solid #667eea;
-        }
-        
-        .payment-info strong {
-            color: #667eea;
+            font-size: 13px;
         }
         
         .footer {
-            margin-top: auto;
-            padding-top: 0.8cm;
-            border-top: 1px solid #ddd;
+            margin-top: 15px;
             text-align: center;
-            font-size: 10px;
-            color: #999;
-            line-height: 1.4;
+            font-size: 11px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- ENCABEZADO -->
-        <div class="header">
-            <div class="header-content">
-                <div class="company-info">
-                    <h1>{{ config.nombre_empresa }}</h1>
-                    {% if config.telefono_empresa %}<p>📞 {{ config.telefono_empresa }}</p>{% endif %}
-                    {% if config.email_empresa %}<p>📧 {{ config.email_empresa }}</p>{% endif %}
-                    {% if config.direccion_empresa %}<p>📍 {{ config.direccion_empresa }}</p>{% endif %}
-                </div>
-                <div class="invoice-title">
-                    <h2>FACTURA</h2>
-                    <p class="invoice-number">Nº {{ venta.numero_factura }}</p>
-                    <p style="font-size: 10px; color: #999;">{{ venta.fecha|date:"d/m/Y H:i" }}</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- DATOS DE CLIENTE Y VENTA -->
-        <div class="info-section">
-            <div class="info-block">
-                <h3>CLIENTE</h3>
-                <p><strong>{{ venta.cliente.nombre }}</strong></p>
-                {% if venta.ruc_cliente %}<p>RUC/Cédula: {{ venta.ruc_cliente }}</p>{% endif %}
-                {% if venta.cliente.email %}<p>Email: {{ venta.cliente.email }}</p>{% endif %}
-                {% if venta.cliente.telefono %}<p>Teléfono: {{ venta.cliente.telefono }}</p>{% endif %}
-                {% if venta.cliente.direccion %}<p>Dirección: {{ venta.cliente.direccion }}</p>{% endif %}
-            </div>
-            <div class="info-block">
-                <h3>DETALLES DE LA FACTURA</h3>
-                <p><strong>Fecha:</strong> {{ venta.fecha|date:"d/m/Y" }}</p>
-                <p><strong>Número de factura:</strong> {{ venta.numero_factura }}</p>
-                <p><strong>Método de pago:</strong> {{ venta.get_metodo_pago_display }}</p>
-                {% if venta.notas %}<p><strong>Notas:</strong> {{ venta.notas }}</p>{% endif %}
-            </div>
-        </div>
-        
-        <!-- TABLA DE DETALLES -->
-        <table class="details-table">
-            <thead>
-                <tr>
-                    <th>Descripción</th>
-                    <th class="text-right" style="width: 2cm;">Cantidad</th>
-                    <th class="text-right" style="width: 2.5cm;">Precio Unit.</th>
-                    <th class="text-right" style="width: 2.5cm;">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for detalle in venta.detalles.all %}
-                <tr>
-                    <td>
-                        {{ detalle.producto.tipo_prenda }}
-                        {% if detalle.producto.color %}<br><small>Color: {{ detalle.producto.color }}</small>{% endif %}
-                        {% if detalle.producto.rango_edad %}<br><small>Talla: {{ detalle.producto.rango_edad }}</small>{% endif %}
-                    </td>
-                    <td class="text-right">1</td>
-                    <td class="text-right">${{ detalle.precio_unitario|floatformat:2 }}</td>
-                    <td class="text-right">${{ detalle.precio_unitario|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- TOTALES -->
-        <div class="totals">
-            <div class="total-row">
-                <div class="label">Subtotal:</div>
-                <div class="value">${{ venta.subtotal|floatformat:2 }}</div>
-            </div>
-            {% if venta.descuento %}
-            <div class="total-row">
-                <div class="label">Descuento:</div>
-                <div class="value">-${{ venta.descuento|floatformat:2 }}</div>
-            </div>
-            {% endif %}
-            {% if venta.envio %}
-            <div class="total-row">
-                <div class="label">Envío:</div>
-                <div class="value">${{ venta.envio|floatformat:2 }}</div>
-            </div>
-            {% endif %}
-            {% if venta.otros_gastos %}
-            <div class="total-row">
-                <div class="label">{{ venta.descripcion_otros }}:</div>
-                <div class="value">${{ venta.otros_gastos|floatformat:2 }}</div>
-            </div>
-            {% endif %}
-            <div class="total-row grand-total">
-                <div class="label">TOTAL A PAGAR:</div>
-                <div class="value">${{ venta.total|floatformat:2 }}</div>
-            </div>
-        </div>
-        
-        <!-- INFORMACIÓN DE PAGO -->
-        <div class="payment-info">
-            <strong>MÉTODO DE PAGO:</strong> {{ venta.get_metodo_pago_display }}<br>
-            <strong>ESTADO:</strong> Pagado
-        </div>
-        
-        <!-- PIE DE PÁGINA -->
-        <div class="footer">
-            {% if config.mensaje_factura %}
-                {{ config.mensaje_factura }}<br>
-            {% endif %}
-            Gracias por su compra.
-        </div>
+    <div class="divider-solid"></div>
+    <div class="header">
+        {% if config.logo %}
+        <img src="{{ base_url }}{{ config.logo.url }}" alt="Logo">
+        {% endif %}
+        <h2>{{ config.nombre_empresa|upper }}</h2>
+        {% if config.ruc_empresa %}<p>RUC: {{ config.ruc_empresa }}</p>{% endif %}
+        {% if config.direccion_empresa %}<p>{{ config.direccion_empresa }}</p>{% endif %}
+        {% if config.telefono_empresa %}<p>Tel: {{ config.telefono_empresa }}</p>{% endif %}
     </div>
+    <div class="divider-solid"></div>
+    
+    <p>Factura: {{ venta.numero_factura }}</p>
+    <p>Fecha: {{ venta.fecha|date:"d/m/Y H:i" }}</p>
+    <p>Cliente: {{ venta.cliente.nombre|upper }}</p>
+    <p>CI/RUC: {{ venta.ruc_cliente|default:venta.cliente.ruc_cedula|default:config.id_consumidor_final }}</p>
+    
+    <div class="divider"></div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th class="text-left" style="width: 15%;">Cant</th>
+                <th class="text-left" style="width: 50%;">Descripción</th>
+                <th class="text-right" style="width: 15%;">P.Unit</th>
+                <th class="text-right" style="width: 20%;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detalle in venta.detalles.all %}
+            <tr>
+                <td class="text-left">1</td>
+                <td class="text-left">
+                    {{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}
+                    {% if detalle.producto.variante %}<br><small>{{ detalle.producto.variante }}</small>{% endif %}
+                </td>
+                <td class="text-right">{{ detalle.precio_unitario|floatformat:2 }}</td>
+                <td class="text-right">{{ detalle.precio_unitario|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="divider"></div>
+    
+    <table class="totals-table">
+        <tr>
+            <td style="width: 60%;" class="text-right">Subtotal:</td>
+            <td style="width: 10%;"></td>
+            <td style="width: 30%;" class="text-right">$ {{ venta.subtotal|floatformat:2 }}</td>
+        </tr>
+        
+        {% if venta.descuento > 0 %}
+        <tr>
+            <td class="text-right">Descuento:</td>
+            <td></td>
+            <td class="text-right">-$ {{ venta.descuento|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if venta.envio > 0 %}
+        <tr>
+            <td class="text-right">Envío:</td>
+            <td></td>
+            <td class="text-right">$ {{ venta.envio|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        
+        {% if venta.otros_gastos > 0 %}
+        <tr>
+            <td class="text-right">{{ venta.descripcion_otros|default:"Otros gastos" }}:</td>
+            <td></td>
+            <td class="text-right">$ {{ venta.otros_gastos|floatformat:2 }}</td>
+        </tr>
+        {% endif %}
+        
+        <tr><td colspan="3"><div class="divider"></div></td></tr>
+        
+        <tr class="grand-total">
+            <td class="text-right">TOTAL FINAL:</td>
+            <td></td>
+            <td class="text-right">$ {{ venta.total|floatformat:2 }}</td>
+        </tr>
+    </table>
+    
+    <div class="divider-solid"></div>
+    
+    <p>Forma de pago: {{ venta.get_metodo_pago_display }}</p>
+    {% if venta.notas %}
+    <p>Notas: {{ venta.notas }}</p>
+    {% endif %}
+    
+    <div class="divider-solid"></div>
+    
+    <div class="footer">
+        {% if config.mensaje_factura %}
+        <p>{{ config.mensaje_factura }}</p>
+        {% else %}
+        <p>¡Gracias por su compra!</p>
+        {% endif %}
+    </div>
+    
+    <div class="divider-solid"></div>
 </body>
 </html>

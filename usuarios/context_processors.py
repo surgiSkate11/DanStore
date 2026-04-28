@@ -1,4 +1,6 @@
 from usuarios.models import UserProfile
+import os
+from django.conf import settings
 
 
 def vocabulario(request):
@@ -22,5 +24,12 @@ def vocabulario(request):
             profile = UserProfile.objects.create(user=request.user)
             contexto['vocab'] = profile.get_vocabulario()
             contexto['negocio_tipo'] = profile.negocio_tipo
+            
+        # Verificar si tiene credenciales de Google Sheets conectadas
+        if hasattr(request, 'empresa') and request.empresa:
+            creds_path = os.path.join(settings.MEDIA_ROOT, f'google_oauth_{request.empresa.id}.json')
+            contexto['tiene_credentials_google'] = os.path.exists(creds_path)
+        else:
+            contexto['tiene_credentials_google'] = False
     
     return contexto

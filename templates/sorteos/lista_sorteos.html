@@ -10,25 +10,58 @@
     
     .page-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
         color: white;
-        padding: 2.5rem 0;
-        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
         margin-bottom: 2rem;
     }
     
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+        pointer-events: none;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+    
+    .section-container {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 2rem;
+    }
+
     .sorteo-card {
-        border-radius: 15px;
+        border-radius: 16px;
         overflow: hidden;
         transition: all 0.3s ease;
-        border: none;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
         background: white;
         height: 100%;
+        display: flex;
+        flex-direction: column;
     }
     
     .sorteo-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+        border-color: #667eea;
     }
     
     .sorteo-header {
@@ -89,11 +122,34 @@
         -webkit-text-fill-color: transparent;
     }
     
+    .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .btn-iniciar-sorteo {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border: none;
+        font-weight: 700;
+        padding: 0.85rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+        transition: all 0.3s ease;
+    }
+
+    .btn-iniciar-sorteo:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        color: white;
+    }
+
     .table-profesional {
         background: white;
-        border-radius: 15px;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
     }
     
     .table-profesional thead {
@@ -154,19 +210,6 @@
         box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     }
     
-    .section-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-    
-    .section-title i {
-        font-size: 2rem;
-    }
-    
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
@@ -180,37 +223,109 @@
         opacity: 0.3;
         margin-bottom: 1rem;
     }
+    
+    /* Filter Tabs */
+    .filter-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+    }
+    
+    .filter-tabs {
+        background: white;
+        padding: 0.5rem;
+        border-radius: 50px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        display: inline-flex;
+        gap: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .filter-tab {
+        border: none;
+        background: transparent;
+        padding: 0.6rem 1.5rem;
+        border-radius: 40px;
+        font-weight: 700;
+        color: #6b7280;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+    }
+    
+    .filter-tab:hover { color: #1f2937; background: #f3f4f6; }
+    .filter-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+    
+    /* Animación de visibilidad */
+    .fade-in-section { animation: fadeIn 0.4s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* Filtros Completados */
+    .filtros-completados {
+        background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+        padding: 1.25rem;
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    
+    .filtros-completados .input-group-text {
+        background: white;
+        border-color: #e5e7eb;
+        color: #667eea;
+    }
+    
+    .filtros-completados .form-control {
+        border-color: #e5e7eb;
+        font-size: 0.95rem;
+    }
+    
+    .filtros-completados .form-control:focus {
+        border-color: #667eea;
+        box-shadow: none;
+    }
+    
+    .filtros-completados .btn-limpiar { border: 1px solid #e5e7eb; background: white; color: #6b7280; font-weight: 600; transition: all 0.2s; border-radius: 10px; }
+    .filtros-completados .btn-limpiar:hover { background: #fef2f2; color: #ef4444; border-color: #fca5a5; transform: translateY(-2px); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <!-- Header -->
-    <div class="page-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="mb-2" style="font-weight: 800; font-size: 2.5rem;">
-                        <i class="bi bi-trophy-fill"></i> Sorteos para En Vivos
-                    </h1>
-                    <p class="mb-0" style="font-size: 1.1rem; opacity: 0.9;">
-                        Crea sorteos dinámicos y emocionantes para enganchar a tus clientes durante los lives
-                    </p>
-                </div>
-                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                    <a href="{% url 'crear_sorteo' %}" class="btn btn-light btn-lg" style="font-weight: 600; padding: 0.75rem 2rem;">
-                        <i class="bi bi-plus-circle-fill"></i> Crear Sorteo
-                    </a>
-                </div>
+    <div class="page-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-trophy-fill"></i> Sorteos para En Vivos
+                </h1>
+                <p class="page-subtitle mb-0">
+                    <i class="bi bi-info-circle"></i> 
+                    Crea sorteos dinámicos y emocionantes para enganchar a tus clientes durante los lives
+                </p>
+            </div>
+            <div class="col-md-4 text-end" style="position: relative; z-index: 1;">
+                <a href="{% url 'crear_sorteo' %}" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-plus-circle-fill"></i> Crear Sorteo
+                </a>
             </div>
         </div>
     </div>
     
+    <!-- Filtro de Sorteos -->
+    <div class="filter-wrapper">
+        <div class="filter-tabs">
+            <button class="filter-tab active" data-target="todos"><i class="bi bi-grid-fill me-1"></i> Todos</button>
+            <button class="filter-tab" data-target="activos"><i class="bi bi-play-circle-fill me-1"></i> Activos</button>
+            <button class="filter-tab" data-target="completados"><i class="bi bi-check-circle-fill me-1"></i> Finalizados</button>
+        </div>
+    </div>
+
     <!-- Sorteos Activos -->
-    <div class="mb-5">
-        <h3 class="section-title text-success">
-            <i class="bi bi-play-circle-fill"></i> Sorteos Activos
-        </h3>
+    <div class="section-container fade-in-section" id="section-activos">
+        <h4 class="mb-4 fw-bold" style="color: #1f2937; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem;">
+            <i class="bi bi-play-circle-fill text-success me-2"></i> Sorteos Activos
+        </h4>
         
         {% if sorteos_activos %}
         <div class="row g-4">
@@ -248,11 +363,11 @@
                             </div>
                         </div>
                         
-                        <div class="d-grid gap-2 mt-4">
-                            <a href="{% url 'ejecutar_sorteo' sorteo.id %}" class="btn btn-success btn-lg" style="font-weight: 600;">
-                                <i class="bi bi-play-fill"></i> Iniciar Sorteo
+                        <div class="d-grid gap-2 mt-auto pt-4">
+                            <a href="{% url 'ejecutar_sorteo' sorteo.id %}" class="btn btn-iniciar-sorteo fs-6 d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-play-fill fs-5"></i> Iniciar Sorteo
                             </a>
-                            <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-light fw-semibold" style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 0.75rem; color: #4b5563;">
                                 <i class="bi bi-eye"></i> Ver Detalles
                             </a>
                         </div>
@@ -266,7 +381,7 @@
             <div class="empty-state-icon">🎯</div>
             <h4 class="mb-2">No hay sorteos activos</h4>
             <p class="text-muted mb-4">Crea tu primer sorteo para comenzar a interactuar con tus clientes</p>
-            <a href="{% url 'crear_sorteo' %}" class="btn btn-primary btn-lg">
+            <a href="{% url 'crear_sorteo' %}" class="btn btn-primary btn-lg shadow-sm" style="border-radius: 12px; font-weight: 600;">
                 <i class="bi bi-plus-circle"></i> Crear Primer Sorteo
             </a>
         </div>
@@ -274,12 +389,34 @@
     </div>
     
     <!-- Sorteos Completados -->
-    {% if sorteos_completados %}
-    <div class="mb-5">
-        <h3 class="section-title" style="background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 1.8rem; font-weight: 800; margin-bottom: 1.5rem;">
-            <i class="bi bi-check-circle-fill" style="-webkit-text-fill-color: #6b7280;"></i> Sorteos Realizados
-        </h3>
+    <div class="section-container mt-4 fade-in-section" id="section-completados">
+        <h4 class="mb-4 fw-bold" style="color: #1f2937; border-bottom: 2px solid #f3f4f6; padding-bottom: 1rem;">
+            <i class="bi bi-check-circle-fill text-secondary me-2"></i> Sorteos Realizados
+        </h4>
         
+        {% if sorteos_completados %}
+        <!-- Panel de Filtros para Sorteos Finalizados -->
+        <div class="filtros-completados">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search"></i> Buscar sorteo</label>
+                    <div class="input-group">
+                        <span class="input-group-text border-end-0"><i class="bi bi-funnel"></i></span>
+                        <input type="text" id="searchCompletados" class="form-control border-start-0 ps-0" placeholder="Escribe el nombre o tipo...">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-calendar-event"></i> Fecha exacta</label>
+                    <input type="date" id="dateCompletados" class="form-control text-muted">
+                </div>
+                <div class="col-md-3 mt-md-4 pt-md-1">
+                    <button class="btn btn-limpiar w-100 py-2" id="btnLimpiarFiltrosSorteos">
+                        <i class="bi bi-eraser-fill me-1"></i> Limpiar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="table-responsive">
             <div class="table-profesional">
                 <table class="table table-hover mb-0">
@@ -294,7 +431,7 @@
                     </thead>
                 <tbody>
                     {% for sorteo in sorteos_completados %}
-                    <tr>
+                    <tr class="sorteo-row" data-nombre="{{ sorteo.nombre|lower }}" data-tipo="{{ sorteo.get_tipo_display|lower }}" data-fecha="{{ sorteo.fecha_sorteo|date:'Y-m-d' }}">
                         <td style="vertical-align: middle; padding: 0.85rem 1.5rem;">
                             <div>
                                 <strong style="font-size: 1rem; color: #1f2937;">{{ sorteo.nombre }}</strong>
@@ -324,7 +461,7 @@
                             </span>
                         </td>
                         <td class="text-center" style="vertical-align: middle; padding: 0.85rem 1rem;">
-                            <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-sm btn-outline-primary" style="min-width: 110px; padding: 0.4rem 0.75rem;">
+                            <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-sm btn-outline-primary" style="min-width: 110px; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 600;">
                                 <i class="bi bi-eye"></i> Ver Detalles
                             </a>
                         </td>
@@ -334,7 +471,105 @@
             </table>
             </div>
         </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🏆</div>
+            <h4 class="mb-2">No hay sorteos finalizados</h4>
+            <p class="text-muted mb-0">Aquí aparecerá el historial de los sorteos que hayas concluido</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.filter-tab');
+        const secActivos = document.getElementById('section-activos');
+        const secCompletados = document.getElementById('section-completados');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Actualizar estilos de los botones
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Lógica de filtrado
+                const target = tab.dataset.target;
+
+                if (target === 'todos') {
+                    if(secActivos) secActivos.style.display = 'block';
+                    if(secCompletados) secCompletados.style.display = 'block';
+                } else if (target === 'activos') {
+                    if(secActivos) secActivos.style.display = 'block';
+                    if(secCompletados) secCompletados.style.display = 'none';
+                } else if (target === 'completados') {
+                    if(secActivos) secActivos.style.display = 'none';
+                    if(secCompletados) secCompletados.style.display = 'block';
+                }
+            });
+        });
+
+        // Lógica de filtrado instantáneo para Sorteos Realizados
+        const searchCompletados = document.getElementById('searchCompletados');
+        const dateCompletados = document.getElementById('dateCompletados');
+        const btnLimpiar = document.getElementById('btnLimpiarFiltrosSorteos');
+        const filasSorteos = document.querySelectorAll('.sorteo-row');
+        
+        function filtrarSorteosCompletados() {
+            if (!searchCompletados || !dateCompletados) return;
+            
+            const searchTerm = searchCompletados.value.toLowerCase();
+            const dateTerm = dateCompletados.value;
+            let visibles = 0;
+            
+            filasSorteos.forEach(fila => {
+                const nombre = fila.dataset.nombre;
+                const tipo = fila.dataset.tipo;
+                const fecha = fila.dataset.fecha;
+                
+                const coincideTexto = nombre.includes(searchTerm) || tipo.includes(searchTerm);
+                const coincideFecha = !dateTerm || fecha === dateTerm;
+                
+                if (coincideTexto && coincideFecha) {
+                    fila.style.display = '';
+                    visibles++;
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+            
+            // Mensaje de Empty State cuando los filtros no encuentran nada
+            const tbody = document.querySelector('.table-profesional tbody');
+            let filaVacia = document.getElementById('noResultsRow');
+            
+            if (visibles === 0) {
+                if (!filaVacia) {
+                    filaVacia = document.createElement('tr');
+                    filaVacia.id = 'noResultsRow';
+                    filaVacia.innerHTML = `<td colspan="5" class="text-center py-5 text-muted">
+                        <i class="bi bi-search" style="font-size: 3rem; opacity: 0.2; display:block; margin-bottom: 10px;"></i>
+                        <h5 class="mb-1">No se encontraron resultados</h5>
+                        <p class="mb-0 small">No hay sorteos que coincidan con estos filtros.</p>
+                    </td>`;
+                    tbody.appendChild(filaVacia);
+                }
+                filaVacia.style.display = '';
+            } else if (filaVacia) {
+                filaVacia.style.display = 'none';
+            }
+        }
+        
+        if (searchCompletados) searchCompletados.addEventListener('input', filtrarSorteosCompletados);
+        if (dateCompletados) dateCompletados.addEventListener('change', filtrarSorteosCompletados);
+        if (btnLimpiar) {
+            btnLimpiar.addEventListener('click', () => {
+                searchCompletados.value = '';
+                dateCompletados.value = '';
+                filtrarSorteosCompletados();
+            });
+        }
+    });
+</script>
 {% endblock %}

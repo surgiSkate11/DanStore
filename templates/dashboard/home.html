@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio - DanStore{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if not onboarding_completado %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h4 class="alert-heading">👋 ¡Bienvenido a DanStore!</h4>
+        <p>Parece que aún no completaste tu onboarding. <a href="{% url 'onboarding' %}" class="alert-link">Completa tu perfil</a> para personalizar la app según tu negocio.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- SECCIÓN DE DEMO DATA MEJORADA -->
+    <div id="demoDataContenedor" style="display: none;">
+        {% if usa_demo_data %}
+        <div class="card shadow-sm border-0 mb-4" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 12px;">
+            <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 w-100">
+                    <div class="bg-white p-3 rounded-circle shadow-sm text-info d-flex justify-content-center align-items-center flex-shrink-0" style="width: 50px; height: 50px;">
+                        <i class="bi bi-bar-chart-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1 text-dark" style="font-weight: 700;">Datos de Demostración Activos</h5>
+                        <p class="mb-0 text-muted small">El sistema contiene información de prueba. Limpia los datos cuando estés listo para empezar con los tuyos.</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <form method="post" action="{% url 'limpiar_demo' %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" style="font-weight: 600;">
+                            <i class="bi bi-eraser-fill me-1"></i> Limpiar Demo
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-light rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 40px; height: 40px; color: #64748b;" onclick="abrirModalOcultarDemo()" title="Ocultar sugerencia">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% elif total_productos == 0 %}
+        <div class="card shadow-sm border-0 mb-4" style="background: linear-gradient(135deg, #fef3c7 0%, #fde047 100%); border-radius: 12px;">
+            <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 w-100">
+                    <div class="bg-white p-3 rounded-circle shadow-sm text-warning d-flex justify-content-center align-items-center flex-shrink-0" style="width: 50px; height: 50px;">
+                        <i class="bi bi-box-seam-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1 text-dark" style="font-weight: 700;">¡Comienza a usar tu Tiendita!</h5>
+                        <p class="mb-0 text-muted small">Tu inventario está vacío. Agrega tus productos manualmente o carga datos de demostración para probar.</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    {% if not usa_demo_data %}
+                    <form method="post" action="{% url 'cargar_demo' %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning rounded-pill px-4 shadow-sm" style="font-weight: 600; color: #78350f;">
+                            <i class="bi bi-cloud-download-fill me-1"></i> Cargar Demo
+                        </button>
+                    </form>
+                    {% endif %}
+                    <button type="button" class="btn btn-light rounded-circle shadow-sm d-flex justify-content-center align-items-center" style="width: 40px; height: 40px; color: #64748b;" onclick="abrirModalOcultarDemo()" title="Ocultar sugerencia">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <!-- FIN SECCIÓN DE DEMO DATA -->
+
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <i class="bi bi-house-door"></i> Dashboard
+            </h1>
+            <p class="lead text-muted">{{ nombre_negocio|default:"Tu Tienda" }}</p>
+        </div>
+    </div>
+    
+    <!-- Cards de estadísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">{{ vocab.unidad_plural }} Disponibles</h6>
+                            <h2 class="mb-0">{{ disponibles }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-check-circle" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-warning text-dark shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">{{ vocab.separado_plural }}</h6>
+                            <h2 class="mb-0">{{ separados }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-bookmark" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-info text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">Vendidos</h6>
+                            <h2 class="mb-0">{{ vendidos }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-bag-check" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase mb-1 small">Total</h6>
+                            <h2 class="mb-0">{{ total_productos }}</h2>
+                        </div>
+                        <div class="d-none d-sm-block">
+                            <i class="bi bi-box-seam" style="font-size: 3rem; opacity: 0.5;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Accesos rápidos - REORDENADO SEGÚN PRIORIDADES -->
+    <div class="row g-4">
+        <!-- PRINCIPAL: Agregar Producto -->
+        <div class="col-12">
+            <div class="card border-0 shadow" style="border-radius: 16px; background: #ffffff; overflow: hidden; position: relative;">
+                <!-- Detalles decorativos de fondo -->
+                <div style="position: absolute; top: -40px; right: -20px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, transparent 70%); border-radius: 50%; z-index: 0;"></div>
+                <div style="position: absolute; bottom: -20px; left: 5%; width: 80px; height: 80px; background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%); border-radius: 50%; z-index: 0;"></div>
+                
+                <div class="card-body p-4 d-flex flex-column flex-md-row align-items-center justify-content-between gap-3" style="z-index: 1; position: relative;">
+                    <div class="d-flex align-items-center gap-3 text-start w-100">
+                        <div class="rounded-circle d-flex justify-content-center align-items-center shadow-sm flex-shrink-0" style="width: 60px; height: 60px; background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+                            <i class="bi bi-plus-lg text-white" style="font-size: 2rem; -webkit-text-stroke: 1px;"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-1" style="color: #0f172a; letter-spacing: -0.3px;">Registro Rápido</h4>
+                            <p class="mb-0 text-muted" style="font-size: 0.95rem;">Alimenta tu inventario añadiendo un nuevo <strong class="text-dark">{{ vocab.unidad }}</strong> al instante.</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'crear_producto' %}" class="btn btn-success rounded-pill px-4 shadow-sm text-nowrap flex-shrink-0 d-flex align-items-center gap-2" style="font-weight: 600; padding-top: 0.6rem; padding-bottom: 0.6rem; background: #10b981; border: none; font-size: 1rem; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(16, 185, 129, 0.3), 0 4px 6px -2px rgba(16, 185, 129, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'">
+                        <i class="bi bi-box-seam"></i> Crear {{ vocab.unidad }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECUNDARIOS: Otras opciones existentes -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-grid text-primary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Ver Inventario</h5>
+                    <p class="card-text text-muted">Gestiona y filtra tus {{ vocab.unidad_plural }}</p>
+                    <a href="{% url 'lista_productos' %}" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> Ver Todo
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Generar Catálogo</h5>
+                    <p class="card-text text-muted">Crea un catálogo PDF para compartir</p>
+                    <a href="{% url 'generar_catalogo' %}" class="btn btn-danger">
+                        <i class="bi bi-download"></i> Generar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sincronización: Opción avanzada -->
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-cloud-arrow-down text-secondary" style="font-size: 3rem;"></i>
+                    <h5 class="card-title mt-3">Google Sheets</h5>
+                    <p class="card-text text-muted"><small>Opción avanzada: Sincroniza productos desde Sheets</small></p>
+                    <a href="{% url 'sincronizar_sheets' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-repeat"></i> Sincronizar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Confirmar Ocultar Demo Data -->
+<div class="modal fade" id="modalConfirmarOcultar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-body text-center p-5">
+                <div class="mb-4">
+                    <div class="bg-light rounded-circle d-inline-flex justify-content-center align-items-center mx-auto shadow-sm" style="width: 80px; height: 80px;">
+                        <i class="bi bi-eye-slash text-secondary" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <h4 style="font-weight: 700; color: #1e293b;">Ocultar Sugerencia</h4>
+                <p class="text-muted mb-4">¿Deseas dejar de ver este mensaje de demostración en tu pantalla de inicio?</p>
+                <div class="d-grid gap-3">
+                    <button type="button" class="btn btn-light btn-lg rounded-pill" style="font-weight: 500; border: 1px solid #e2e8f0;" onclick="ocultarDemo('temporal')">
+                        Solo por esta sesión
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-lg rounded-pill" style="font-weight: 600;" onclick="ocultarDemo('permanente')">
+                        No volver a mostrar nunca
+                    </button>
+                    <button type="button" class="btn btn-link text-muted mt-2 text-decoration-none" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Mostrar u ocultar la sección de Demo Data leyendo la preferencia configurada
+    document.addEventListener('DOMContentLoaded', function() {
+        const preferenciaPermanente = localStorage.getItem('demo_data_oculto');
+        const preferenciaSesion = sessionStorage.getItem('demo_data_oculto_sesion');
+        const contenedor = document.getElementById('demoDataContenedor');
+        
+        // Mostrar lentamente solo si no está oculto por preferencia
+        if (contenedor && preferenciaPermanente !== 'true' && preferenciaSesion !== 'true') {
+            contenedor.style.opacity = '0';
+            contenedor.style.display = 'block';
+            setTimeout(() => {
+                contenedor.style.transition = 'opacity 0.4s ease-in-out';
+                contenedor.style.opacity = '1';
+            }, 50);
+        }
+    });
+
+    // Función que abre el modal interactivo
+    function abrirModalOcultarDemo() {
+        var modal = new bootstrap.Modal(document.getElementById('modalConfirmarOcultar'));
+        modal.show();
+    }
+
+    // Lógica para registrar qué decidió el usuario
+    function ocultarDemo(tipo) {
+        const contenedor = document.getElementById('demoDataContenedor');
+        
+        if (tipo === 'permanente') {
+            // Se oculta para siempre instalando una flag en LocalStorage (memoria permanente del navegador)
+            localStorage.setItem('demo_data_oculto', 'true');
+        } else {
+            // Se oculta usando SessionStorage (hasta que cierre esta ventana del navegador)
+            sessionStorage.setItem('demo_data_oculto_sesion', 'true');
+        }
+        
+        // Efecto visual para desaparecer el banner
+        if (contenedor) {
+            contenedor.style.opacity = '0';
+            setTimeout(() => {
+                contenedor.style.display = 'none';
+            }, 400);
+        }
+        
+        // Cerrar el modal actual
+        var myModalEl = document.getElementById('modalConfirmarOcultar');
+        var modal = bootstrap.Modal.getInstance(myModalEl);
+        if (modal) {
+            modal.hide();
+        }
+    }
+</script>
+
+{% endblock %}
+

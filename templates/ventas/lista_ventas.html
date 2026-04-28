@@ -7,7 +7,7 @@
     .gradient-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 2rem;
+        padding: 2rem 0;
         border-radius: 12px;
         margin-bottom: 2rem;
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
@@ -61,17 +61,22 @@
 <div class="container-fluid px-4">
     <!-- Header -->
     <div class="gradient-header">
-        <div class="row align-items-center">
-            <div class="col-12 col-md-7 mb-3 mb-md-0">
-                <h1 class="mb-2 h3 h2-md">
-                    <i class="bi bi-receipt"></i> Ventas y Facturas
-                </h1>
-                <p class="mb-0 opacity-90 small">Gestión completa de ventas y facturación (sincronizadas desde Google Sheets)</p>
-            </div>
-            <div class="col-12 col-md-5 text-md-end">
-                <a href="{% url 'configuracion_facturas' %}" class="btn btn-outline-light btn-lg">
-                    <i class="bi bi-gear"></i> <span class="d-none d-sm-inline">Configuración</span>
-                </a>
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-2">
+                        <i class="bi bi-receipt"></i> Ventas y Facturas
+                    </h1>
+                    <p class="mb-0 opacity-90">Gestión completa de ventas y facturación (sincronizadas desde Google Sheets)</p>
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <a href="{% url 'crear_venta' %}" class="btn btn-light btn-lg shadow-sm">
+                        <i class="bi bi-plus-circle"></i> Nueva Venta
+                    </a>
+                    <a href="{% url 'configuracion_facturas' %}" class="btn btn-outline-light btn-lg shadow-sm">
+                        <i class="bi bi-gear"></i> Configuración
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -156,6 +161,15 @@
                                    onmouseout="this.style.backgroundColor='rgba(249, 115, 22, 0.1)'; this.style.color='#f97316';">
                                     <i class="bi bi-pencil-square"></i><span class="d-none d-lg-inline ms-1">Editar</span>
                                 </a>
+                                <button type="button" 
+                                   data-url="{% url 'generar_factura_pdf' venta.id %}"
+                                   data-filename="Factura_{{ venta.numero_factura }}.pdf"
+                                   data-title="Factura {{ venta.numero_factura }}"
+                                   data-text="Hola, te comparto el comprobante/factura de tu compra."
+                                   onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)" 
+                                   class="btn btn-sm btn-outline-info" title="Compartir">
+                                    <i class="bi bi-share"></i><span class="d-none d-lg-inline ms-1">Compartir</span>
+                                </button>
                                 <a href="{% url 'generar_factura_pdf' venta.id %}" 
                                    class="btn btn-sm btn-outline-success" title="Descargar PDF">
                                     <i class="bi bi-file-pdf"></i><span class="d-none d-lg-inline ms-1">PDF</span>

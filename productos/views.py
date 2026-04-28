@@ -4,352 +4,487 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
-from .models import Producto, TipoPrenda
-from .forms import ProductoForm, ProductoFiltroForm
+from .models import Producto, TipoProducto
 import openpyxl
 import csv
 import io
 
 
+# ── UTILIDAD ──────────────────────────────────────────────────────────────────
+
+def get_negocio_tipo(user):
+    """Obtiene el tipo de negocio del perfil del usuario de forma segura"""
+    try:
+        return user.profile.negocio_tipo or 'general'
+    except Exception:
+        return 'general'
+
+
+# ── VISTAS PRINCIPALES ────────────────────────────────────────────────────────
+
 @login_required
 def lista_productos(request):
-    """Vista para listar productos con filtros"""
+    """Lista productos con filtros genéricos para cualquier negocio"""
     from django.core.paginator import Paginator
-    
-    # OPTIMIZACIÓN: select_related evita N+1, only() carga solo campos necesarios
-    productos = Producto.objects.select_related('tipo_prenda').only(
-        'id', 'imagen', 'marca', 'color', 'categoria_grupo', 'rango_edad',
-        'precio', 'estado', 'descripcion', 'tipo_prenda__nombre'
+
+    # select_related evita N+1 queries
+    # CRÍTICO: Filtrar siempre por la empresa del request actual
+    productos = Producto.objects.filter(empresa=request.empresa).select_related('tipo_producto').only(
+        'id', 'imagen', 'nombre', 'marca', 'color', 'categoria',
+        'variante', 'precio', 'estado', 'descripcion',
+        'tipo_producto__nombre', 'stock'
     )
-    
-    # Aplicar filtros
-    filtro_form = ProductoFiltroForm(request.GET)
-    
-    if filtro_form.is_valid():
-        if filtro_form.cleaned_data.get('categoria_grupo'):
-            productos = productos.filter(
-                categoria_grupo=filtro_form.cleaned_data['categoria_grupo']
-            )
-        
-        if filtro_form.cleaned_data.get('tipo_prenda'):
-            productos = productos.filter(
-                tipo_prenda=filtro_form.cleaned_data['tipo_prenda']
-            )
-        
-        if filtro_form.cleaned_data.get('estado'):
-            productos = productos.filter(
-                estado=filtro_form.cleaned_data['estado']
-            )
-        
-        if filtro_form.cleaned_data.get('busqueda'):
-            busqueda = filtro_form.cleaned_data['busqueda']
-            productos = productos.filter(
-                Q(descripcion__icontains=busqueda)
-            )
-    
-    # Paginación: 52 productos por página (divisible entre 4 columnas)
+
+    # ── FILTROS ───────────────────────────────────────────────────────────────
+    # Categoría libre
+    categoria = request.GET.get('categoria', '').strip()
+    if categoria:
+        productos = productos.filter(categoria__icontains=categoria)
+
+    # Tipo de producto
+    tipo_id = request.GET.get('tipo_producto', '').strip()
+    if tipo_id and tipo_id.isdigit():
+        productos = productos.filter(tipo_producto_id=tipo_id)
+
+    # Estado
+    estado = request.GET.get('estado', '').strip()
+    if estado and estado in dict(Producto.ESTADO_CHOICES):
+        productos = productos.filter(estado=estado)
+
+    # Búsqueda general — busca en nombre, descripción, marca, categoría, variante
+    busqueda = request.GET.get('busqueda', '').strip()
+    if busqueda:
+        productos = productos.filter(
+            Q(nombre__icontains=busqueda) |
+            Q(descripcion__icontains=busqueda) |
+            Q(marca__icontains=busqueda) |
+            Q(categoria__icontains=busqueda) |
+            Q(variante__icontains=busqueda) |
+            Q(color__icontains=busqueda)
+        )
+
+    # Paginación: 52 por página (divisible en 4 columnas)
     paginator = Paginator(productos, 52)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Para el filtro de categorías — muestra las que existen en la BD
+    categorias_existentes = (
+        Producto.objects.filter(empresa=request.empresa).exclude(categoria='')
+        .values_list('categoria', flat=True)
+        .distinct()
+        .order_by('categoria')
+    )
+
+    tipos_existentes = TipoProducto.objects.filter(empresa=request.empresa)
+
     context = {
         'page_obj': page_obj,
-        'filtro_form': filtro_form,
+        'categorias': categorias_existentes,
+        'tipos': tipos_existentes,
+        'estados': Producto.ESTADO_CHOICES,
+        # Valores actuales de filtros para mantener selección
+        'filtro_categoria': categoria,
+        'filtro_tipo': tipo_id,
+        'filtro_estado': estado,
+        'filtro_busqueda': busqueda,
     }
     return render(request, 'productos/lista_productos.html', context)
 
 
 @login_required
-def editar_producto(request, pk):
-    """Vista para editar un producto existente"""
-    producto = get_object_or_404(Producto, pk=pk)
-    negocio_tipo = request.user.profile.negocio_tipo if hasattr(request.user, 'profile') else 'ropa'
+def crear_producto(request):
+    """Crea un nuevo producto — genérico para cualquier negocio"""
+    from .forms import ProductoForm
     
     if request.method == 'POST':
-        form = ProductoForm(request.POST, request.FILES, instance=producto, negocio_tipo=negocio_tipo)
+        form = ProductoForm(request.POST, request.FILES, empresa=request.empresa)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '¡Producto creado exitosamente!')
+            return redirect('lista_productos')
+    else:
+        form = ProductoForm(empresa=request.empresa)
+
+    return render(request, 'productos/form_producto.html', {
+        'form': form,
+        'titulo': 'Crear Nuevo Producto',
+    })
+
+
+def _crear_producto_directo(request):
+    """Fallback para crear producto sin depender del form"""
+    Producto.objects.create(
+        empresa=request.empresa,
+        nombre=request.POST.get('nombre', ''),
+        descripcion=request.POST.get('descripcion', ''),
+        categoria=request.POST.get('categoria', ''),
+        variante=request.POST.get('variante', ''),
+        precio=request.POST.get('precio') or None,
+        precio_costo=request.POST.get('precio_costo') or None,
+        estado=request.POST.get('estado', 'disponible'),
+        marca=request.POST.get('marca', ''),
+        color=request.POST.get('color', ''),
+        stock=int(request.POST.get('stock', 1)),
+        origen='manual',
+    )
+    messages.success(request, '¡Producto creado exitosamente!')
+
+
+@login_required
+def editar_producto(request, pk):
+    """Edita un producto existente"""
+    from .forms import ProductoForm
+    producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
+
+    if request.method == 'POST':
+        form = ProductoForm(request.POST, request.FILES, instance=producto, empresa=request.empresa)
         if form.is_valid():
             form.save()
             messages.success(request, '¡Producto actualizado exitosamente!')
             return redirect('lista_productos')
     else:
-        form = ProductoForm(instance=producto, negocio_tipo=negocio_tipo)
-    
+        form = ProductoForm(instance=producto, empresa=request.empresa)
+
     return render(request, 'productos/form_producto.html', {
         'form': form,
         'titulo': 'Editar Producto',
         'producto': producto,
-        'negocio_tipo': negocio_tipo
     })
 
 
 @login_required
 def eliminar_producto(request, pk):
-    """Vista para eliminar un producto"""
-    producto = get_object_or_404(Producto, pk=pk)
-    
+    """Elimina un producto con confirmación"""
+    producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
+
     if request.method == 'POST':
         producto.delete()
         messages.success(request, '¡Producto eliminado exitosamente!')
         return redirect('lista_productos')
-    
-    return render(request, 'productos/confirmar_eliminar.html', {
-        'producto': producto
-    })
 
+    return render(request, 'productos/confirmar_eliminar.html', {'producto': producto})
+
+
+# ── VISTAS AJAX ───────────────────────────────────────────────────────────────
 
 @login_required
 def cambiar_estado_producto(request, pk):
-    """Vista AJAX para cambiar el estado de un producto"""
+    """AJAX — cambia el estado de un producto"""
     if request.method == 'POST':
-        producto = get_object_or_404(Producto, pk=pk)
+        producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
         nuevo_estado = request.POST.get('estado')
-        
+
         if nuevo_estado in dict(Producto.ESTADO_CHOICES):
             producto.estado = nuevo_estado
-            producto.save()
-            
+            producto.save(update_fields=['estado', 'actualizado_en'])
             return JsonResponse({
                 'success': True,
                 'estado': producto.get_estado_display()
             })
-    
+
     return JsonResponse({'success': False}, status=400)
-
-
-@login_required
-def get_rangos_edad(request):
-    """Vista AJAX para obtener rangos de edad según categoría"""
-    categoria = request.GET.get('categoria')
-    
-    choices = []
-    if categoria == 'bebe':
-        choices = Producto.EDAD_BEBE
-    elif categoria in ['nino', 'nina']:
-        choices = Producto.EDAD_NINO
-    elif categoria == 'joven':
-        choices = Producto.EDAD_JOVEN
-    elif categoria in ['adulto_hombre', 'adulto_mujer']:
-        choices = Producto.TALLA_ADULTO
-    
-    return JsonResponse({
-        'choices': [{'value': c[0], 'label': c[1]} for c in choices]
-    })
 
 
 @login_required
 def cambiar_categoria_producto(request, pk):
-    """Vista AJAX para cambiar la categoría de un producto"""
+    """AJAX — cambia la categoría de un producto (texto libre)"""
     if request.method == 'POST':
-        producto = get_object_or_404(Producto, pk=pk)
-        nueva_categoria = request.POST.get('categoria_grupo')
-        
-        if nueva_categoria in dict(Producto.CATEGORIA_CHOICES):
-            producto.categoria_grupo = nueva_categoria
-            producto.save()
-            
-            return JsonResponse({
-                'success': True,
-                'categoria': producto.get_categoria_grupo_display()
-            })
-    
+        producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
+        nueva_categoria = request.POST.get('categoria', '').strip()
+        producto.categoria = nueva_categoria
+        producto.save(update_fields=['categoria', 'actualizado_en'])
+        return JsonResponse({'success': True, 'categoria': producto.categoria})
+
     return JsonResponse({'success': False}, status=400)
 
 
 @login_required
-def cambiar_talla_producto(request, pk):
-    """Vista AJAX para cambiar la talla/edad de un producto"""
+def api_crear_tipo_producto(request):
+    """AJAX — crea un nuevo Tipo de Producto desde un modal"""
     if request.method == 'POST':
-        producto = get_object_or_404(Producto, pk=pk)
-        nueva_talla = request.POST.get('rango_edad', '')
-        
-        # Permitir cualquier valor de texto (viene de Google Sheets)
-        producto.rango_edad = nueva_talla
-        producto.save()
-        
+        import json
+        try:
+            data = json.loads(request.body)
+            nombre = data.get('nombre', '').strip()
+        except:
+            nombre = request.POST.get('nombre', '').strip()
+            
+        if not nombre:
+            return JsonResponse({'success': False, 'error': 'El nombre no puede estar vacío.'}, status=400)
+            
+        # Comprobar si ya existe
+        if TipoProducto.objects.filter(nombre__iexact=nombre, empresa=request.empresa).exists():
+            return JsonResponse({'success': False, 'error': 'Ya existe un tipo de producto con ese nombre.'}, status=400)
+            
+        # Crear
+        nuevo_tipo = TipoProducto.objects.create(nombre=nombre, empresa=request.empresa)
         return JsonResponse({
             'success': True,
-            'talla': producto.rango_edad
+            'id': nuevo_tipo.id,
+            'nombre': nuevo_tipo.nombre
         })
-    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+
+
+@login_required
+def cambiar_variante_producto(request, pk):
+    """
+    AJAX — cambia la variante de un producto.
+    Reemplaza cambiar_talla_producto — ahora es genérico:
+    sirve para talla, modelo, sabor, versión, etc.
+    """
+    if request.method == 'POST':
+        producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
+        nueva_variante = request.POST.get('variante', '').strip()
+        producto.variante = nueva_variante
+        producto.save(update_fields=['variante', 'actualizado_en'])
+        return JsonResponse({'success': True, 'variante': producto.variante})
+
     return JsonResponse({'success': False}, status=400)
 
 
 @login_required
 def subir_foto_producto(request, pk):
-    """Vista AJAX para subir/actualizar foto de un producto"""
+    """AJAX — sube o reemplaza la foto de un producto"""
     if request.method == 'POST' and request.FILES.get('imagen'):
         try:
-            producto = get_object_or_404(Producto, pk=pk)
+            producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
             producto.imagen = request.FILES['imagen']
-            producto.save()
-            
+            producto.save(update_fields=['imagen', 'actualizado_en'])
             return JsonResponse({
                 'success': True,
                 'message': 'Foto actualizada exitosamente',
                 'imagen_url': producto.imagen.url if producto.imagen else None
             })
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'Error: {str(e)}'
-            }, status=400)
-    
+            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)
+
     return JsonResponse({'success': False, 'message': 'No se recibió imagen'}, status=400)
 
 
 @login_required
-def crear_producto(request):
-    """Vista para crear un nuevo producto"""
-    negocio_tipo = request.user.profile.negocio_tipo if hasattr(request.user, 'profile') else 'ropa'
-    
-    if request.method == 'POST':
-        form = ProductoForm(request.POST, request.FILES, negocio_tipo=negocio_tipo)
-        if form.is_valid():
-            producto = form.save()
-            messages.success(request, '¡Producto creado exitosamente!')
-            return redirect('lista_productos')
-    else:
-        form = ProductoForm(negocio_tipo=negocio_tipo)
-    
-    return render(request, 'productos/form_producto.html', {
-        'form': form,
-        'titulo': 'Crear Nuevo Producto',
-        'negocio_tipo': negocio_tipo
-    })
+def get_categorias_sugeridas(request):
+    """
+    AJAX — devuelve las categorías existentes para autocompletar.
+    Reemplaza get_rangos_edad que era específico de ropa.
+    """
+    q = request.GET.get('q', '').strip()
+    categorias = (
+        Producto.objects.filter(empresa=request.empresa).exclude(categoria='')
+        .filter(categoria__icontains=q)
+        .values_list('categoria', flat=True)
+        .distinct()
+        .order_by('categoria')[:20]
+    )
+    return JsonResponse({'categorias': list(categorias)})
 
 
-# CAMBIO 2: Vistas de importación Excel/CSV
+# ── IMPORTACIÓN EXCEL / CSV ───────────────────────────────────────────────────
+
 @login_required
 def importar_excel(request):
     """
-    Acepta .xlsx o .csv
-    Columnas esperadas: nombre, categoria_grupo, precio, estado, descripcion
-    La fila 1 siempre es cabecera — se ignora automáticamente
+    Importa productos desde Excel (.xlsx) o CSV.
+
+    Columnas del archivo (fila 1 = cabecera, se ignora):
+      A: Nombre del producto     (texto, obligatorio)
+      B: Categoría               (texto libre, opcional)
+      C: Precio                  (número, opcional)
+      D: Estado                  (disponible / separado / vendido)
+      E: Descripción             (texto, opcional)
+      F: Variante                (talla / modelo / sabor / etc., opcional)
+      G: Marca                   (texto, opcional)
+      H: Stock                   (número entero, opcional, default 1)
+
+    Si el nombre ya existe → actualiza. Si es nuevo → crea.
     """
     if request.method == 'POST':
         archivo = request.FILES.get('archivo')
-        
+
         if not archivo:
             messages.error(request, 'Debes seleccionar un archivo.')
             return redirect('importar_excel')
-        
-        nombre = archivo.name.lower()
+
+        nombre_archivo = archivo.name.lower()
         errores = []
         creados = 0
         actualizados = 0
 
         try:
-            # ── EXCEL ──────────────────────────────────────────
-            if nombre.endswith('.xlsx') or nombre.endswith('.xls'):
+            # ── LEER ARCHIVO ──────────────────────────────────────────────────
+            if nombre_archivo.endswith('.xlsx') or nombre_archivo.endswith('.xls'):
                 wb = openpyxl.load_workbook(archivo)
                 ws = wb.active
                 filas = list(ws.iter_rows(min_row=2, values_only=True))
-            
-            # ── CSV ────────────────────────────────────────────
-            elif nombre.endswith('.csv'):
+
+            elif nombre_archivo.endswith('.csv'):
                 contenido = archivo.read().decode('utf-8-sig')
                 reader = csv.reader(io.StringIO(contenido))
                 next(reader)  # saltar cabecera
                 filas = list(reader)
-            
+
             else:
                 messages.error(request, 'Formato no soportado. Usa .xlsx o .csv')
                 return redirect('importar_excel')
 
-            # ── PROCESAR FILAS ─────────────────────────────────
+            # ── PROCESAR FILAS ────────────────────────────────────────────────
             for i, fila in enumerate(filas, start=2):
                 try:
-                    nombre_prod  = str(fila[0]).strip() if fila[0] else None
-                    categoria    = str(fila[1]).strip() if len(fila) > 1 and fila[1] else 'adulto_mujer'
-                    precio       = float(fila[2]) if len(fila) > 2 and fila[2] else 0
-                    estado       = str(fila[3]).strip().lower() if len(fila) > 3 and fila[3] else 'disponible'
-                    descripcion  = str(fila[4]).strip() if len(fila) > 4 and fila[4] else ''
+                    # Extraer valores con defaults seguros
+                    nombre_prod = str(fila[0]).strip() if len(fila) > 0 and fila[0] else None
+                    categoria   = str(fila[1]).strip() if len(fila) > 1 and fila[1] else ''
+                    precio      = _parsear_decimal(fila[2]) if len(fila) > 2 else None
+                    estado      = str(fila[3]).strip().lower() if len(fila) > 3 and fila[3] else 'disponible'
+                    descripcion = str(fila[4]).strip() if len(fila) > 4 and fila[4] else ''
+                    variante    = str(fila[5]).strip() if len(fila) > 5 and fila[5] else ''
+                    marca       = str(fila[6]).strip() if len(fila) > 6 and fila[6] else ''
+                    stock       = int(float(str(fila[7]))) if len(fila) > 7 and fila[7] else 1
 
+                    # Fila completamente vacía — saltar silenciosamente
                     if not nombre_prod:
                         continue
 
-                    # Validar estado
-                    estados_validos = ['disponible', 'separado', 'vendido']
-                    if estado not in estados_validos:
+                    # Normalizar estado
+                    if estado not in ['disponible', 'separado', 'vendido']:
                         estado = 'disponible'
-                    
-                    # Validar categoría
-                    categorias_validas = dict(Producto.CATEGORIA_CHOICES)
-                    if categoria not in categorias_validas:
-                        categoria = 'adulto_mujer'
 
-                    # update_or_create
+                    # update_or_create por nombre — evita duplicados
                     producto, creado = Producto.objects.update_or_create(
                         nombre=nombre_prod,
+                        empresa=request.empresa,
                         defaults={
-                            'categoria_grupo': categoria,
+                            'categoria': categoria,
                             'precio': precio,
                             'estado': estado,
                             'descripcion': descripcion,
+                            'variante': variante,
+                            'marca': marca,
+                            'color': color,
+                            'stock': stock,
                             'origen': 'excel',
                             'fecha_importacion': timezone.now(),
                         }
                     )
-                    
+
                     if creado:
                         creados += 1
                     else:
                         actualizados += 1
 
-                except (IndexError, ValueError) as e:
+                except (IndexError, ValueError, TypeError) as e:
                     errores.append(f'Fila {i}: {str(e)}')
 
         except Exception as e:
             messages.error(request, f'Error al leer el archivo: {str(e)}')
             return redirect('importar_excel')
 
-        # ── RESUMEN FINAL ──────────────────────────────────────
+        # ── RESULTADO ─────────────────────────────────────────────────────────
         if creados or actualizados:
-            messages.success(
-                request,
-                f'✅ {creados} productos creados, {actualizados} actualizados.'
-            )
+            messages.success(request, f'✅ {creados} productos creados, {actualizados} actualizados.')
         if errores:
             for error in errores[:5]:
                 messages.warning(request, error)
+            if len(errores) > 5:
+                messages.warning(request, f'... y {len(errores) - 5} errores más.')
 
         return redirect('lista_productos')
 
     return render(request, 'productos/importar_excel.html')
 
 
+def _parsear_decimal(valor):
+    """Convierte un valor a decimal de forma segura — maneja comas y símbolos"""
+    if valor is None:
+        return None
+    texto = str(valor).strip().replace(',', '.').replace('$', '').replace(' ', '')
+    if not texto:
+        return None
+    try:
+        return float(texto)
+    except ValueError:
+        return None
+
+
 @login_required
 def descargar_plantilla(request):
-    """Genera y descarga una plantilla Excel vacía con las columnas correctas"""
+    """
+    Descarga una plantilla Excel con las columnas correctas y una hoja de referencia.
+    Genérica — sirve para cualquier tipo de negocio.
+    """
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Productos"
-    
-    # Cabeceras
-    cabeceras = ['Nombre', 'Categoría', 'Precio', 'Estado', 'Descripción']
+
+    from openpyxl.styles import Font, PatternFill, Alignment
+
+    # ── CABECERAS ─────────────────────────────────────────────────────────────
+    cabeceras = ['Nombre', 'Categoría', 'Precio', 'Estado', 'Descripción', 'Variante', 'Marca', 'Stock']
     ws.append(cabeceras)
-    
-    # Fila de ejemplo
-    ws.append(['Vestido floral', 'adulto_mujer', '25.00', 'disponible', 'Talla M'])
-    
-    # Estilo de cabecera
-    from openpyxl.styles import Font, PatternFill
+
+    # ── FILAS DE EJEMPLO por tipo de negocio ──────────────────────────────────
+    ejemplos = [
+        # Ropa
+        ['Vestido floral', 'Mujer', '25.00', 'disponible', 'Talla M, color rojo', 'M', 'Zara', 1],
+        # Tecnología
+        ['iPhone 15 Pro', 'Smartphones', '999.00', 'disponible', '128GB, color negro', '128GB', 'Apple', 2],
+        # Alimentos
+        ['Torta de chocolate', 'Postres', '15.00', 'disponible', 'Para 10 personas', '10 porciones', 'Casera', 1],
+        # Servicios
+        ['Diseño de logo', 'Servicios', '80.00', 'disponible', 'Incluye 3 propuestas', 'Paquete básico', '', 1],
+    ]
+    for ejemplo in ejemplos:
+        ws.append(ejemplo)
+
+    # ── ESTILO CABECERAS ──────────────────────────────────────────────────────
+    color_cabecera = PatternFill("solid", fgColor="1a73e8")
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="1a73e8")
-    
-    # Ancho de columnas
-    ws.column_dimensions['A'].width = 25
-    ws.column_dimensions['B'].width = 20
-    ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 15
-    ws.column_dimensions['E'].width = 30
+        cell.fill = color_cabecera
+        cell.alignment = Alignment(horizontal='center')
 
+    # ── ESTILO FILAS EJEMPLO ──────────────────────────────────────────────────
+    color_ejemplo = PatternFill("solid", fgColor="EBF5FB")
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        for cell in row:
+            cell.fill = color_ejemplo
+
+    # ── ANCHO DE COLUMNAS ─────────────────────────────────────────────────────
+    anchos = {'A': 30, 'B': 18, 'C': 12, 'D': 15, 'E': 35, 'F': 18, 'G': 15, 'H': 8}
+    for col, ancho in anchos.items():
+        ws.column_dimensions[col].width = ancho
+
+    # ── HOJA DE REFERENCIA ────────────────────────────────────────────────────
+    ws_ref = wb.create_sheet("Referencia")
+    ws_ref.title = "Referencia"
+
+    ws_ref.append(['Campo', 'Descripción', 'Valores válidos / Ejemplos'])
+    ref_data = [
+        ['Nombre',      'Nombre del producto (obligatorio)',           'Vestido, iPhone 15, Torta de chocolate'],
+        ['Categoría',   'Categoría libre — escribe la tuya',          'Mujer, Electrónica, Postres, Servicios'],
+        ['Precio',      'Precio de venta en números',                  '25.00 / 999 / 15.50'],
+        ['Estado',      'Estado actual del producto',                  'disponible | separado | vendido'],
+        ['Descripción', 'Descripción adicional (opcional)',            'Talla M, color rojo / 128GB negro'],
+        ['Variante',    'Talla, modelo, sabor, versión (opcional)',    'M / L / 128GB / Chocolate / Básico'],
+        ['Marca',       'Marca o proveedor (opcional)',                'Zara / Apple / Casera'],
+        ['Stock',       'Cantidad disponible (opcional, default 1)',   '1 / 5 / 10'],
+    ]
+    for fila in ref_data:
+        ws_ref.append(fila)
+
+    # Estilo hoja referencia
+    for cell in ws_ref[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="27AE60")
+        cell.alignment = Alignment(horizontal='center')
+
+    ws_ref.column_dimensions['A'].width = 15
+    ws_ref.column_dimensions['B'].width = 38
+    ws_ref.column_dimensions['C'].width = 42
+
+    # ── RESPUESTA ─────────────────────────────────────────────────────────────
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = 'attachment; filename="plantilla_productos.xlsx"'
     wb.save(response)
     return response
-
-

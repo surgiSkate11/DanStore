@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from empresas.models import Empresa
 
 class UserProfile(models.Model):
     """Perfil extendido del usuario con información del negocio"""
@@ -12,8 +12,24 @@ class UserProfile(models.Model):
         ('servicios', 'Servicios'),
         ('otro', 'Otro'),
     ]
+
+    ROLES = (
+        ('SUPERADMIN', 'Dueño del Software'),
+        ('DUEÑO', 'Dueño de Empresa'),
+        ('EMPLEADO', 'Empleado de Empresa'),
+        ('CLIENTE', 'Cliente Final'),
+    )
+    
+    TIPO_ENTIDAD_CHOICES = [
+        ('negocio', 'Negocio'),
+        ('empresa', 'Empresa'),
+    ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    
+    # Sistema Multi-tenant
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='empleados')
+    rol = models.CharField(max_length=20, choices=ROLES, default='DUEÑO')
     
     # Tipo de negocio (define vocabulario dinámico)
     negocio_tipo = models.CharField(
@@ -21,6 +37,14 @@ class UserProfile(models.Model):
         choices=TIPO_NEGOCIO_CHOICES,
         default='ropa',
         verbose_name="Tipo de negocio"
+    )
+
+    # Tipo de entidad (Empresa o Negocio)
+    tipo_entidad = models.CharField(
+        max_length=20,
+        choices=TIPO_ENTIDAD_CHOICES,
+        default='negocio',
+        verbose_name="Tipo de entidad"
     )
     
     # Nombre del negocio

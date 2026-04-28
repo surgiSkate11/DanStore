@@ -32,6 +32,7 @@
         padding: 1.5rem;
         border-radius: 12px 12px 0 0;
         border-bottom: 2px solid #667eea;
+        cursor: pointer;
     }
     
     .producto-item {
@@ -77,6 +78,46 @@
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Botón Facturar suave y moderno */
+    .btn-facturar-soft {
+        background: #eef2ff;
+        color: #4f46e5;
+        border: 1px solid #c7d2fe;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-facturar-soft:hover {
+        background: #e0e7ff;
+        color: #4338ca;
+        border-color: #a5b4fc;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+    }
+    
+    .btn-whatsapp {
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-whatsapp:hover {
+        background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    }
+    
+    .toggle-icon {
+        transition: transform 0.3s ease;
+        display: inline-block;
+    }
+    
+    .cliente-header.collapsed .toggle-icon {
+        transform: rotate(180deg);
     }
 </style>
 {% endblock %}
@@ -125,30 +166,63 @@
         <div class="col-12">
             <div class="deuda-card">
                 <!-- Header del Cliente -->
-                <div class="cliente-header">
+                <div class="cliente-header" data-bs-toggle="collapse" data-bs-target="#collapseDeuda{{ forloop.counter }}" aria-expanded="true" role="button">
                     <div class="row align-items-center">
                         <div class="col-12 col-md-6">
                             <h4 class="mb-2" style="color: #4c1d95;">
                                 <i class="bi bi-person-fill"></i> {{ deuda.cliente }}
+                                <i class="bi bi-chevron-up ms-2 toggle-icon" style="font-size: 1.2rem; color: #667eea;"></i>
                             </h4>
                             <p class="mb-0 small" style="color: #5b21b6;">
                                 <strong>{{ deuda.cantidad }}</strong> producto{{ deuda.cantidad|pluralize }} pendiente{{ deuda.cantidad|pluralize }}
                             </p>
                         </div>
-                        <div class="col-12 col-md-6 text-md-end mt-3 mt-md-0">
+                        <div class="col-12 col-md-6 text-md-end mt-3 mt-md-0" onclick="event.stopPropagation();">
                             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-md-end gap-3">
                                 <!-- Total de Deuda -->
                                 <div style="background: white; padding: 1rem; border-radius: 8px; border: 2px solid #667eea;">
                                     <small class="text-muted d-block mb-1">Deuda Total:</small>
                                     <h3 class="mb-0" style="color: #667eea;">${{ deuda.total|floatformat:2 }}</h3>
                                 </div>
+                                <!-- Botón Facturar Todo -->
+                                <a href="{% url 'crear_venta' %}?cliente={{ deuda.cliente|urlencode }}" 
+                                   class="btn btn-facturar-soft d-flex align-items-center gap-2 shadow-sm"                                   style="white-space: nowrap;"
+                                   onclick="showDjangoToast('Cargando productos en la factura...', 'info')">
+                                    <i class="bi bi-cart-check-fill"></i>
+                                    <span class="d-none d-sm-inline">Facturar Todo</span>
+                                    <span class="d-inline d-sm-none">Facturar</span>
+                                </a>
+                                <!-- Botón WhatsApp -->
+                                {% if deuda.telefono_wa %}
+                                <a href="https://wa.me/{{ deuda.telefono_wa }}?text=Hola%20{{ deuda.cliente|urlencode }},%20te%20escribo%20de%20{{ empresa.nombre|urlencode|default:'nuestra tienda' }}.%20Te%20recuerdo%20que%20tienes%20un%20saldo%20pendiente%20de%20%24{{ deuda.total|floatformat:2 }}.%20%C2%A1Adjunto%20tu%20comprobante!" 
+                                   target="_blank"
+                                   class="btn btn-whatsapp d-flex align-items-center gap-2 shadow-sm"
+                                   style="white-space: nowrap;"
+                                   title="Enviar recordatorio por WhatsApp">
+                                    <i class="bi bi-whatsapp"></i>
+                                    <span class="d-none d-lg-inline">WhatsApp</span>
+                                </a>
+                                {% endif %}
+                                <!-- Botón Compartir -->
+                                <button type="button" 
+                                   class="btn btn-outline-secondary d-flex align-items-center gap-2 shadow-sm"
+                                   style="white-space: nowrap;"
+                                   data-url="{% url 'generar_comprobante_deuda_pdf' deuda.cliente %}"
+                                   data-filename="Comprobante_Deuda.pdf"
+                                   data-title="Comprobante de Deuda"
+                                   data-text="{% if config.mensaje_deuda %}{{ config.mensaje_deuda }}{% else %}Hola, te adjunto el comprobante de los productos pendientes.{% endif %}"
+                                   onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)">
+                                    <i class="bi bi-share-fill"></i>
+                                    <span class="d-none d-sm-inline">Compartir</span>
+                                </button>
                                 <!-- Botón de Imprimir -->
                                 <a href="{% url 'generar_comprobante_deuda_pdf' deuda.cliente %}" 
-                                   class="btn btn-outline-primary d-flex align-items-center gap-2"
+                                   target="_blank"
+                                   class="btn btn-outline-primary d-flex align-items-center gap-2 shadow-sm"
                                    style="white-space: nowrap;">
-                                    <i class="bi bi-printer-fill"></i>
-                                    <span class="d-none d-sm-inline">Imprimir Comprobante</span>
-                                    <span class="d-inline d-sm-none">Imprimir</span>
+                                    <i class="bi bi-file-pdf-fill"></i>
+                                    <span class="d-none d-sm-inline">Descargar PDF</span>
+                                    <span class="d-inline d-sm-none">PDF</span>
                                 </a>
                             </div>
                         </div>
@@ -156,9 +230,10 @@
                 </div>
                 
                 <!-- Lista de Productos -->
-                <div class="card-body p-0">
-                    {% for producto in deuda.productos %}
-                    <div class="producto-item">
+                <div class="collapse show" id="collapseDeuda{{ forloop.counter }}">
+                    <div class="card-body p-0">
+                        {% for producto in deuda.productos %}
+                        <div class="producto-item">
                         <div class="row align-items-center">
                             <div class="col-12 col-md-1 text-center mb-2 mb-md-0">
                                 {% if producto.imagen %}
@@ -171,27 +246,34 @@
                                 </div>
                                 {% endif %}
                             </div>
-                            <div class="col-12 col-md-5 mb-2 mb-md-0">
-                                <h6 class="mb-1">{{ producto.tipo_prenda }}</h6>
+                            <div class="col-12 col-md-4 mb-2 mb-md-0">
+                                <h6 class="mb-1">{{ producto.tipo_producto|default:producto.nombre }}</h6>
                                 {% if producto.marca %}
                                 <small class="text-muted">{{ producto.marca }}</small>
                                 {% endif %}
                             </div>
                             <div class="col-6 col-md-2 mb-2 mb-md-0">
-                                <span class="badge bg-secondary">{{ producto.get_categoria_grupo_display }}</span>
+                                <span class="badge bg-secondary">{{ producto.categoria|default:"General" }}</span>
                             </div>
                             <div class="col-6 col-md-2 mb-2 mb-md-0">
                                 <small class="text-muted d-block">Fecha:</small>
                                 <strong>{{ producto.creado_en|date:"d/m/Y" }}</strong>
                             </div>
-                            <div class="col-12 col-md-2 text-md-end">
-                                <span class="badge-separado">
+                            <div class="col-12 col-md-3 text-md-end d-flex justify-content-md-end align-items-center gap-2">
+                                <span class="badge-separado me-1">
                                     <i class="bi bi-clock-history"></i> ${{ producto.precio|floatformat:2 }}
                                 </span>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        data-url="{% url 'cambiar_estado_producto' producto.id %}"
+                                        onclick="marcarProductoPagado(this)"
+                                        title="Marcar pago rápido sin generar factura">
+                                    <i class="bi bi-check2-circle"></i> Pagar
+                                </button>
                             </div>
                         </div>
-                    </div>
+                        </div>
                     {% endfor %}
+                </div>
                 </div>
             </div>
         </div>
@@ -213,4 +295,51 @@
     </div>
     {% endif %}
 </div>
+
+<form id="csrfForm">{% csrf_token %}</form>
+<script>
+function marcarProductoPagado(btn) {
+    showConfirmationModal({
+        title: 'Confirmar Pago Rápido',
+        message: '¿Confirmas que este producto ya fue pagado?<br><br><small>Esto lo marcará como <strong>"vendido"</strong> y lo quitará de la deuda. Si deseas generar una factura oficial, usa el botón "Facturar Todo".</small>',
+        icon: '<i class="bi bi-patch-question-fill text-primary"></i>',
+        confirmText: 'Sí, fue pagado',
+        onConfirm: () => {
+            const url = btn.dataset.url;
+            const formData = new FormData();
+            formData.append('estado', 'vendido');
+            formData.append('csrfmiddlewaretoken', document.querySelector('#csrfForm input[name=csrfmiddlewaretoken]').value);
+            
+            // Deshabilitar el botón y mostrar un spinner de carga
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    if (typeof showDjangoToast === 'function') showDjangoToast('Producto marcado como pagado', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    showDjangoToast('Error al actualizar el estado del producto', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check2-circle"></i> Pagar';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showDjangoToast('Ocurrió un error en la conexión', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check2-circle"></i> Pagar';
+            });
+        }
+    });
+}
+</script>
 {% endblock %}

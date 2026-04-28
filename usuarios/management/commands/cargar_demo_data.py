@@ -1,10 +1,9 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from productos.models import Producto, TipoPrenda
+from productos.models import Producto
 from ventas.models import Cliente
-from decimal import Decimal
+from clientes.models import Cliente
 import random
-from django.utils import timezone
 
 
 class Command(BaseCommand):
@@ -44,47 +43,44 @@ class Command(BaseCommand):
             )
             return
 
-        # Crear tipos de prendas si no existen
-        tipos = [
-            'Remera', 'Pantalón', 'Vestido', 'Campera', 'Shorts',
-            'Falda', 'Blusa', 'Sweater', 'Abrigo', 'Chaleco'
+        # Demo data genérico para cualquier negocio
+        productos_demo = [
+            {
+                'nombre': 'Producto de ejemplo 1',
+                'categoria': 'General',
+                'precio': 25.00,
+                'estado': 'disponible',
+                'descripcion': 'Este es un producto de ejemplo',
+                'variante': 'Talla M',
+                'marca': 'Marca Demo',
+                'stock': 5,
+                'origen': 'manual',
+            },
+            {
+                'nombre': 'Producto de ejemplo 2',
+                'categoria': 'General',
+                'precio': 45.00,
+                'estado': 'disponible',
+                'descripcion': 'Otro producto de ejemplo',
+                'variante': 'L',
+                'marca': 'Marca Demo',
+                'stock': 3,
+                'origen': 'manual',
+            },
+            {
+                'nombre': 'Producto separado demo',
+                'categoria': 'General',
+                'precio': 30.00,
+                'estado': 'separado',
+                'descripcion': 'Producto reservado de ejemplo',
+                'variante': 'S',
+                'vendido_a': 'Cliente Demo',
+                'stock': 1,
+                'origen': 'manual',
+            },
         ]
-        
-        tipo_objects = []
-        for tipo in tipos:
-            obj, _ = TipoPrenda.objects.get_or_create(nombre=tipo)
-            tipo_objects.append(obj)
-
-        # Datos de productos ficticios (para ropa)
-        productos_data = [
-            {'nombre': 'Remera básica negra', 'precio': Decimal('15.00')},
-            {'nombre': 'Remera básica blanca', 'precio': Decimal('15.00')},
-            {'nombre': 'Pantalón jean azul', 'precio': Decimal('35.00')},
-            {'nombre': 'Pantalón jean negro', 'precio': Decimal('35.00')},
-            {'nombre': 'Vestido floral', 'precio': Decimal('45.00')},
-            {'nombre': 'Campera de cuero', 'precio': Decimal('80.00')},
-            {'nombre': 'Shorts deportivos', 'precio': Decimal('25.00')},
-            {'nombre': 'Falda plisada', 'precio': Decimal('40.00')},
-            {'nombre': 'Blusa elegante', 'precio': Decimal('50.00')},
-            {'nombre': 'Sweater gris', 'precio': Decimal('45.00')},
-        ]
-
-        # Crear productos
-        colores = ['Negro', 'Blanco', 'Azul', 'Rojo', 'Verde', 'Rosa', 'Gris', 'Beige']
-        categorias = ['nina', 'joven', 'adulto_mujer']
-        
-        for i, prod_data in enumerate(productos_data):
-            Producto.objects.create(
-                tipo_prenda=random.choice(tipo_objects),
-                nombre=prod_data['nombre'],
-                precio=prod_data['precio'],
-                color=random.choice(colores),
-                categoria_grupo=random.choice(categorias),
-                rango_edad='M',  # Medium genérico
-                estado='disponible',
-                descripcion=f'Producto de demostración {i+1}',
-                sincronizado_sheets=False
-            )
+        for datos in productos_demo:
+            Producto.objects.create(**datos)
 
         # Crear clientes de prueba
         clientes_nombres = [
@@ -103,19 +99,14 @@ class Command(BaseCommand):
             cliente, _ = Cliente.objects.get_or_create(
                 nombre=nombre,
                 defaults={
+                    'cedula': f'00000000{random.randint(10,99)}',
                     'telefono': f'11{random.randint(20000000, 99999999)}',
                     'email': f'{nombre.lower().replace(" ", ".")}@email.com'
                 }
             )
             clientes_objs.append(cliente)
-
-        # Marcar algunos productos como separados
-        productos = list(Producto.objects.filter(sincronizado_sheets=False))
-        for _ in range(min(3, len(productos))):
-            prod = random.choice(productos)
-            prod.estado = 'separado'
-            prod.save()
-            productos.remove(prod)
+            if hasattr(user.profile, 'empresa') and user.profile.empresa:
+                cliente.empresas.add(user.profile.empresa)
 
         # Actualizar perfil del usuario
         user.profile.usa_demo_data = True
@@ -124,7 +115,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f'✨ Demo data cargada exitosamente:\n'
-                f'  • {len(productos_data)} productos creados\n'
+                f'  • {len(productos_demo)} productos creados\n'
                 f'  • {len(clientes_objs)} clientes creados\n'
             )
         )

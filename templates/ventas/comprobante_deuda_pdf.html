@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Comprobante de Deuda - {{ cliente_nombre }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        body {
+            font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+            font-size: 13px;
+            color: var(--color-texto, #333333);
+            background: #fff;
+            line-height: 1.5;
+        }
+        .header-table {
+            width: 100%;
+            margin-bottom: 30px;
+            border-bottom: 3px solid var(--color-principal, #667eea);
+            padding-bottom: 20px;
+        }
+        .header-logo {
+            width: 50%;
+            vertical-align: middle;
+        }
+        .header-logo img {
+            max-height: 80px;
+            max-width: 250px;
+        }
+        .header-company {
+            width: 50%;
+            text-align: right;
+            vertical-align: middle;
+        }
+        .company-name {
+            color: var(--color-principal, #667eea);
+            font-size: 26px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .company-details {
+            color: #666;
+            font-size: 12px;
+            margin: 0;
+        }
+        .document-title-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .document-title {
+            color: #333;
+            font-size: 22px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        .document-subtitle {
+            color: #888;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+        .info-table {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid var(--color-principal, #667eea);
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #444;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        .info-box p {
+            margin: 0 0 5px 0;
+            color: #555;
+        }
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .products-table th {
+            background-color: var(--color-principal, #667eea);
+            color: white;
+            padding: 12px;
+            font-size: 12px;
+            text-transform: uppercase;
+            border: none;
+        }
+        .products-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            color: #444;
+        }
+        .products-table tr:nth-child(even) td {
+            background-color: #fafbfc;
+        }
+        .products-table .col-center { text-align: center; }
+        .products-table .col-right { text-align: right; }
+        .products-table .col-left { text-align: left; }
+        
+        .summary-table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        .summary-table td {
+            vertical-align: top;
+        }
+        .total-box-container {
+            text-align: right;
+            width: 100%;
+        }
+        .total-box {
+            display: inline-block;
+            background-color: var(--color-principal, #667eea);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 22px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .total-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-right: 15px;
+            opacity: 0.9;
+        }
+        .footer-message {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            font-style: italic;
+        }
+        .badge-category {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body style="--color-texto: {{ config.color_texto|default:'#333333' }}; --color-principal: {{ config.color_principal|default:'#667eea' }};">
+    <table class="header-table">
+        <tr>
+            <td class="header-logo">
+                {% if config.logo %}
+                <img src="{{ base_url }}{{ config.logo.url }}" alt="Logo">
+                {% else %}
+                <h1 class="company-name" style="margin: 0;">{{ config.nombre_empresa|upper }}</h1>
+                {% endif %}
+            </td>
+            <td class="header-company">
+                {% if config.logo %}
+                <h1 class="company-name">{{ config.nombre_empresa|upper }}</h1>
+                {% endif %}
+                {% if config.ruc_empresa %}<p class="company-details"><strong>RUC:</strong> {{ config.ruc_empresa }}</p>{% endif %}
+                {% if config.direccion_empresa %}<p class="company-details">{{ config.direccion_empresa }}</p>{% endif %}
+                {% if config.telefono_empresa %}<p class="company-details"><strong>Tel:</strong> {{ config.telefono_empresa }}</p>{% endif %}
+                {% if config.email_empresa %}<p class="company-details">{{ config.email_empresa }}</p>{% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="document-title-container">
+        <h2 class="document-title">Estado de Cuenta</h2>
+        <p class="document-subtitle">Comprobante de productos separados / pendientes de pago</p>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td style="width: 60%; padding-right: 15px;">
+                <div class="info-box">
+                    <h3>Datos del Cliente</h3>
+                    <p><strong>Nombre:</strong> {{ cliente_nombre|upper }}</p>
+                    {% if cliente and cliente.ruc_cedula %}<p><strong>CI/RUC:</strong> {{ cliente.ruc_cedula }}</p>{% endif %}
+                    {% if cliente and cliente.telefono %}<p><strong>Teléfono:</strong> {{ cliente.telefono }}</p>{% endif %}
+                    {% if cliente and cliente.direccion %}<p><strong>Dirección:</strong> {{ cliente.direccion }}</p>{% endif %}
+                </div>
+            </td>
+            <td style="width: 40%; padding-left: 15px; vertical-align: top;">
+                <div class="info-box" style="border-left-color: #cbd5e1;">
+                    <h3>Detalles del Documento</h3>
+                    <p><strong>Fecha de Emisión:</strong><br>{{ fecha_actual|date:"d/m/Y H:i" }}</p>
+                    <p><strong>Total de Artículos:</strong><br>{{ productos|length }}</p>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="products-table">
+        <thead>
+            <tr>
+                <th class="col-center" style="width: 5%;">#</th>
+                <th class="col-left" style="width: 40%;">Producto</th>
+                <th class="col-center" style="width: 20%;">Categoría</th>
+                <th class="col-center" style="width: 15%;">Variante</th>
+                <th class="col-center" style="width: 20%;">Valor Unitario</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for producto in productos %}
+            <tr>
+                <td class="col-center" style="color: #888;">{{ forloop.counter }}</td>
+                <td class="col-left">
+                    <strong style="color: #333;">{{ producto.tipo_producto|default:producto.nombre }}</strong>
+                    {% if producto.marca %}<br><span style="color: #888; font-size: 11px;">Marca: {{ producto.marca }}</span>{% endif %}
+                </td>
+                <td class="col-center">
+                    <span class="badge-category">{{ producto.categoria|default:"General" }}</span>
+                </td>
+                <td class="col-center">
+                    <span style="color: #555;">{{ producto.variante|default:"-" }}</span>
+                </td>
+                <td class="col-center">
+                    <strong>${{ producto.precio|default:0|floatformat:2 }}</strong>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="summary-table">
+        <tr>
+            <td style="width: 50%;">
+                {% if config.mensaje_deuda %}
+                <div style="background-color: #f1f5f9; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569;">
+                    <strong>Nota:</strong><br>
+                    {{ config.mensaje_deuda }}
+                </div>
+                {% endif %}
+            </td>
+            <td style="width: 50%;">
+                <div class="total-box-container">
+                    <div class="total-box">
+                        <span class="total-label">Total a Pagar</span>
+                        <span>${{ total_deuda|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer-message">
+        {% if config.mensaje_factura %}
+            {{ config.mensaje_factura }}
+        {% else %}
+            Gracias por su preferencia. Este documento es un comprobante de productos reservados, no es una factura con validez tributaria.
+        {% endif %}
+    </div>
+</body>
+</html>

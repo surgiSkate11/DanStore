@@ -3,21 +3,24 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.utils import timezone
+from django.db import transaction
 from .models import Sorteo, Participante, Premio, ResultadoSorteo, Cupon
 import random
 import string 
 from .models import SorteoPremio
-from ventas.models import Cliente
+from clientes.models import Cliente
 
 @login_required
 def lista_sorteos(request):
     """Vista principal de sorteos"""
     # OPTIMIZACIÓN: prefetch_related para cargar participantes y premios de una vez
     sorteos_activos = Sorteo.objects.filter(
+        empresa=request.empresa,
         activo=True, completado=False
     ).prefetch_related('sorteo_premios__premio').order_by('-fecha_creacion')
     
     sorteos_completados = Sorteo.objects.filter(
+        empresa=request.empresa,
         completado=True
     ).prefetch_related('sorteo_premios__premio', 'resultados__cliente').order_by('-fecha_sorteo')
     
@@ -38,6 +41,7 @@ def crear_sorteo(request):
         criterio = request.POST.get('criterio')
         
         sorteo = Sorteo.objects.create(
+            empresa=request.empresa,
             nombre=nombre,
             tipo=tipo,
             descripcion=descripcion,
@@ -64,7 +68,7 @@ def detalle_sorteo(request, sorteo_id):
             'resultados__cliente',
             'resultados__premio'
         ),
-        id=sorteo_id
+        id=sorteo_id, empresa=request.empresa
     )
     participantes = sorteo.obtener_participantes()
     premios = sorteo.sorteo_premios.select_related('premio').all()
@@ -107,7 +111,7 @@ def ejecutar_sorteo(request, sorteo_id):
     from django.db.models import Sum, Count
     from datetime import date
     
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     
     if sorteo.completado:
         messages.warning(request, 'Este sorteo ya fue completado')
@@ -124,6 +128,11 @@ def ejecutar_sorteo(request, sorteo_id):
     # Validar premios segundo
     if not premios.exists():
         messages.error(request, 'Debes configurar al menos un premio antes de iniciar el sorteo')
+        return redirect('detalle_sorteo', sorteo_id=sorteo.id)
+    
+    # Validar que cofres/cajas coincidan exactamente con la configuración
+    if sorteo.tipo in ['cofre', 'caja'] and premios.count() != sorteo.cantidad_cofres:
+        messages.error(request, f'Debes configurar exactamente {sorteo.cantidad_cofres} premios para iniciar este sorteo.')
         return redirect('detalle_sorteo', sorteo_id=sorteo.id)
     
     # Contar resultados ya registrados
@@ -163,13 +172,13 @@ def ejecutar_sorteo(request, sorteo_id):
         for cliente in participantes:
             # Calcular monto según el criterio del sorteo
             if sorteo.criterio == 'compras_hoy':
-                ventas_hoy = Venta.objects.filter(cliente=cliente, fecha__date=date.today())
+                ventas_hoy = Venta.objects.filter(cliente=cliente, empresa=request.empresa, fecha__date=date.today())
                 monto = float(ventas_hoy.aggregate(total=Sum('total'))['total'] or 0)
                 
             elif sorteo.criterio == 'cantidad_productos':
                 # Para cantidad de productos, cada producto = 5 puntos base
                 from ventas.models import DetalleVenta
-                cantidad = DetalleVenta.objects.filter(venta__cliente=cliente).count()
+                cantidad = DetalleVenta.objects.filter(venta__cliente=cliente, venta__empresa=request.empresa).count()
                 monto = cantidad * 5 / 3 * 5  # Convertir a equivalente de monto
                 
             else:
@@ -219,7 +228,7 @@ def sortear_ganador(request, sorteo_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     participantes = sorteo.obtener_participantes()
     
     if not participantes.exists():
@@ -237,6 +246,7 @@ def sortear_ganador(request, sorteo_id):
     })
 
 
+@transaction.atomic
 @login_required
 def registrar_resultado(request, sorteo_id):
     """Registra el resultado del sorteo"""
@@ -244,7 +254,7 @@ def registrar_resultado(request, sorteo_id):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
     try:
-        sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+        sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
         cliente_id = request.POST.get('cliente_id')
         premio_id = request.POST.get('premio_id')
         posicion = request.POST.get('posicion')
@@ -252,13 +262,17 @@ def registrar_resultado(request, sorteo_id):
         if not cliente_id:
             return JsonResponse({'success': False, 'error': 'ID de cliente no proporcionado'}, status=400)
         
-        cliente = get_object_or_404(Cliente, id=cliente_id)
+        cliente = get_object_or_404(Cliente, id=cliente_id, empresas=request.empresa)
         sorteo_premio = None
         premio_obj = None
         
         # Buscar el SorteoPremio (no el Premio directamente)
         if premio_id:
-            sorteo_premio = get_object_or_404(SorteoPremio, id=premio_id, sorteo=sorteo)
+            # Evitar condiciones de carrera si dos peticiones entran a la vez
+            sorteo_premio = get_object_or_404(SorteoPremio.objects.select_for_update(), id=premio_id, sorteo=sorteo)
+            if sorteo_premio.asignado:
+                return JsonResponse({'success': False, 'error': 'Este premio ya fue asignado. Refresca la página.'}, status=400)
+                
             premio_obj = sorteo_premio.premio
         
         # Crear resultado
@@ -299,14 +313,6 @@ def registrar_resultado(request, sorteo_id):
                 sorteo.fecha_sorteo = timezone.now()
                 sorteo.save()
                 sorteo_completado = True
-        elif sorteo.tipo == 'semaforo':
-            # NUEVO: Para semáforo, completar cuando se asigne un premio
-            # El semáforo solo entrega 1 premio por sorteo (una luz ganadora)
-            sorteo.completado = True
-            sorteo.activo = False
-            sorteo.fecha_sorteo = timezone.now()
-            sorteo.save()
-            sorteo_completado = True
         else:
             # Para otros sorteos: completar cuando todos los premios estén asignados
             premios_sin_asignar = sorteo.sorteo_premios.filter(asignado=False).count()
@@ -334,7 +340,7 @@ def registrar_resultado(request, sorteo_id):
 @login_required
 def finalizar_sorteo(request, sorteo_id):
     """Marca el sorteo como completado"""
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     sorteo.completado = True
     sorteo.activo = False
     sorteo.fecha_sorteo = timezone.now()
@@ -359,16 +365,16 @@ def generar_codigo_cupon():
 @login_required
 def gestionar_participantes(request, sorteo_id):
     """Vista para gestionar participantes manualmente"""
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     
     if sorteo.criterio != 'manual':
         messages.warning(request, 'Este sorteo no usa selección manual de participantes')
         return redirect('detalle_sorteo', sorteo_id=sorteo.id)
     
-    from ventas.models import Cliente
+    from clientes.models import Cliente
     # OPTIMIZACIÓN: prefetch_related para participantes actuales
     participantes_actuales = sorteo.participantes.select_related('cliente').all()
-    todos_clientes = Cliente.objects.only('id', 'nombre', 'telefono').order_by('nombre')
+    todos_clientes = Cliente.objects.filter(empresas=request.empresa).only('id', 'nombre', 'telefono').order_by('nombre')
     
     context = {
         'sorteo': sorteo,
@@ -385,11 +391,11 @@ def agregar_participante(request, sorteo_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     cliente_id = request.POST.get('cliente_id')
     
-    from ventas.models import Cliente
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    from clientes.models import Cliente
+    cliente = get_object_or_404(Cliente, id=cliente_id, empresas=request.empresa)
     
     # Crear o verificar participante
     participante, created = Participante.objects.get_or_create(
@@ -416,7 +422,7 @@ def eliminar_participante(request, sorteo_id, participante_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     participante = get_object_or_404(Participante, id=participante_id, sorteo=sorteo)
     
     nombre = participante.cliente.nombre
@@ -431,14 +437,14 @@ def eliminar_participante(request, sorteo_id, participante_id):
 @login_required
 def gestionar_premios(request, sorteo_id):
     """Vista para gestionar premios del sorteo"""
-    sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+    sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
     from .models import Premio
     
     # Premios ya asociados a este sorteo
     premios_sorteo = sorteo.sorteo_premios.select_related('premio').all()
     
     # Todos los premios disponibles en la biblioteca
-    premios_disponibles = Premio.objects.all().order_by('-creado_en')
+    premios_disponibles = Premio.objects.filter(empresa=request.empresa).order_by('-creado_en')
     
     context = {
         'sorteo': sorteo,
@@ -456,13 +462,15 @@ def agregar_premio(request, sorteo_id):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
     try:
-        sorteo = get_object_or_404(Sorteo, id=sorteo_id)
+        sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
         
         # Validar cantidad de premios según el tipo de sorteo
         premios_actuales = sorteo.sorteo_premios.count()
         max_premios = None
         
         if sorteo.tipo == 'cofre':
+            max_premios = sorteo.cantidad_cofres
+        elif sorteo.tipo == 'caja':
             max_premios = sorteo.cantidad_cofres
         elif sorteo.tipo == 'semaforo':
             max_premios = 3  # Uno por cada color
@@ -481,14 +489,13 @@ def agregar_premio(request, sorteo_id):
         
         if premio_id:
             # Usar premio existente
-            premio = get_object_or_404(Premio, id=premio_id)
+            premio = get_object_or_404(Premio, id=premio_id, empresa=request.empresa)
         else:
             # Crear nuevo premio
             nombre = request.POST.get('nombre')
             tipo = request.POST.get('tipo')
             descripcion = request.POST.get('descripcion', '')
             valor_descuento = request.POST.get('valor_descuento')
-            minimo_compra = request.POST.get('minimo_compra')
             dias_validez = request.POST.get('dias_validez', 2)
             
             if not nombre or not tipo:
@@ -498,11 +505,11 @@ def agregar_premio(request, sorteo_id):
                 }, status=400)
             
             premio = Premio.objects.create(
+                empresa=request.empresa,
                 nombre=nombre,
                 tipo=tipo,
                 descripcion=descripcion,
                 valor_descuento=valor_descuento if valor_descuento else None,
-                minimo_compra=minimo_compra if minimo_compra else None,
                 dias_validez=dias_validez if dias_validez else 2,
             )
         
@@ -511,6 +518,14 @@ def agregar_premio(request, sorteo_id):
         color = request.POST.get('color')
         orden = request.POST.get('orden', premios_actuales + 1)
         
+        # Validar que no se repita el numero_cofre en cofre
+        if sorteo.tipo == 'cofre' and numero_cofre:
+            if sorteo.sorteo_premios.filter(numero_cofre=numero_cofre).exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': f'El cofre número {numero_cofre} ya tiene un premio asignado.'
+                }, status=400)
+
         # Validar que no se repita el color en semáforo
         if sorteo.tipo == 'semaforo' and color:
             color_existente = sorteo.sorteo_premios.filter(color=color).exists()

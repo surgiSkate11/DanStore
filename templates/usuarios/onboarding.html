@@ -17,18 +17,28 @@
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
-                        <div class="mb-4">
-                            <label for="nombre_negocio" class="form-label fw-bold">Nombre de tu negocio</label>
-                            <input 
-                                type="text" 
-                                class="form-control form-control-lg" 
-                                id="nombre_negocio" 
-                                name="nombre_negocio" 
-                                placeholder="Ej: La Boutique de Sofia"
-                                required
-                            >
-                            <div class="invalid-feedback">
-                                Por favor ingresa el nombre de tu negocio.
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="tipo_entidad" class="form-label fw-bold">Tipo</label>
+                                <select name="tipo_entidad" id="tipo_entidad" class="form-select form-select-lg" required>
+                                    {% for value, label in tipos_entidad %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="nombre_negocio" class="form-label fw-bold">Nombre</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control form-control-lg" 
+                                    id="nombre_negocio" 
+                                    name="nombre_negocio" 
+                                    placeholder="Ej: La Boutique de Sofia"
+                                    required
+                                >
+                                <div class="invalid-feedback">
+                                    Por favor ingresa el nombre.
+                                </div>
                             </div>
                         </div>
 

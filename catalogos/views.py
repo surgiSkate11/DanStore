@@ -23,21 +23,21 @@ from PyPDF2 import PdfReader, PdfWriter
 @login_required
 def generar_catalogo(request):
     """Vista para configurar y generar catálogo PDF"""
-    filtro_form = ProductoFiltroForm(request.GET or None)
+    filtro_form = ProductoFiltroForm(request.GET or None, empresa=request.empresa)
     
     # Obtener productos según filtros
     # Excluir productos vendidos y separados (no deben aparecer en catálogo público)
-    productos = Producto.objects.exclude(estado__in=['vendido', 'separado'])
+    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado'])
     
     if filtro_form.is_valid():
-        if filtro_form.cleaned_data.get('categoria_grupo'):
+        if filtro_form.cleaned_data.get('categoria'):
             productos = productos.filter(
-                categoria_grupo=filtro_form.cleaned_data['categoria_grupo']
+                categoria=filtro_form.cleaned_data['categoria']
             )
         
-        if filtro_form.cleaned_data.get('tipo_prenda'):
+        if filtro_form.cleaned_data.get('tipo_producto'):
             productos = productos.filter(
-                tipo_prenda=filtro_form.cleaned_data['tipo_prenda']
+                tipo_producto=filtro_form.cleaned_data['tipo_producto']
             )
         
         if filtro_form.cleaned_data.get('busqueda'):
@@ -59,32 +59,24 @@ def preview_catalogo(request):
     """Vista para mostrar previsualización HTML del catálogo antes de descargar PDF"""
     
     # Obtener productos según filtros
-    productos = Producto.objects.exclude(estado__in=['vendido', 'separado']).exclude(
-        Q(imagen='') | Q(imagen__isnull=True)
-    )
+    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado'])
     
     # Aplicar filtros
-    categoria_grupo = request.GET.get('categoria_grupo')
-    tipo_prenda_id = request.GET.get('tipo_prenda')
+    categoria = request.GET.get('categoria')
+    tipo_producto_id = request.GET.get('tipo_producto')
     busqueda = request.GET.get('busqueda')
     
-    if categoria_grupo:
-        productos = productos.filter(categoria_grupo=categoria_grupo)
+    if categoria:
+        productos = productos.filter(categoria=categoria)
     
-    if tipo_prenda_id:
-        productos = productos.filter(tipo_prenda_id=tipo_prenda_id)
+    if tipo_producto_id:
+        productos = productos.filter(tipo_producto_id=tipo_producto_id)
     
     if busqueda:
         productos = productos.filter(Q(descripcion__icontains=busqueda))
     
-    # Ordenar por categoría
-    from django.db.models import Case, When, Value, IntegerField
-    order_map = {
-        'bebe': 1, 'nina': 2, 'nino': 3, 'joven': 4, 'adulto_hombre': 5, 'adulto_mujer': 6
-    }
-    preserved = Case(*[When(categoria_grupo=k, then=Value(v)) for k, v in order_map.items()], 
-                     output_field=IntegerField())
-    productos = productos.annotate(cat_order=preserved).order_by('cat_order', 'tipo_prenda', 'precio')
+    # Ordenar por categoría y precio
+    productos = productos.order_by('categoria', 'tipo_producto', 'precio')
     
     # Query string para descargar
     query_string = request.GET.urlencode()
@@ -93,78 +85,63 @@ def preview_catalogo(request):
         'productos': productos,
         'total_productos': productos.count(),
         'query_string': query_string,
-        'categoria_grupo': categoria_grupo,
-        'tipo_prenda_id': tipo_prenda_id,
+        'categoria': categoria,
+        'tipo_producto_id': tipo_producto_id,
         'busqueda': busqueda,
     }
     
     return render(request, 'catalogos/preview_catalogo.html', context)
 
 
-def agregar_fondo_pagina(canvas_obj, doc):
-    """Callback que agrega fondo a cada página ANTES del contenido"""
-    catalogo_dir = os.path.join(settings.MEDIA_ROOT, 'catalogo')
-    
-    # Buscar portada
-    portada_path = None
-    for ext in ['png', 'jpg', 'jpeg']:
-        path = os.path.join(catalogo_dir, f'portada.{ext}')
-        if os.path.exists(path):
-            portada_path = path
-            break
-    
-    # Buscar bordes
-    bordes_path = None
-    for ext in ['png', 'jpg', 'jpeg']:
-        path = os.path.join(catalogo_dir, f'bordes.{ext}')
-        if os.path.exists(path):
-            bordes_path = path
-            break
-    
-    # doc.page es el número de página actual (empezando en 1)
-    page_num = doc.page - 1  # Convertir a 0-indexed
-    
-    # Página 0: Portada (sin número de página)
-    if page_num == 0 and portada_path:
-        try:
-            canvas_obj.drawImage(
-                portada_path,
-                0, 0,
-                width=A4[0],
-                height=A4[1],
-                preserveAspectRatio=False
-            )
-        except Exception as e:
-            print(f"Error al cargar portada: {e}")
-    
-    # Páginas 1+: Bordes y número de página
-    elif page_num > 0 and bordes_path:
-        try:
-            canvas_obj.drawImage(
-                bordes_path,
-                0, 0,
-                width=A4[0],
-                height=A4[1],
-                preserveAspectRatio=False
-            )
-        except Exception as e:
-            print(f"Error al cargar bordes: {e}")
+def get_fondo_pagina_callback(catalogo_dir):
+    """Fábrica de callbacks para inyectar el directorio correcto del tenant"""
+    def agregar_fondo_pagina(canvas_obj, doc):
+        # Buscar portada
+        portada_path = None
+        for ext in ['png', 'jpg', 'jpeg']:
+            path = os.path.join(catalogo_dir, f'portada.{ext}')
+            if os.path.exists(path):
+                portada_path = path
+                break
         
-        # Agregar número de página en la esquina inferior derecha
-        # Página 1 del PDF = Página 2 del catálogo (después de la portada)
-        numero_pagina_catalogo = page_num + 1
-        canvas_obj.setFont("Helvetica", 10)
-        canvas_obj.setFillColor(colors.HexColor('#666666'))
-        # Posición: esquina inferior derecha (margen de 1.5cm desde el borde)
-        canvas_obj.drawRightString(A4[0] - 1.5*cm, 1.2*cm, str(numero_pagina_catalogo))
-    
-    # Si no hay bordes pero es página de contenido, agregar número de página
-    elif page_num > 0:
-        # Agregar número de página solo en páginas de contenido
-        numero_pagina_catalogo = page_num + 1
-        canvas_obj.setFont("Helvetica", 10)
-        canvas_obj.setFillColor(colors.HexColor('#666666'))
-        canvas_obj.drawRightString(A4[0] - 1.5*cm, 1.2*cm, str(numero_pagina_catalogo))
+        # Buscar bordes
+        bordes_path = None
+        for ext in ['png', 'jpg', 'jpeg']:
+            path = os.path.join(catalogo_dir, f'bordes.{ext}')
+            if os.path.exists(path):
+                bordes_path = path
+                break
+        
+        # doc.page es el número de página actual (empezando en 1)
+        page_num = doc.page - 1  # Convertir a 0-indexed
+        
+        # Página 0: Portada (sin número de página)
+        if page_num == 0 and portada_path:
+            try:
+                canvas_obj.drawImage(portada_path, 0, 0, width=A4[0], height=A4[1], preserveAspectRatio=False)
+            except Exception as e:
+                print(f"Error al cargar portada: {e}")
+        
+        # Páginas 1+: Bordes y número de página
+        elif page_num > 0 and bordes_path:
+            try:
+                canvas_obj.drawImage(bordes_path, 0, 0, width=A4[0], height=A4[1], preserveAspectRatio=False)
+            except Exception as e:
+                print(f"Error al cargar bordes: {e}")
+            
+            numero_pagina_catalogo = page_num + 1
+            canvas_obj.setFont("Helvetica", 10)
+            canvas_obj.setFillColor(colors.HexColor('#666666'))
+            canvas_obj.drawRightString(A4[0] - 1.5*cm, 1.2*cm, str(numero_pagina_catalogo))
+        
+        # Si no hay bordes pero es página de contenido, agregar número de página
+        elif page_num > 0:
+            numero_pagina_catalogo = page_num + 1
+            canvas_obj.setFont("Helvetica", 10)
+            canvas_obj.setFillColor(colors.HexColor('#666666'))
+            canvas_obj.drawRightString(A4[0] - 1.5*cm, 1.2*cm, str(numero_pagina_catalogo))
+            
+    return agregar_fondo_pagina
 
 
 @login_required
@@ -172,42 +149,29 @@ def descargar_catalogo(request):
     """Vista para generar y descargar el PDF del catálogo con diseño personalizado"""
     
     # Obtener productos según filtros
-    # IMPORTANTE: Solo productos con foto, disponibles (excluir vendidos y separados)
-    productos = Producto.objects.exclude(estado__in=['vendido', 'separado']).exclude(
-        Q(imagen='') | Q(imagen__isnull=True)
-    )
+    # IMPORTANTE: Solo productos disponibles (excluir vendidos y separados)
+    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado'])
+    catalogo_dir = os.path.join(settings.MEDIA_ROOT, f'catalogo_tenant_{request.empresa.id}')
     
     # Aplicar filtros de la query string
-    categoria_grupo = request.GET.get('categoria_grupo')
-    tipo_prenda_id = request.GET.get('tipo_prenda')
+    categoria = request.GET.get('categoria')
+    tipo_producto_id = request.GET.get('tipo_producto')
     busqueda = request.GET.get('busqueda')
     
-    if categoria_grupo:
-        productos = productos.filter(categoria_grupo=categoria_grupo)
+    if categoria:
+        productos = productos.filter(categoria=categoria)
     
-    if tipo_prenda_id:
-        productos = productos.filter(tipo_prenda_id=tipo_prenda_id)
+    if tipo_producto_id:
+        productos = productos.filter(tipo_producto_id=tipo_producto_id)
     
     if busqueda:
         productos = productos.filter(Q(descripcion__icontains=busqueda))
     
-    # Ordenar productos por categoría para mejor organización del catálogo
-    # Orden: Bebé, Niña, Niño, Joven, Adulto Hombre, Adulto Mujer
-    from django.db.models import Case, When, Value, IntegerField
-    orden_categorias = Case(
-        When(categoria_grupo='bebe', then=Value(1)),
-        When(categoria_grupo='nina', then=Value(2)),
-        When(categoria_grupo='nino', then=Value(3)),
-        When(categoria_grupo='joven', then=Value(4)),
-        When(categoria_grupo='adulto_hombre', then=Value(5)),
-        When(categoria_grupo='adulto_mujer', then=Value(6)),
-        default=Value(7),
-        output_field=IntegerField()
-    )
-    productos = productos.annotate(orden_cat=orden_categorias).order_by('orden_cat', 'tipo_prenda', 'id')
+    # Ordenar productos por categoría y tipo para mejor organización del catálogo
+    productos = productos.order_by('categoria', 'tipo_producto', 'id')
     
     # Cargar configuración de diseño para obtener productos_por_pagina
-    config_file = os.path.join(settings.MEDIA_ROOT, 'catalogo', 'config_diseno.json')
+    config_file = os.path.join(catalogo_dir, 'config_diseno.json')
     if os.path.exists(config_file):
         with open(config_file, 'r', encoding='utf-8') as f:
             config_diseno_temp = json.load(f)
@@ -245,7 +209,6 @@ def descargar_catalogo(request):
     elements = []
     
     # Cargar configuración de diseño
-    config_file = os.path.join(settings.MEDIA_ROOT, 'catalogo', 'config_diseno.json')
     if os.path.exists(config_file):
         with open(config_file, 'r', encoding='utf-8') as f:
             config_diseno = json.load(f)
@@ -257,7 +220,10 @@ def descargar_catalogo(request):
             'color_titulo': '#1a1a2e',
             'color_borde': '#e94560',
             'grosor_borde': 2,
-            'estilo_precio': 'moderno'
+            'estilo_precio': 'moderno',
+            'nombre_negocio': 'Mi Tienda',
+            'subtitulo_negocio': 'Productos de Excelente Calidad',
+            'lema_negocio': 'Calidad y Estilo'
         }
     
     # Estilos con colores personalizados
@@ -374,8 +340,8 @@ def descargar_catalogo(request):
     )
     
     # Verificar si hay portada personalizada
-    portada_path = os.path.join(settings.MEDIA_ROOT, 'catalogo', 'portada.jpg')
-    portada_png = os.path.join(settings.MEDIA_ROOT, 'catalogo', 'portada.png')
+    portada_path = os.path.join(catalogo_dir, 'portada.jpg')
+    portada_png = os.path.join(catalogo_dir, 'portada.png')
     tiene_portada = os.path.exists(portada_path) or os.path.exists(portada_png)
     
     if not tiene_portada:
@@ -389,8 +355,13 @@ def descargar_catalogo(request):
         elements.append(subtitulo)
         elements.append(Spacer(1, 2*cm))
         
+        info_html = f"<b>{config_diseno.get('nombre_negocio', 'Mi Tienda')}</b><br/>{config_diseno.get('subtitulo_negocio', 'Productos de Excelente Calidad')}"
+        lema = config_diseno.get('lema_negocio', '')
+        if lema:
+            info_html += f"<br/>{lema}"
+            
         info = Paragraph(
-            "<b>Tiendita</b><br/>Ropa Americana Nueva<br/>Calidad y Estilo",
+            info_html,
             style_subtitulo
         )
         elements.append(info)
@@ -459,53 +430,65 @@ def descargar_catalogo(request):
             img = None
             img_error = None
             
-            try:
-                # Calcular tamaño de imagen MAXIMIZADO - aprovechar el espacio vertical disponible
-                img_ancho_max = (ancho_imagen_config - padding_imagen_lateral) * cm
-                img_alto_max = altura_producto - (padding_contenedor * 0.5)  # Padding dinámico
-                
-                # Usar el más pequeño para mantener proporción cuadrada
-                img_size = min(img_ancho_max, img_alto_max)
-                
-                img = Image(producto.imagen.path, width=img_size, height=img_size)
-                img.hAlign = 'CENTER'
-                img.vAlign = 'TOP'  # Alineación al borde superior
-            except Exception as e1:
-                img_error = str(e1)
+            # Calcular tamaño de imagen MAXIMIZADO - aprovechar el espacio vertical disponible
+            img_ancho_max = (ancho_imagen_config - padding_imagen_lateral) * cm
+            img_alto_max = altura_producto - (padding_contenedor * 0.5)  # Padding dinámico
+            
+            # Usar el más pequeño para mantener proporción cuadrada
+            img_size = min(img_ancho_max, img_alto_max)
+            
+            if producto.imagen and hasattr(producto.imagen, 'path') and os.path.exists(producto.imagen.path):
                 try:
-                    # Intento 2: Usar PIL para convertir primero
-                    import tempfile
-                    pil_img = PILImage.open(producto.imagen.path)
-                    # Convertir a RGB si es necesario
-                    if pil_img.mode not in ('RGB', 'RGBA'):
-                        pil_img = pil_img.convert('RGB')
-                    # Guardar temporalmente y cargar con ReportLab
-                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
-                        temp_path = tmp.name
-                        pil_img.save(temp_path, 'JPEG')
-                        img_ancho_max = (ancho_imagen_config - padding_imagen_lateral) * cm
-                        img_alto_max = altura_producto - (padding_contenedor * 0.5)  # Padding dinámico
-                        img_size = min(img_ancho_max, img_alto_max)
-                        img = Image(temp_path, width=img_size, height=img_size)
-                        img.hAlign = 'CENTER'
-                        img.vAlign = 'TOP'  # Alineación al borde superior
-                    os.unlink(temp_path)
-                except Exception as e2:
-                    img_error = f"Error 1: {e1}\nError 2: {e2}"
-                    img = Paragraph(
-                        f'<b style="color: red;">ERROR AL CARGAR IMAGEN</b><br/>'
-                        f'<i style="font-size: 8px;">{producto.imagen.name}</i><br/>'
-                        f'<i style="font-size: 7px;">Verifica que el archivo exista y esté en formato válido</i>',
-                        style_descripcion
-                    )
+                    img = Image(producto.imagen.path, width=img_size, height=img_size)
+                    img.hAlign = 'CENTER'
+                    img.vAlign = 'TOP'  # Alineación al borde superior
+                except Exception as e1:
+                    img_error = str(e1)
+                    try:
+                        # Intento 2: Usar PIL para convertir primero
+                        import tempfile
+                        pil_img = PILImage.open(producto.imagen.path)
+                        # Convertir a RGB si es necesario
+                        if pil_img.mode not in ('RGB', 'RGBA'):
+                            pil_img = pil_img.convert('RGB')
+                        # Guardar temporalmente y cargar con ReportLab
+                        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+                            temp_path = tmp.name
+                            pil_img.save(temp_path, 'JPEG')
+                            img = Image(temp_path, width=img_size, height=img_size)
+                            img.hAlign = 'CENTER'
+                            img.vAlign = 'TOP'  # Alineación al borde superior
+                        os.unlink(temp_path)
+                    except Exception as e2:
+                        img_error = f"Error 1: {e1}\nError 2: {e2}"
+                        img = Paragraph(
+                            f'<b style="color: red;">ERROR AL CARGAR IMAGEN</b><br/>'
+                            f'<i style="font-size: 8px;">{os.path.basename(producto.imagen.path)}</i><br/>'
+                            f'<i style="font-size: 7px;">Verifica que el archivo exista y esté en formato válido</i>',
+                            style_descripcion
+                        )
+            else:
+                # Producto sin imagen o archivo inexistente
+                # Dibujar un recuadro o texto que indique que no hay imagen
+                from reportlab.platypus import Spacer
+                # Creamos una tabla con un "icono" de no imagen
+                no_img_data = [[Paragraph('<b style="color: #9ca3af; font-size: 14px;"><br/><br/><br/><br/>Sin Imagen</b>', style_precio)]]
+                from reportlab.platypus import Table, TableStyle
+                img = Table(no_img_data, colWidths=[img_size], rowHeights=[img_size])
+                img.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e5e7eb')),
+                ]))
             
             # ===== PREPARAR DESCRIPCIÓN CON DISEÑO OPTIMIZADO =====
             # Categoría destacada
-            categoria_html = f'<b>★ {producto.get_categoria_grupo_display().upper()} ★</b>'
+            categoria_html = f'<b>★ {producto.categoria.upper() if producto.categoria else "General"} ★</b>'
             categoria_para = Paragraph(categoria_html, style_categoria)
             
             # Título del producto
-            titulo_html = f'<b>{str(producto.tipo_prenda).upper()}</b>'
+            titulo_html = f'<b>{str(producto.tipo_producto).upper() if producto.tipo_producto else producto.nombre.upper()}</b>'
             titulo_para = Paragraph(titulo_html, style_titulo_producto)
             
             # Detalles compactos
@@ -517,7 +500,8 @@ def descargar_catalogo(request):
             if hasattr(producto, 'color') and producto.color:
                 detalles.append(f'<b>◆ Color:</b> {producto.color}')
             
-            detalles.append(f'<b>◈ Talla:</b> {producto.get_rango_edad_display_custom()}')
+            if hasattr(producto, 'variante') and producto.variante:
+                detalles.append(f'<b>◈ Variante:</b> {producto.variante}')
             
             detalles_html = '<br/>'.join(detalles)
             detalles_para = Paragraph(detalles_html, style_descripcion)
@@ -525,7 +509,7 @@ def descargar_catalogo(request):
             # ===== PRECIO CON FONDO DECORATIVO (SI EXISTE) =====
             fondo_precio_path = None
             for ext in ['png', 'jpg', 'jpeg']:
-                path_fondo = os.path.join(settings.MEDIA_ROOT, 'catalogo', f'fondo_precio.{ext}')
+                path_fondo = os.path.join(catalogo_dir, f'fondo_precio.{ext}')
                 if os.path.exists(path_fondo):
                     fondo_precio_path = path_fondo
                     break
@@ -661,10 +645,10 @@ def descargar_catalogo(request):
             elements.append(PageBreak())
     
     # Generar PDF con callback onPage para agregar fondos
-    doc.build(elements, onFirstPage=agregar_fondo_pagina, onLaterPages=agregar_fondo_pagina)
+    callback_fondo = get_fondo_pagina_callback(catalogo_dir)
+    doc.build(elements, onFirstPage=callback_fondo, onLaterPages=callback_fondo)
     
     # Si hay PDFs personalizados, combinarlos
-    catalogo_dir = os.path.join(settings.MEDIA_ROOT, 'catalogo')
     portada_pdf = os.path.join(catalogo_dir, 'portada.pdf')
     bordes_pdf = os.path.join(catalogo_dir, 'bordes.pdf')
     
@@ -707,13 +691,15 @@ def descargar_catalogo(request):
         final_buffer.seek(0)
         
         response = HttpResponse(final_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="catalogo_tiendita.pdf"'
+        filename = f"catalogo_{config_diseno.get('nombre_negocio', 'empresa').replace(' ', '_').lower()}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
     
     # Si no hay PDFs personalizados, usar el generado normalmente
     buffer.seek(0)
     response = HttpResponse(buffer, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="catalogo_tiendita.pdf"'
+    filename = f"catalogo_{config_diseno.get('nombre_negocio', 'empresa').replace(' ', '_').lower()}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
 
@@ -722,7 +708,7 @@ def descargar_catalogo(request):
 def personalizar_catalogo(request):
     """Vista para subir y gestionar las imágenes personalizadas del catálogo"""
     
-    catalogo_dir = os.path.join(settings.MEDIA_ROOT, 'catalogo')
+    catalogo_dir = os.path.join(settings.MEDIA_ROOT, f'catalogo_tenant_{request.empresa.id}')
     os.makedirs(catalogo_dir, exist_ok=True)
     
     config_file = os.path.join(catalogo_dir, 'config_diseno.json')
@@ -748,7 +734,10 @@ def personalizar_catalogo(request):
             'tamano_precio': 24,
             'tamano_descripcion': 11,
             'fuente_titulo': 'Helvetica-Bold',
-            'fuente_texto': 'Helvetica'
+            'fuente_texto': 'Helvetica',
+            'nombre_negocio': 'Mi Tienda',
+            'subtitulo_negocio': 'Productos de Excelente Calidad',
+            'lema_negocio': 'Calidad y Estilo'
         }
     
     # Buscar archivos en diferentes formatos
@@ -767,7 +756,7 @@ def personalizar_catalogo(request):
             portada_existe = True
             portada_formato = ext.upper()
             portada_es_pdf = (ext == 'pdf')
-            portada_url = f"{settings.MEDIA_URL}catalogo/portada.{ext}"
+            portada_url = f"{settings.MEDIA_URL}catalogo_tenant_{request.empresa.id}/portada.{ext}"
             break
     
     for ext in ['pdf', 'png', 'jpg', 'jpeg']:
@@ -776,7 +765,7 @@ def personalizar_catalogo(request):
             bordes_existe = True
             bordes_formato = ext.upper()
             bordes_es_pdf = (ext == 'pdf')
-            bordes_url = f"{settings.MEDIA_URL}catalogo/bordes.{ext}"
+            bordes_url = f"{settings.MEDIA_URL}catalogo_tenant_{request.empresa.id}/bordes.{ext}"
             break
     
     if request.method == 'POST':
@@ -863,6 +852,11 @@ def personalizar_catalogo(request):
             config_diseno['tamano_titulo'] = int(request.POST.get('tamano_titulo', 18))
             config_diseno['tamano_precio'] = int(request.POST.get('tamano_precio', 24))
             config_diseno['tamano_descripcion'] = int(request.POST.get('tamano_descripcion', 11))
+            
+            # Incorporamos los campos de texto
+            config_diseno['nombre_negocio'] = request.POST.get('nombre_negocio', 'Mi Tienda')
+            config_diseno['subtitulo_negocio'] = request.POST.get('subtitulo_negocio', 'Productos de Excelente Calidad')
+            config_diseno['lema_negocio'] = request.POST.get('lema_negocio', 'Calidad y Estilo')
             
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_diseno, f, indent=4, ensure_ascii=False)

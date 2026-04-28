@@ -672,30 +672,36 @@
 <script>
     // Configuración del sorteo
     const sorteoTipo = "{{ sorteo.tipo }}";
+    const cantidadCofres = {{ sorteo.cantidad_cofres|default:3 }};
     const sorteoUrl = "{% url 'ejecutar_sorteo' sorteo.id %}";
     const premiosCount = {{ premios.count }};
-    const premiosAsignados = {{ premios_asignados|default:0 }};
-    const premiosDisponibles = premiosCount - premiosAsignados;
     
     // Función para ejecutar sorteo con validación
     function ejecutarSorteo() {
         // Validar premios para ranking (necesita 3)
         if (sorteoTipo === 'ranking') {
-            if (premiosDisponibles === 0) {
+            if (premiosCount === 0) {
                 if (typeof showToast === 'function') {
                     showToast('Debes agregar premios antes de iniciar el sorteo', 'warning');
                 }
                 return;
             }
-            if (premiosDisponibles < 3) {
+            if (premiosCount < 3) {
                 if (typeof showToast === 'function') {
-                    showToast('Necesitas 3 premios para el Top 3. Tienes ' + premiosDisponibles, 'warning');
+                    showToast('Necesitas 3 premios para el Top 3. Tienes ' + premiosCount, 'warning');
+                }
+                return;
+            }
+        } else if (sorteoTipo === 'cofre' || sorteoTipo === 'caja') {
+            if (premiosCount !== cantidadCofres) {
+                if (typeof showToast === 'function') {
+                    showToast(`Debes configurar exactamente ${cantidadCofres} premios. Tienes ${premiosCount}.`, 'warning', 'Acción Requerida');
                 }
                 return;
             }
         } else {
             // Para otros tipos, validar que haya al menos 1 premio
-            if (premiosDisponibles === 0) {
+            if (premiosCount === 0) {
                 if (typeof showToast === 'function') {
                     showToast('Debes agregar premios para el sorteo', 'warning');
                 }

@@ -2,10 +2,12 @@ from django.db import models
 from django.utils import timezone
 from ventas.models import Cliente, Venta
 from decimal import Decimal
+from empresas.models import Empresa
 
 
 class Sorteo(models.Model):
     """Modelo principal de sorteos para en vivos"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='sorteos')
     
     TIPO_SORTEO = [
         ('ruleta', '🎡 Ruleta de Ganadores'),
@@ -55,8 +57,8 @@ class Sorteo(models.Model):
     # Configuración específica por tipo
     cantidad_cofres = models.IntegerField(
         default=3,
-        verbose_name="Cantidad de cofres (para tipo cofre)",
-        help_text="Mínimo 3 cofres"
+        verbose_name="Cantidad de Cajas/Cofres",
+        help_text="Para 'Cofre Sorpresa' y 'Caja Misteriosa'"
     )
     
     # Estado y fechas
@@ -79,38 +81,41 @@ class Sorteo(models.Model):
         from datetime import date
         
         if self.criterio == 'todos':
-            return Cliente.objects.all()
+            return Cliente.objects.filter(empresas=self.empresa)
         
         elif self.criterio == 'compras_hoy':
             return Cliente.objects.filter(
+                empresas=self.empresa,
+                ventas__empresa=self.empresa,
                 ventas__fecha__date=date.today()
             ).distinct()
         
         elif self.criterio == 'monto_minimo' and self.monto_minimo:
-            clientes_ids = Venta.objects.values('cliente').annotate(
+            clientes_ids = Venta.objects.filter(empresa=self.empresa).values('cliente').annotate(
                 total_comprado=Sum('total')
             ).filter(
                 total_comprado__gte=self.monto_minimo
             ).values_list('cliente', flat=True)
-            return Cliente.objects.filter(id__in=clientes_ids)
+            return Cliente.objects.filter(id__in=clientes_ids, empresas=self.empresa)
         
         elif self.criterio == 'cantidad_productos' and self.cantidad_minima:
-            clientes_ids = Venta.objects.values('cliente').annotate(
+            clientes_ids = Venta.objects.filter(empresa=self.empresa).values('cliente').annotate(
                 total_productos=Count('detalles')
             ).filter(
                 total_productos__gte=self.cantidad_minima
             ).values_list('cliente', flat=True)
-            return Cliente.objects.filter(id__in=clientes_ids)
+            return Cliente.objects.filter(id__in=clientes_ids, empresas=self.empresa)
         
         elif self.criterio == 'top_compradores':
-            clientes_ids = Venta.objects.values('cliente').annotate(
+            clientes_ids = Venta.objects.filter(empresa=self.empresa).values('cliente').annotate(
                 total_comprado=Sum('total')
             ).order_by('-total_comprado')[:self.top_cantidad].values_list('cliente', flat=True)
-            return Cliente.objects.filter(id__in=clientes_ids)
+            return Cliente.objects.filter(id__in=clientes_ids, empresas=self.empresa)
         
         else:
             # Participantes agregados manualmente
             return Cliente.objects.filter(
+                empresas=self.empresa,
                 id__in=self.participantes.values_list('cliente_id', flat=True)
             )
     
@@ -151,6 +156,7 @@ class Participante(models.Model):
 
 class Premio(models.Model):
     """Premios reutilizables para sorteos"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='premios')
     
     TIPO_PREMIO = [
         ('descuento_porcentaje', '% Descuento'),
@@ -238,7 +244,6 @@ class SorteoPremio(models.Model):
         verbose_name = "Premio de Sorteo"
         verbose_name_plural = "Premios de Sorteos"
         ordering = ['sorteo', 'orden', 'agregado_en']
-        unique_together = ['sorteo', 'premio', 'numero_cofre', 'color']
     
     def __str__(self):
         return f"{self.premio.nombre} en {self.sorteo.nombre}"

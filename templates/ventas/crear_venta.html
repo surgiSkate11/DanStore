@@ -57,6 +57,7 @@
     /* Búsqueda de cliente personalizada profesional */
     .search-cliente-wrapper {
         position: relative;
+        z-index: 1050;
     }
     
     #searchClienteInput {
@@ -73,33 +74,80 @@
     
     .search-results-dropdown {
         position: absolute;
-        top: 100%;
+        top: calc(100% + 8px);
         left: 0;
         right: 0;
-        max-height: 300px;
+        max-height: 350px;
         overflow-y: auto;
-        background: white;
-        border: 1px solid #667eea;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1000;
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 15px 40px rgba(0,0,0,0.25) !important;
+        z-index: 9999 !important;
         display: none;
+    }
+    
+    .search-results-dropdown::-webkit-scrollbar {
+        width: 8px;
+    }
+    .search-results-dropdown::-webkit-scrollbar-track {
+        background: #f8f9fa;
+        border-radius: 0 12px 12px 0;
+    }
+    .search-results-dropdown::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+    .search-results-dropdown::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
     }
     
     .search-results-dropdown.show {
         display: block;
     }
     
+    .search-dropdown-header {
+        padding: 10px 16px;
+        background: #f8f9fa;
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #6b7280;
+        text-transform: uppercase;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
     .search-result-item {
         padding: 12px 16px;
         cursor: pointer;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid #f3f4f6;
+        background-color: #ffffff;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .search-result-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #e0e7ff;
+        color: #4f46e5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
         transition: all 0.2s ease;
     }
     
     .search-result-item:hover {
         background: #f8f9ff;
-        padding-left: 20px;
+    }
+    
+    .search-result-item:hover .search-result-icon {
+        background: #4f46e5;
+        color: #ffffff;
     }
     
     .search-result-item.active {
@@ -111,15 +159,22 @@
         border-bottom: none;
     }
     
+    .search-result-info {
+        flex: 1;
+    }
+    
     .search-result-nombre {
         font-weight: 600;
-        font-size: 15px;
+        font-size: 0.95rem;
         margin-bottom: 2px;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
     }
     
     .search-result-telefono {
-        font-size: 13px;
-        color: #666;
+        font-size: 0.8rem;
+        color: #6b7280;
     }
     
     .search-result-item.active .search-result-telefono {
@@ -129,7 +184,9 @@
     .no-results-message {
         padding: 20px;
         text-align: center;
-        color: #999;
+        color: #6b7280;
+        background: #f9fafb;
+        border-radius: 0 0 12px 12px;
     }
     
     .input-group-text {
@@ -286,6 +343,12 @@
     .form-section:hover {
         box-shadow: 0 8px 24px rgba(0,0,0,0.12);
         transform: translateY(-2px);
+    }
+    
+    /* Z-index fix for Client Search */
+    .form-section-cliente {
+        position: relative;
+        z-index: 1050;
     }
     
     /* Badge Contador Profesional */
@@ -935,7 +998,7 @@
         <!-- SECCIÓN 1: Información del Cliente -->
         <div class="row">
             <div class="col-12">
-                <div class="form-section">
+                <div class="form-section form-section-cliente">
                     <h5>
                         <i class="bi bi-person-fill" style="color: #667eea;"></i> Información del Cliente
                     </h5>
@@ -956,33 +1019,49 @@
                     </div>
                     <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
                     {% else %}
-                    <!-- Modo creación: Mostrar clientes disponibles del Google Sheets -->
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold mb-2">Seleccionar Cliente (desde Google Sheets)</label>
-                        <select name="cliente_id" id="selectCliente" class="form-select form-select-lg" required>
-                            <option value="">-- Selecciona un cliente --</option>
-                            {% for cliente in clientes %}
-                            <option value="{{ cliente.nombre }}">
-                                {{ cliente.nombre }}
-                                {% if cliente.telefono %} - {{ cliente.telefono }}{% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> Los clientes se sincronizan automáticamente desde Google Sheets
-                        </small>
-                    </div>
-                    
-                    <!-- Información adicional del cliente (teléfono/dirección) -->
-                    <div id="infoClienteSeleccionado" style="display: none;" class="mt-3 p-3 bg-light rounded">
-                        <div class="d-flex align-items-start">
-                            <i class="bi bi-info-circle-fill text-primary me-2" style="font-size: 1.2rem;"></i>
+                        {% if cliente_seleccionado %}
+                        <div class="alert alert-info d-flex align-items-center" style="background: #e0f2fe; border-color: #bae6fd; border-radius: 12px;">
+                            <i class="bi bi-person-check-fill me-3" style="font-size: 2.5rem; color: #0284c7;"></i>
                             <div>
-                                <p class="mb-1"><strong>Teléfono:</strong> <span id="telefonoClienteInfo">-</span></p>
-                                <p class="mb-0"><strong>Dirección:</strong> <span id="direccionClienteInfo">-</span></p>
+                                <h5 class="mb-1" style="color: #0c4a6e; font-weight: 700;">{{ cliente_seleccionado }}</h5>
+                                <p class="mb-0 small" style="color: #0284c7;">Cliente preseleccionado automáticamente desde las deudas</p>
                             </div>
                         </div>
-                    </div>
+                        <input type="hidden" name="cliente_id" id="selectCliente" value="{{ cliente_seleccionado }}">
+                        {% else %}
+                        <div class="mb-3">
+                            <div class="d-flex gap-2 align-items-stretch" style="position: relative; z-index: 1050;">
+                                <div class="search-cliente-wrapper flex-grow-1" style="position: relative;">
+                                    <div class="input-group input-group-lg" style="border-radius: 10px; border: 2px solid #e5e7eb; overflow: visible; background: white; height: 100%;">
+                                        <span class="input-group-text bg-white border-0 text-primary">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" id="searchClienteInput" class="form-control border-0 shadow-none" placeholder="Escribe el nombre, Cédula o RUC..." autocomplete="off">
+                                        <button type="button" class="btn btn-light bg-white border-0" id="clearSearchBtn" style="display: none; border-radius: 0 8px 8px 0;">
+                                            <i class="bi bi-x-lg text-muted"></i>
+                                        </button>
+                                    </div>
+                                    <div class="search-results-dropdown" id="searchResultsDropdown"></div>
+                                </div>
+                                <button type="button" class="btn btn-primary d-flex align-items-center justify-content-center shadow-sm" data-bs-toggle="modal" data-bs-target="#crearClienteModal" style="border-radius: 10px; padding: 0 1.25rem; white-space: nowrap; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600; transition: all 0.3s ease;">
+                                    <i class="bi bi-person-plus-fill me-2"></i> Nuevo
+                                </button>
+                                <input type="hidden" name="cliente_id" id="selectCliente" required>
+                            </div>
+                        </div>
+                        
+                        <!-- Información adicional del cliente (teléfono/dirección) -->
+                        <div id="infoClienteSeleccionado" style="display: none;" class="mt-3 p-3 bg-light rounded" style="border-radius: 10px !important;">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-info-circle-fill text-primary me-2" style="font-size: 1.2rem;"></i>
+                                <div>
+                                    <p class="mb-1"><strong>CI/RUC:</strong> <span id="cedulaClienteInfo">-</span></p>
+                                    <p class="mb-1"><strong>Teléfono:</strong> <span id="telefonoClienteInfo">-</span></p>
+                                    <p class="mb-0"><strong>Dirección:</strong> <span id="direccionClienteInfo">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -1023,13 +1102,13 @@
                                     <!-- Categoría -->
                                     <div class="mb-2">
                                         <span class="badge" style="background: #667eea; font-size: 0.75rem;">
-                                            {{ detalle.producto.get_categoria_grupo_display }}
+                                        {{ detalle.producto.categoria|default:"General" }}
                                         </span>
                                     </div>
                                     
                                     <!-- Nombre del producto -->
                                     <h6 class="mb-1" style="font-weight: 600; font-size: 0.9rem; line-height: 1.3;">
-                                        {{ detalle.producto.tipo_prenda }}
+                                    {{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}
                                     </h6>
                                     
                                     <!-- Marca -->
@@ -1084,27 +1163,9 @@
                                 <label class="form-label fw-semibold mb-2" style="color: #374151; font-size: 0.9rem;">
                                     <i class="bi bi-funnel-fill" style="color: #667eea;"></i> Filtrar por Categoría
                                 </label>
-                                <div class="d-flex flex-wrap gap-2">
+                                <div class="d-flex flex-wrap gap-2" id="categoriasFiltroContainer">
                                     <button type="button" class="filter-btn active" data-categoria="todos">
                                         <i class="bi bi-grid-3x3-gap"></i> Todos
-                                    </button>
-                                    <button type="button" class="filter-btn" data-categoria="bebe">
-                                        <i class="bi bi-heart-fill"></i> Bebé
-                                    </button>
-                                    <button type="button" class="filter-btn" data-categoria="nina">
-                                        <i class="bi bi-balloon-fill"></i> Niña
-                                    </button>
-                                    <button type="button" class="filter-btn" data-categoria="nino">
-                                        <i class="bi bi-rocket-takeoff-fill"></i> Niño
-                                    </button>
-                                    <button type="button" class="filter-btn" data-categoria="adulto_mujer">
-                                        <i class="bi bi-person-fill"></i> Mamá
-                                    </button>
-                                    <button type="button" class="filter-btn" data-categoria="joven">
-                                        <i class="bi bi-star-fill"></i> Joven
-                                    </button>
-                                    <button type="button" class="filter-btn" data-categoria="adulto_hombre">
-                                        <i class="bi bi-person-fill-gear"></i> Papá
                                     </button>
                                 </div>
                             </div>
@@ -1125,8 +1186,8 @@
                         <div class="card producto-seleccionable" 
                              data-producto-id="{{ producto.id }}" 
                              data-precio="{{ producto.precio }}"
-                             data-categoria="{{ producto.categoria_grupo }}"
-                             data-nombre="{{ producto.tipo_prenda|lower }}">
+                         data-categoria="{{ producto.categoria }}"
+                         data-nombre="{{ producto.tipo_producto|lower }} {{ producto.nombre|lower }}">
                             <div class="position-relative">
                                 {% if producto.imagen %}
                                 <img src="{{ producto.imagen.url }}" class="card-img-top" 
@@ -1140,10 +1201,10 @@
                             </div>
                             <div class="card-body p-2">
                                 <h6 class="card-title mb-1" style="font-size: 0.875rem;">
-                                    {{ producto.tipo_prenda }}
+                            {{ producto.tipo_producto|default:producto.nombre }}
                                 </h6>
                                 <p class="card-text mb-1">
-                                    <small class="text-muted">{{ producto.get_categoria_grupo_display }}</small>
+                            <small class="text-muted">{{ producto.categoria|default:"General" }}</small>
                                 </p>
                                 <p class="card-text mb-0">
                                     <strong style="color: #10b981;">${{ producto.precio }}</strong>
@@ -1334,6 +1395,7 @@
             </p>
         </div>
     </form>
+    
 </div>
 
 <script>
@@ -1347,17 +1409,38 @@ let todosLosProductos = [];
 // Inicializar productos
 document.addEventListener('DOMContentLoaded', function() {
     todosLosProductos = Array.from(document.querySelectorAll('.producto-seleccionable'));
+    
+    // Generar botones de categoría dinámicamente
+    const categoriasUnicas = new Set();
+    todosLosProductos.forEach(p => {
+        if (p.dataset.categoria && p.dataset.categoria.trim() !== '' && p.dataset.categoria.trim() !== 'None') {
+            categoriasUnicas.add(p.dataset.categoria.trim());
+        }
+    });
+    
+    const contenedorFiltros = document.getElementById('categoriasFiltroContainer');
+    if (contenedorFiltros) {
+        categoriasUnicas.forEach(cat => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'filter-btn';
+            btn.dataset.categoria = cat;
+            btn.innerHTML = `<i class="bi bi-tag"></i> ${cat}`;
+            contenedorFiltros.appendChild(btn);
+        });
+    }
+
     aplicarFiltrosYPaginacion();
     
     // Event listeners para filtros
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+    document.getElementById('categoriasFiltroContainer').addEventListener('click', function(e) {
+        const btn = e.target.closest('.filter-btn');
+        if (!btn) return;
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            categoriaActual = this.dataset.categoria;
-            paginaActual = 1;
-            aplicarFiltrosYPaginacion();
-        });
+        btn.classList.add('active');
+        categoriaActual = btn.dataset.categoria;
+        paginaActual = 1;
+        aplicarFiltrosYPaginacion();
     });
     
     // Event listener para búsqueda
@@ -1461,17 +1544,7 @@ function agregarProductoTabla(productoId) {
     const nombre = card.querySelector('.card-title').textContent.trim();
     const precio = parseFloat(card.dataset.precio) || 0;
     const categoria = card.dataset.categoria || 'Sin categoría';
-    
-    // Mapear categorías a nombres legibles
-    const categoriaMap = {
-        'bebe': 'Bebé',
-        'nina': 'Niña',
-        'nino': 'Niño',
-        'joven': 'Joven',
-        'adulto_mujer': 'Mamá',
-        'adulto_hombre': 'Papá'
-    };
-    const categoriaNombre = categoriaMap[categoria] || categoria;
+    const categoriaNombre = categoria;
     
     const tbody = document.getElementById('tablaProductosSeleccionados');
     
@@ -1481,16 +1554,8 @@ function agregarProductoTabla(productoId) {
         filaVacia.remove();
     }
     
-    // Colores dinámicos por categoría para identificación visual profesional
-    const coloresCategoria = {
-        'bebe': { bg: '#fef3c7', border: '#fbbf24', icon: '#f59e0b' },
-        'nina': { bg: '#fce7f3', border: '#f472b6', icon: '#ec4899' },
-        'nino': { bg: '#dbeafe', border: '#60a5fa', icon: '#3b82f6' },
-        'joven': { bg: '#e0e7ff', border: '#818cf8', icon: '#6366f1' },
-        'adulto_mujer': { bg: '#fce7f3', border: '#f472b6', icon: '#db2777' },
-        'adulto_hombre': { bg: '#dbeafe', border: '#3b82f6', icon: '#1d4ed8' }
-    };
-    const colores = coloresCategoria[categoria] || { bg: '#f3f4f6', border: '#9ca3af', icon: '#6b7280' };
+    // Colores genéricos
+    const colores = { bg: '#f8f9ff', border: '#667eea', icon: '#4f46e5' };
     
     // Crear nueva fila con diseño tipo factura profesional
     const fila = document.createElement('tr');
@@ -1596,19 +1661,26 @@ document.getElementById('productosGrid').addEventListener('click', function(e) {
 function actualizarContador() {
     const contador = document.getElementById('contadorProductos');
     const badge = document.getElementById('badgeContador');
-    contador.textContent = productosSeleccionados.size;
+    if (contador) contador.textContent = productosSeleccionados.size;
     
     // Animación del badge
-    if (productosSeleccionados.size > 0) {
+    if (badge && productosSeleccionados.size > 0) {
         badge.classList.add('tiene-productos');
         setTimeout(() => badge.classList.remove('tiene-productos'), 600);
     }
     
     // Habilitar/deshabilitar botón
     const btnCrear = document.getElementById('btnCrearVenta');
-    const tieneCliente = document.getElementById('clienteIdHidden').value;
-    
-    btnCrear.disabled = !(productosSeleccionados.size > 0 && tieneCliente);
+    if (btnCrear) {
+        const modoEdicion = "{{ modo_edicion|yesno:'true,false' }}" === "true";
+        if (modoEdicion) {
+            btnCrear.disabled = !(productosSeleccionados.size > 0);
+        } else {
+            const selectCliente = document.getElementById('selectCliente');
+            const tieneCliente = selectCliente && selectCliente.value;
+            btnCrear.disabled = !(productosSeleccionados.size > 0 && tieneCliente);
+        }
+    }
 }
 
 // Agregar productos seleccionados al formulario antes de enviar
@@ -1648,17 +1720,7 @@ function agregarProductoTabla(productoId) {
     const nombre = card.querySelector('.card-title').textContent.trim();
     const precio = parseFloat(card.dataset.precio) || 0;
     const categoria = card.dataset.categoria || 'Sin categoría';
-    
-    // Mapear categorías a nombres legibles
-    const categoriaMap = {
-        'bebe': 'Bebé',
-        'nina': 'Niña',
-        'nino': 'Niño',
-        'joven': 'Joven',
-        'adulto_mujer': 'Mamá',
-        'adulto_hombre': 'Papá'
-    };
-    const categoriaNombre = categoriaMap[categoria] || categoria;
+    const categoriaNombre = categoria;
     
     const tbody = document.getElementById('tablaProductosSeleccionados');
     
@@ -1808,6 +1870,9 @@ calcularTotales();
 
 <!-- Búsqueda de Cliente Personalizada (solo en modo creación) -->
 {% if not modo_edicion %}
+<!-- Contenedores seguros de JSON para evitar errores en el editor de código -->
+<script id="clientes-data" type="application/json">{{ clientes_json|safe }}</script>
+<script id="productos-cliente-ids" type="application/json">{{ productos_cliente_ids|default:"[]"|safe }}</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectCliente = document.getElementById('selectCliente');
@@ -1815,37 +1880,133 @@ document.addEventListener('DOMContentLoaded', function() {
     const telefonoInfo = document.getElementById('telefonoClienteInfo');
     const direccionInfo = document.getElementById('direccionClienteInfo');
     
-    // Datos de clientes con teléfono y dirección
-    const clientesData = {{ clientes_json|safe }};
+    // Parsear datos JSON de forma segura
+    const clientesData = JSON.parse(document.getElementById('clientes-data').textContent);
     
-    if (selectCliente) {
-        // Mostrar información del cliente cuando se selecciona
-        selectCliente.addEventListener('change', function() {
-            const nombreCliente = this.value;
-            
-            if (nombreCliente) {
-                // Buscar datos del cliente
-                const clienteSeleccionado = clientesData.find(c => c.nombre === nombreCliente);
-                
-                if (clienteSeleccionado) {
-                    // Mostrar teléfono y dirección si existen
-                    telefonoInfo.textContent = clienteSeleccionado.telefono || 'No disponible';
-                    direccionInfo.textContent = clienteSeleccionado.direccion || 'No disponible';
-                    infoCliente.style.display = 'block';
-                } else {
-                    infoCliente.style.display = 'none';
-                }
-                
-                // Habilitar formulario
-                actualizarContador();
+    const searchInput = document.getElementById('searchClienteInput');
+    const searchDropdown = document.getElementById('searchResultsDropdown');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    
+    if (searchInput) {
+        function renderDropdown(results, searchTerm, isTop5 = false) {
+            searchDropdown.innerHTML = '';
+            if (results.length === 0) {
+                const div = document.createElement('div');
+                div.className = 'no-results-message';
+                div.innerHTML = `<i class="bi bi-person-plus-fill text-primary" style="font-size: 1.5rem; display: block; margin-bottom: 5px;"></i> <span>Crear nuevo cliente: <strong>${searchTerm}</strong></span>`;
+                searchDropdown.appendChild(div);
             } else {
+                if (isTop5 && results.length > 0) {
+                    const header = document.createElement('div');
+                    header.className = 'search-dropdown-header';
+                    header.innerHTML = '<i class="bi bi-star-fill text-warning"></i> Clientes Frecuentes';
+                    searchDropdown.appendChild(header);
+                }
+                results.forEach(cliente => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    
+                    const comprasHtml = cliente.compras ? `<span class="badge bg-success bg-opacity-10 text-success rounded-pill ms-2" style="font-size: 0.7rem;">${cliente.compras} compras</span>` : '';
+                    
+                    div.innerHTML = `
+                        <div class="search-result-icon">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="search-result-info">
+                            <div class="search-result-nombre">${cliente.nombre} ${comprasHtml}</div>
+                            <div class="search-result-telefono">
+                                ${cliente.ruc_cedula ? `CI/RUC: <strong>${cliente.ruc_cedula}</strong>` : ''}
+                                ${cliente.ruc_cedula && cliente.telefono ? ' | ' : ''}
+                                ${cliente.telefono ? `<i class="bi bi-telephone"></i> ${cliente.telefono}` : ''}
+                            </div>
+                        </div>
+                    `;
+                    div.addEventListener('click', () => seleccionarCliente(cliente));
+                    searchDropdown.appendChild(div);
+                });
+            }
+            searchDropdown.classList.add('show');
+        }
+
+        function seleccionarCliente(clienteObj) {
+            searchInput.value = clienteObj.nombre;
+            selectCliente.value = clienteObj.nombre; 
+            searchDropdown.classList.remove('show');
+            clearBtn.style.display = 'block';
+            
+            if (infoCliente) {
+                const cedulaInfo = document.getElementById('cedulaClienteInfo');
+                if (cedulaInfo) cedulaInfo.textContent = clienteObj.ruc_cedula || 'No disponible';
+                if (telefonoInfo) telefonoInfo.textContent = clienteObj.telefono || 'No disponible';
+                if (direccionInfo) direccionInfo.textContent = clienteObj.direccion || 'No disponible';
+                infoCliente.style.display = 'block';
+            }
+            actualizarContador();
+        }
+
+        searchInput.addEventListener('input', function() {
+            const term = this.value.trim().toLowerCase();
+            
+            selectCliente.value = this.value; 
+            
+            if (term.length > 0) {
+                clearBtn.style.display = 'block';
+                if (infoCliente) infoCliente.style.display = 'none'; 
+                
+                const filtered = clientesData.filter(c => 
+                    (c.nombre && c.nombre.toLowerCase().includes(term)) || 
+                    (c.ruc_cedula && c.ruc_cedula.toLowerCase().includes(term)) ||
+                    (c.telefono && c.telefono.toLowerCase().includes(term))
+                ).slice(0, 8); 
+                
+                renderDropdown(filtered, this.value, false);
+            } else {
+                clearBtn.style.display = 'none';
+                const top5 = [...clientesData].sort((a, b) => (b.compras || 0) - (a.compras || 0)).slice(0, 5);
+                renderDropdown(top5, '', true);
                 infoCliente.style.display = 'none';
             }
+            actualizarContador();
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-cliente-wrapper') && searchDropdown) {
+                searchDropdown.classList.remove('show');
+            }
+        });
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value.trim().length > 0) {
+                searchDropdown.classList.add('show');
+            } else if (clientesData.length > 0) {
+                const top5 = [...clientesData].sort((a, b) => (b.compras || 0) - (a.compras || 0)).slice(0, 5);
+                renderDropdown(top5, '', true);
+            }
+        });
+        
+        searchInput.addEventListener('click', function() {
+            if (this.value.trim().length === 0 && clientesData.length > 0 && !searchDropdown.classList.contains('show')) {
+                const top5 = [...clientesData].sort((a, b) => (b.compras || 0) - (a.compras || 0)).slice(0, 5);
+                renderDropdown(top5, '', true);
+            }
+        });
+        
+        clearBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            selectCliente.value = '';
+            this.style.display = 'none';
+            
+            const top5 = [...clientesData].sort((a, b) => (b.compras || 0) - (a.compras || 0)).slice(0, 5);
+            renderDropdown(top5, '', true);
+            
+            if (infoCliente) infoCliente.style.display = 'none';
+            actualizarContador();
+            searchInput.focus();
         });
     }
     
     // Preseleccionar productos del cliente automáticamente
-    const productosClienteIds = {{ productos_cliente_ids|default:"[]"|safe }};
+    const productosClienteIds = JSON.parse(document.getElementById('productos-cliente-ids').textContent);
     
     if (productosClienteIds.length > 0) {
         console.log('Preseleccionando productos del cliente:', productosClienteIds);
@@ -1869,6 +2030,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
 {% else %}
 <!-- Modo Edición: Cálculo simplificado de totales -->
 <script>
@@ -1892,26 +2054,6 @@ document.addEventListener('DOMContentLoaded', function() {
             filaVacia.remove();
         }
         
-        // Mapear categorías a nombres legibles
-        const categoriaMap = {
-            'bebe': 'Bebé',
-            'nina': 'Niña',
-            'nino': 'Niño',
-            'joven': 'Joven',
-            'adulto_mujer': 'Mamá',
-            'adulto_hombre': 'Papá'
-        };
-        
-        // Colores por categoría
-        const coloresCategoria = {
-            'bebe': { bg: '#fef3c7', border: '#fbbf24', icon: '#f59e0b' },
-            'nina': { bg: '#fce7f3', border: '#f472b6', icon: '#ec4899' },
-            'nino': { bg: '#dbeafe', border: '#60a5fa', icon: '#3b82f6' },
-            'joven': { bg: '#e0e7ff', border: '#818cf8', icon: '#6366f1' },
-            'adulto_mujer': { bg: '#fce7f3', border: '#f472b6', icon: '#db2777' },
-            'adulto_hombre': { bg: '#dbeafe', border: '#3b82f6', icon: '#1d4ed8' }
-        };
-        
         productosCards.forEach(function(card, index) {
             const nombre = card.querySelector('h6').textContent.trim();
             const precioElem = card.querySelector('.precio-producto-edicion');
@@ -1919,15 +2061,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const categoriaElem = card.querySelector('.badge');
             const categoria = categoriaElem.textContent.trim();
             
-            // Determinar el slug de categoría para los colores
-            let categoriaSlug = 'bebe';
-            if (categoria.includes('Niña')) categoriaSlug = 'nina';
-            else if (categoria.includes('Niño')) categoriaSlug = 'nino';
-            else if (categoria.includes('Joven')) categoriaSlug = 'joven';
-            else if (categoria.includes('Mamá')) categoriaSlug = 'adulto_mujer';
-            else if (categoria.includes('Papá')) categoriaSlug = 'adulto_hombre';
-            
-            const colores = coloresCategoria[categoriaSlug] || { bg: '#f3f4f6', border: '#9ca3af', icon: '#6b7280' };
+            const colores = { bg: '#f8f9ff', border: '#667eea', icon: '#4f46e5' };
             
             // Crear fila en la tabla
             const fila = document.createElement('tr');
@@ -2039,148 +2173,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endif %}
 
-<!-- Script eliminado de búsqueda anterior -->
-<script>
-// Las variables y funciones de búsqueda ya no son necesarias
-// ya que los clientes vienen del Google Sheets directamente
-        
-        clearBtn.style.display = 'block';
-        
-        // Filtrar clientes
-        filteredResults = [];
-        clientesData.forEach(cliente => {
-            const searchText = cliente.dataset.searchtext;
-            if (searchText.includes(searchTerm)) {
-                filteredResults.push({
-                    nombre: cliente.dataset.nombre,
-                    telefono: cliente.dataset.telefono,
-                    direccion: cliente.dataset.direccion
-                });
-            }
-        });
-        
-        // Limitar a 5 resultados
-        filteredResults = filteredResults.slice(0, 5);
-        
-        // Mostrar resultados
-        mostrarResultados(filteredResults, searchTerm);
-        selectedIndex = -1;
-    });
-    
-    // Mostrar resultados en el dropdown
-    function mostrarResultados(resultados, searchTerm) {
-        if (resultados.length === 0) {
-            searchResults.innerHTML = `
-                <div class="no-results-message">
-                    <i class="bi bi-emoji-frown" style="font-size: 24px; color: #ccc;"></i>
-                    <p class="mb-0 mt-2">No se encontraron clientes</p>
-                    <small>Intenta con otro nombre o teléfono</small>
-                </div>
-            `;
-            searchResults.classList.add('show');
-            return;
-        }
-        
-        let html = '';
-        resultados.forEach((cliente, index) => {
-            const nombreHighlight = resaltarTexto(cliente.nombre, searchTerm);
-            const telefonoHighlight = resaltarTexto(cliente.telefono, searchTerm);
-            
-            html += `
-                <div class="search-result-item" data-index="${index}">
-                    <div class="search-result-nombre">${nombreHighlight}</div>
-                    <div class="search-result-telefono">
-                        <i class="bi bi-telephone"></i> ${telefonoHighlight}
-                    </div>
-                </div>
-            `;
-        });
-        
-        searchResults.innerHTML = html;
-        searchResults.classList.add('show');
-        
-        // Agregar event listeners a los resultados
-        document.querySelectorAll('.search-result-item').forEach(item => {
-            item.addEventListener('click', function() {
-                const index = parseInt(this.dataset.index);
-                seleccionarCliente(filteredResults[index]);
-            });
-            
-            item.addEventListener('mouseenter', function() {
-                document.querySelectorAll('.search-result-item').forEach(el => el.classList.remove('active'));
-                this.classList.add('active');
-                selectedIndex = parseInt(this.dataset.index);
-            });
-        });
-    }
-    
-    // Resaltar texto coincidente
-    function resaltarTexto(texto, busqueda) {
-        if (!busqueda) return texto;
-        const regex = new RegExp(`(${busqueda})`, 'gi');
-        return texto.replace(regex, '<strong style="background: #fef08a;">$1</strong>');
-    }
-    
-    // Seleccionar cliente
-    function seleccionarCliente(cliente) {
-        console.log('✅ Cliente seleccionado:', cliente);
-        
-        searchInput.value = cliente.nombre;
-        // Guardar el nombre del cliente (para Google Sheets clientes no tienen ID)
-        clienteIdHidden.value = cliente.nombre;
-        searchResults.classList.remove('show');
-        clearBtn.style.display = 'block';
-        
-        // Mostrar información del cliente
-        document.getElementById('clienteTelefono').textContent = cliente.telefono || 'No disponible';
-        document.getElementById('clienteDireccion').textContent = cliente.direccion || 'No disponible';
-        infoCliente.style.display = 'block';
-        
-        actualizarContador();
-    }
-    
-    // Navegación con teclado
-    searchInput.addEventListener('keydown', function(e) {
-        const items = document.querySelectorAll('.search-result-item');
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-            actualizarSeleccion(items);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedIndex = Math.max(selectedIndex - 1, 0);
-            actualizarSeleccion(items);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (selectedIndex >= 0 && filteredResults[selectedIndex]) {
-                seleccionarCliente(filteredResults[selectedIndex]);
-            }
-        } else if (e.key === 'Escape') {
-            searchResults.classList.remove('show');
-        }
-    });
-    
-    function actualizarSeleccion(items) {
-        items.forEach((item, index) => {
-            if (index === selectedIndex) {
-                item.classList.add('active');
-<!-- Función para actualizar contador de productos -->
-<script>
-function actualizarContador() {
-    // Habilitar/deshabilitar botón
-    const btnCrear = document.getElementById('btnCrearVenta');
-    const modoEdicion = {{ modo_edicion|default:'false'|lower }};
-    
-    if (modoEdicion) {
-        // En modo edición, solo se requieren productos
-        btnCrear.disabled = !(productosSeleccionados.size > 0);
-    } else {
-        // En modo creación, se requieren productos y cliente
-        const selectCliente = document.getElementById('selectCliente');
-        const tieneCliente = selectCliente && selectCliente.value;
-        btnCrear.disabled = !(productosSeleccionados.size > 0 && tieneCliente);
-    }
-}
-</script>
 {% endblock %}

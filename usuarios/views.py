@@ -20,10 +20,12 @@ def onboarding(request):
     if request.method == 'POST':
         negocio_tipo = request.POST.get('negocio_tipo')
         nombre_negocio = request.POST.get('nombre_negocio', '')
+        tipo_entidad = request.POST.get('tipo_entidad', 'negocio')
         
         if negocio_tipo in dict(UserProfile.TIPO_NEGOCIO_CHOICES):
             profile.negocio_tipo = negocio_tipo
             profile.nombre_negocio = nombre_negocio
+            profile.tipo_entidad = tipo_entidad
             profile.onboarding_completado = True
             profile.save()
             messages.success(request, f"¡Bienvenido! Tu negocio '{nombre_negocio}' ha sido creado.")
@@ -31,7 +33,8 @@ def onboarding(request):
     
     context = {
         'profile': profile,
-        'tipos_negocio': UserProfile.TIPO_NEGOCIO_CHOICES
+        'tipos_negocio': UserProfile.TIPO_NEGOCIO_CHOICES,
+        'tipos_entidad': UserProfile.TIPO_ENTIDAD_CHOICES
     }
     return render(request, 'usuarios/onboarding.html', context)
 
@@ -54,6 +57,7 @@ def cambiar_tipo_negocio(request):
 @login_required
 @require_http_methods(['POST'])
 def cargar_demo_data(request):
+    
     """Carga datos de demostración"""
     try:
         call_command('cargar_demo_data', request.user.id)
@@ -87,4 +91,3 @@ def limpiar_demo_data(request):
         messages.error(request, f"Error al limpiar demo data: {str(e)}")
     
     return redirect('home')
-

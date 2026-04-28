@@ -1,181 +1,113 @@
 from django import forms
-from .models import Producto, TipoPrenda
+from .models import Producto, TipoProducto
+
 
 class ProductoForm(forms.ModelForm):
-    """Formulario dinámico para crear y editar productos según tipo de negocio"""
-    
-    # Campos dinámicos para atributos (se generan según negocio_tipo)
-    atributos_json = forms.CharField(
-        required=False,
-        widget=forms.HiddenInput()
-    )
+    """Formulario para crear y editar productos"""
     
     class Meta:
         model = Producto
-        fields = ['imagen', 'descripcion', 'categoria_grupo', 'rango_edad', 
-                  'tipo_prenda', 'estado', 'precio', 'atributos']
+        fields = ['nombre', 'descripcion', 'imagen', 'categoria', 'tipo_producto', 
+                  'variante', 'precio', 'precio_costo', 'marca', 'color', 'stock', 'estado']
         widgets = {
-            'imagen': forms.FileInput(attrs={
+            'nombre': forms.TextInput(attrs={
                 'class': 'form-control',
-                'accept': 'image/*'
+                'placeholder': 'Nombre del producto'
             }),
             'descripcion': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'Descripción del producto'
             }),
-            'categoria_grupo': forms.Select(attrs={
+            'imagen': forms.FileInput(attrs={
                 'class': 'form-control',
-                'id': 'id_categoria_grupo'
+                'accept': 'image/*'
             }),
-            'rango_edad': forms.TextInput(attrs={
+            'categoria': forms.TextInput(attrs={
                 'class': 'form-control',
-                'id': 'id_rango_edad',
-                'placeholder': 'Ej: M, 5, 0-3, etc.'
+                'placeholder': 'Ej: General, Mujer, Electrónica, Postres, Servicios'
             }),
-            'tipo_prenda': forms.Select(attrs={
+            'tipo_producto': forms.Select(attrs={
                 'class': 'form-control'
             }),
-            'estado': forms.Select(attrs={
-                'class': 'form-control'
+            'variante': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Talla, modelo, sabor, versión, etc.'
             }),
             'precio': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'placeholder': '0.00'
             }),
-            'atributos': forms.HiddenInput(),
+            'precio_costo': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '0.00 (opcional)'
+            }),
+            'marca': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Marca o proveedor (opcional)'
+            }),
+            'color': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Color (opcional)'
+            }),
+            'stock': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '1'
+            }),
+            'estado': forms.Select(attrs={
+                'class': 'form-control'
+            }),
         }
-    
-    def __init__(self, *args, negocio_tipo=None, **kwargs):
+
+    def __init__(self, *args, **kwargs):
+        # Extraemos la empresa si se pasa en kwargs
+        self.empresa = kwargs.pop('empresa', None)
         super().__init__(*args, **kwargs)
-        self.negocio_tipo = negocio_tipo or 'ropa'
         
-        # tipo_prenda es requerido
-        self.fields['tipo_prenda'].required = True
+        # Configurar opciones de Categoría dinámicamente
+        queryset_productos = Producto.objects.filter(empresa=self.empresa) if self.empresa else Producto.objects.all()
+        categorias = list(queryset_productos.exclude(categoria='').values_list('categoria', flat=True).distinct().order_by('categoria'))
         
-        # Campos dinámicos según negocio_tipo
-        self._agregar_campos_dinamicos()
-    
-    def _agregar_campos_dinamicos(self):
-        """Agrega campos dinámicos según el tipo de negocio"""
+        if self.instance and self.instance.pk and self.instance.categoria and self.instance.categoria not in categorias:
+            categorias.append(self.instance.categoria)
+            
+        choices = [('', '--------')] + [(c, c) for c in categorias]
         
-        # Definir atributos esperados por negocio_tipo
-        atributos_por_tipo = {
-            'ropa': {
-                'talla': forms.CharField(
-                    max_length=50, required=False, 
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: M, L, XL'})
-                ),
-                'color': forms.CharField(
-                    max_length=50, required=False,
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Negro, Azul'})
-                ),
-            },
-            'tecnologia': {
-                'marca': forms.CharField(
-                    max_length=100, required=False,
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Marca'})
-                ),
-                'modelo': forms.CharField(
-                    max_length=100, required=False,
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Modelo'})
-                ),
-                'especificaciones': forms.CharField(
-                    required=False,
-                    widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Especificaciones'})
-                ),
-            },
-            'alimentos': {
-                'vencimiento': forms.DateField(
-                    required=False,
-                    widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
-                ),
-                'peso': forms.CharField(
-                    max_length=100, required=False,
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 500g, 1kg'})
-                ),
-                'lote': forms.CharField(
-                    max_length=100, required=False,
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de lote'})
-                ),
-            },
-            'servicios': {
-                'fecha_servicio': forms.DateField(
-                    required=False,
-                    widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
-                ),
-                'ubicacion': forms.CharField(
-                    max_length=200, required=False,
-                    widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ubicación'})
-                ),
-            },
-        }
+        self.fields['categoria'].widget = forms.Select(attrs={'class': 'form-control'})
+        self.fields['categoria'].widget.choices = choices
         
-        # Agregar campos dinámicos al formulario
-        campos_dinamicos = atributos_por_tipo.get(self.negocio_tipo, {})
-        for nombre, campo in campos_dinamicos.items():
-            self.fields[f'atributo_{nombre}'] = campo
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        tipo_prenda = cleaned_data.get('tipo_prenda')
-        
-        if not tipo_prenda:
-            raise forms.ValidationError('Debe seleccionar un tipo de prenda')
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        """Guarda el producto y compila los atributos dinámicos"""
-        instance = super().save(commit=False)
-        
-        # Compilar atributos dinámicos en el JSONField
-        atributos = {}
-        for campo, valor in self.cleaned_data.items():
-            if campo.startswith('atributo_'):
-                nombre_atributo = campo.replace('atributo_', '')
-                if valor:  # Solo guardar si tiene valor
-                    atributos[nombre_atributo] = str(valor)
-        
-        instance.atributos = atributos
-        
-        if commit:
-            instance.save()
-        
-        return instance
+        # ── HACER CAMPOS IMPORTANTES OBLIGATORIOS ──
+        self.fields['nombre'].required = True
+        self.fields['nombre'].error_messages = {'required': 'El nombre del producto es obligatorio.'}
+        self.fields['precio'].required = True
+        self.fields['precio'].error_messages = {'required': 'El precio de venta es obligatorio.'}
+        self.fields['stock'].required = True
+        self.fields['stock'].error_messages = {'required': 'Debes indicar el stock.'}
 
 
 
 class ProductoFiltroForm(forms.Form):
     """Formulario para filtrar productos"""
-    
-    categoria_grupo = forms.ChoiceField(
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-
     def __init__(self, *args, **kwargs):
+        empresa = kwargs.pop('empresa', None)
         super().__init__(*args, **kwargs)
-        # Categorías estándar (siempre presentes y en orden)
-        categorias_estandar = [
-            ('Bebé', 'Bebé'),
-            ('Niño', 'Niño'),
-            ('Niña', 'Niña'),
-            ('Joven/Adolescente', 'Joven/Adolescente'),
-            ('Adulto Hombre', 'Adulto Hombre'),
-            ('Adulto Mujer', 'Adulto Mujer'),
-        ]
-        # Obtener categorías adicionales de la base de datos (no estándar)
-        from .models import Producto
-        categorias_db = set(Producto.objects.values_list('categoria_grupo', flat=True).distinct())
-        categorias_db = {c for c in categorias_db if c and c not in dict(categorias_estandar)}
-        # Unir todas, primero las estándar, luego las adicionales ordenadas alfabéticamente
-        choices = [('', 'Todas las categorías')] + categorias_estandar + sorted((c, c) for c in categorias_db)
-        self.fields['categoria_grupo'].choices = choices
+        if empresa:
+            self.fields['tipo_producto'].queryset = TipoProducto.objects.filter(empresa=empresa)
     
-    tipo_prenda = forms.ModelChoiceField(
-        queryset=TipoPrenda.objects.all(),
+    categoria = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: General, Mujer, Electrónica, Postres...'
+        }),
+        help_text='Valores válidos: general (recomendado), bebe, nina, nino, joven, adulto_hombre, adulto_mujer, o cualquier categoría personalizada'
+    )
+    
+    tipo_producto = forms.ModelChoiceField(
+        queryset=TipoProducto.objects.none(), # Se llena en el __init__
         required=False,
         empty_label='Todos los tipos',
         widget=forms.Select(attrs={'class': 'form-control'})
@@ -192,6 +124,6 @@ class ProductoFiltroForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Buscar en descripción...'
+            'placeholder': 'Buscar en nombre o descripción...'
         })
     )

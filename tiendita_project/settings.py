@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 from decouple import config
 import os
+import platform
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,16 +26,41 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-%ufqav673r6x8-0k(mzj+_$k-+6l$w(ktrc62g0gkx$^f!hg7%')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+# ==============================
+# SEGURIDAD BÁSICA - DJANGO
+# ==============================
+# Nunca dejes DEBUG=True en producción
+DEBUG = config('DEBUG', default=False, cast=bool)
 
+# ==============================
+# ALLOWED_HOSTS
+# ==============================
 
-# Configuración segura de ALLOWED_HOSTS
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
-# Si DEBUG es True, permite todos los hosts (solo desarrollo local)
-if DEBUG:
-    ALLOWED_HOSTS = ['*']
+# Esta línea NO se cambia
+# Lee los hosts desde el archivo .env
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1'
+).split(',')
 
+# Limpia espacios
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
+
+# ==============================
+# VALIDACIONES DE SEGURIDAD
+# ==============================
+
+# No permitir '*' en producción
+if not DEBUG and '*' in ALLOWED_HOSTS:
+    raise ValueError(
+        "No se permite '*' en ALLOWED_HOSTS cuando DEBUG=False"
+    )
+
+# Obliga a configurar dominio real en producción
+if not DEBUG and ALLOWED_HOSTS == ['localhost', '127.0.0.1']:
+    raise ValueError(
+        "Debes configurar tu dominio en ALLOWED_HOSTS en producción"
+    )
 
 # Application definition
 
@@ -45,12 +72,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Apps propias
+    'dashboard',
     'usuarios',
     'productos',
     'catalogos',
     'clientes',
     'ventas',
     'sorteos',
+    'empresas',
 ]
 
 MIDDLEWARE = [
@@ -62,6 +91,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Middleware para Multi-tenant (identificar la empresa de cada usuario)
+    'empresas.middleware.TenantMiddleware',
 ]
 
 ROOT_URLCONF = 'tiendita_project.urls'
@@ -77,8 +108,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'usuarios.context_processors.vocabulario',
-            ],
+                'usuarios.context_processors.vocabulario',                'empresas.context_processors.empresa_actual',            ],
         },
     },
 ]
@@ -169,3 +199,10 @@ LOGOUT_REDIRECT_URL = 'login'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuración para pdfkit (wkhtmltopdf)
+if platform.system() == 'Windows':
+    # Ruta por defecto al instalar en Windows
+    WKHTMLTOPDF_CMD = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    WKHTMLTOPDF_CMD = '/usr/bin/wkhtmltopdf'

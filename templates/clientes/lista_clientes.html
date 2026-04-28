@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}Top Clientes - Tiendita{% endblock %}
+{% block title %}Lista de Clientes - Tiendita{% endblock %}
 
 {% block extra_css %}
 <style>
-    .clientes-header {
+    .gradient-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 12px;
-        padding: 2.5rem;
         color: white;
+        padding: 2rem 0;
+        border-radius: 12px;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
     
     .stat-card {
@@ -80,14 +80,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid px-4">
     <!-- Header -->
-    <div class="clientes-header">
-        <div>
-            <h2 class="mb-2">
-                <i class="bi bi-trophy"></i> Top Clientes VIP
-            </h2>
-            <p class="mb-0 opacity-75">Reconocimientos y estadísticas de nuestros mejores clientes</p>
+    <div class="gradient-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-2">
+                        <i class="bi bi-trophy"></i> Top Clientes Destacados
+                    </h1>
+                    <p class="mb-0 opacity-90">Reconocimientos y estadísticas de nuestros mejores clientes</p>
+                </div>
+                <div class="col-auto d-flex gap-2">
+                    <a href="{% url 'crear_cliente' %}" class="btn btn-light btn-lg shadow-sm">
+                        <i class="bi bi-plus-circle"></i> Crear Cliente
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
     

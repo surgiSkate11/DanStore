@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Nuevo Cliente - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Header de Página Profesional */
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem 2rem 2.5rem 2rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
+    }
+
+    .form-section {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem 2rem 0.5rem 2rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+    .form-section:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    .form-label.fw-semibold {
+        color: #374151;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-save {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        transition: all 0.3s ease;
+        padding: 1rem 3rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(102, 126, 234, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2 position-relative z-1" style="font-weight: 800;">
+                    <i class="bi bi-person-plus-fill"></i> Crear Nuevo Cliente
+                </h1>
+                <p class="mb-0 opacity-90 position-relative z-1">
+                    <i class="bi bi-info-circle"></i> Completa la información para registrar un nuevo cliente en el sistema.
+                </p>
+            </div>
+            <div class="col-md-4 text-end position-relative z-1">
+                <a href="{% url 'lista_clientes' %}" class="btn btn-outline-light btn-lg">
+                    <i class="bi bi-arrow-left-circle"></i> Volver a Clientes
+                </a>
+        </div>
+    </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-10">
+            <div class="form-section">
+                <h5 style="font-weight: 700; font-size: 1.25rem; color: #1f2937; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e5e7eb;">
+                    <i class="bi bi-person-lines-fill" style="color: #667eea; margin-right: 0.5rem; vertical-align: middle;"></i> Información del Cliente
+                </h5>
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                            <label for="{{ form.nombre.id_for_label }}" class="form-label fw-semibold">{{ form.nombre.label }} <span class="text-danger">*</span></label>
+                        {{ form.nombre }}
+                        {% if form.nombre.errors %}
+                            {% for error in form.nombre.errors %}
+                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="{{ form.ruc_cedula.id_for_label }}" class="form-label fw-semibold mb-0" id="labelDocumento">Cédula / RUC <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-2">
+                                {% for radio in form.tipo_identificacion %}
+                                <div class="form-check form-check-inline m-0">
+                                    {{ radio.tag }}
+                                    <label class="form-check-label small fw-medium" for="{{ radio.id_for_label }}" style="cursor: pointer;">{{ radio.choice_label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {{ form.ruc_cedula }}
+                        {% if form.ruc_cedula.errors %}
+                            {% for error in form.ruc_cedula.errors %}
+                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            {% for error in form.email.errors %}
+                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                            <label for="{{ form.telefono.id_for_label }}" class="form-label fw-semibold">{{ form.telefono.label }}</label>
+                        {{ form.telefono }}
+                        {% if form.telefono.errors %}
+                            {% for error in form.telefono.errors %}
+                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                            <label for="{{ form.direccion.id_for_label }}" class="form-label fw-semibold">{{ form.direccion.label }}</label>
+                        {{ form.direccion }}
+                        {% if form.direccion.errors %}
+                            {% for error in form.direccion.errors %}
+                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                            <label for="{{ form.notas.id_for_label }}" class="form-label fw-semibold">{{ form.notas.label }}</label>
+                        {{ form.notas }}
+                        {% if form.notas.errors %}
+                            {% for error in form.notas.errors %}
+                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                    <div class="text-center mb-5 mt-5">
+                        <button type="submit" class="btn btn-primary btn-save text-uppercase">
+                            <i class="bi bi-check-circle-fill me-2"></i> Guardar Cliente
+                        </button>
+                    </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function actualizarValidacionDocumento() {
+        const opciones = document.getElementsByName('tipo_identificacion');
+        const inputDocumento = document.getElementById('{{ form.ruc_cedula.id_for_label }}');
+        const labelDocumento = document.getElementById('labelDocumento');
+        
+        if (!inputDocumento || !labelDocumento) return;
+
+        let seleccion = 'cedula';
+        for (const op of opciones) {
+            if (op.checked) {
+                seleccion = op.value;
+                break;
+            }
+        }
+        
+        if (seleccion === 'cedula') {
+            inputDocumento.setAttribute('maxlength', '10');
+            inputDocumento.setAttribute('title', 'Solo se permiten números. 10 para cédula.');
+            inputDocumento.setAttribute('placeholder', 'Ej: 0999999999');
+            labelDocumento.innerHTML = 'Número de Cédula <span class="text-danger">*</span>';
+            if (inputDocumento.value.length > 10) {
+                inputDocumento.value = inputDocumento.value.substring(0, 10);
+            }
+        } else {
+            inputDocumento.setAttribute('maxlength', '13');
+            inputDocumento.setAttribute('title', 'Solo se permiten números. 13 para RUC.');
+            inputDocumento.setAttribute('placeholder', 'Ej: 0999999999001');
+            labelDocumento.innerHTML = 'Número de RUC <span class="text-danger">*</span>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        actualizarValidacionDocumento();
+    });
+</script>
+
+{% if form.errors %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Mostrar Errores Globales (non_field_errors)
+        {% for error in form.non_field_errors %}
+            showDjangoToast('{{ error|escapejs }}', 'error');
+        {% endfor %}
+        
+        // 2. Comprobar si hay errores específicos de campo y lanzar UN solo Toast de advertencia
+        let hayErroresDeCampo = false;
+        {% for field in form %}
+            {% if field.errors %}hayErroresDeCampo = true;{% endif %}
+        {% endfor %}
+        
+        if (hayErroresDeCampo) {
+            showDjangoToast('Por favor, revisa y corrige los errores resaltados en rojo.', 'warning');
+        }
+
+        // 3. Resaltar visualmente los campos con error
+        document.querySelectorAll('.field-error').forEach(errorDiv => {
+            const container = errorDiv.parentElement;
+            const input = container.querySelector('.form-control');
+            if (input) {
+                input.classList.add('is-invalid');
+                input.style.borderColor = '#ef4444';
+                input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

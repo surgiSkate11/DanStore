@@ -171,9 +171,12 @@
                     </h1>
                     <p class="mb-0 opacity-90">Gestiona tu catálogo de productos</p>
                 </div>
-                <div class="col-auto">
-                    <a href="{% url 'sincronizar_sheets' %}" class="btn btn-light btn-lg shadow-sm">
-                        <i class="bi bi-cloud-download"></i> Sincronizar desde Sheets
+                <div class="col-auto d-flex gap-2">
+                    <a href="{% url 'crear_producto' %}" class="btn btn-light btn-lg shadow-sm">
+                        <i class="bi bi-plus-circle"></i> Nuevo Producto
+                    </a>
+                    <a href="{% url 'importar_excel' %}" class="btn btn-outline-light btn-lg shadow-sm">
+                        <i class="bi bi-file-earmark-excel"></i> Importar
                     </a>
                 </div>
             </div>
@@ -191,25 +194,40 @@
                     <label class="form-label fw-semibold">
                         <i class="bi bi-people"></i> Categoría
                     </label>
-                    {{ filtro_form.categoria_grupo }}
+                    <select name="categoria" class="form-select" id="filtro-categoria">
+                        <option value="">Todas las categorías</option>
+                        {% for categoria in categorias %}
+                            <option value="{{ categoria }}" {% if filtro_categoria == categoria %}selected{% endif %}>{{ categoria }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
                     <label class="form-label fw-semibold">
-                        <i class="bi bi-tags"></i> Tipo de Prenda
+                        <i class="bi bi-tags"></i> Tipo de Producto
                     </label>
-                    {{ filtro_form.tipo_prenda }}
+                    <select name="tipo_producto" class="form-select" id="filtro-tipo">
+                        <option value="">Todos los tipos</option>
+                        {% for tipo in tipos %}
+                            <option value="{{ tipo.id }}" {% if filtro_tipo == tipo.id|stringformat:"s" %}selected{% endif %}>{{ tipo.nombre }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-2">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-circle-fill"></i> Estado
                     </label>
-                    {{ filtro_form.estado }}
+                    <select name="estado" class="form-select" id="filtro-estado">
+                        <option value="">Todos los estados</option>
+                        {% for valor, label in estados %}
+                            <option value="{{ valor }}" {% if filtro_estado == valor %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-search"></i> Buscar
                     </label>
-                    {{ filtro_form.busqueda }}
+                    <input type="text" name="busqueda" class="form-control" value="{{ filtro_busqueda }}" placeholder="Nombre, marca, categoría..." id="filtro-busqueda">
                 </div>
                 <div class="col-12 col-md-1 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100" style="border-radius: 8px;">
@@ -229,7 +247,7 @@
                 <!-- Imagen del producto -->
                 <div class="product-image-container">
                     {% if producto.imagen %}
-                    <img src="{{ producto.imagen.url }}" class="product-image" alt="{{ producto.tipo_prenda }}" id="img-{{ producto.id }}">
+                    <img src="{{ producto.imagen.url }}" class="product-image" alt="{{ producto.tipo_producto }}" id="img-{{ producto.id }}">
                     {% else %}
                     <div class="d-flex align-items-center justify-content-center h-100">
                         <i class="bi bi-image" style="font-size: 4rem; color: #d1d5db;"></i>
@@ -256,22 +274,26 @@
                 
                 <!-- Cuerpo del producto -->
                 <div class="product-body">
-                    <!-- Título del producto -->
+                    <!-- Título del producto (Hacer click aquí enviará a la edición) -->
                     <h5 class="mb-2" style="color: #1f2937; font-weight: 700; font-size: 1rem;">
-                        {% if producto.marca %}
-                            <strong style="color: #667eea;">{{ producto.marca }}</strong>
-                        {% endif %}
-                        {{ producto.tipo_prenda }}
+                        <a href="{% url 'editar_producto' producto.pk %}" class="text-decoration-none text-dark stretched-link">
+                            {% if producto.marca %}
+                                <strong style="color: #667eea;">{{ producto.marca }}</strong> —
+                            {% endif %}
+                            {{ producto.nombre|default:producto.tipo_producto }}
+                        </a>
                     </h5>
-                    
+
                     <!-- Badges -->
                     <div class="mb-3">
+                        {% if producto.categoria %}
                         <span class="badge bg-primary" style="font-size: 0.75rem;">
-                            <i class="bi bi-people-fill"></i> {{ producto.get_categoria_grupo_display }}
+                            <i class="bi bi-tag-fill"></i> {{ producto.categoria }}
                         </span>
-                        {% if producto.rango_edad %}
+                        {% endif %}
+                        {% if producto.variante %}
                             <span class="badge bg-info text-dark" style="font-size: 0.75rem;">
-                                <i class="bi bi-arrows-angle-expand"></i> {{ producto.rango_edad }}
+                                <i class="bi bi-arrows-angle-expand"></i> {{ producto.variante }}
                             </span>
                         {% endif %}
                         {% if producto.color %}
@@ -280,7 +302,6 @@
                             </span>
                         {% endif %}
                     </div>
-                    
                     <!-- Info del producto -->
                     <ul class="list-unstyled small mb-3" style="color: #6b7280;">
                         {% if producto.precio %}
@@ -366,9 +387,9 @@
             <div class="card-body p-5">
                 <i class="bi bi-inbox" style="font-size: 4rem; color: #667eea;"></i>
                 <h4 class="mt-3 mb-2" style="color: #1f2937;">No hay productos</h4>
-                <p class="text-muted mb-4">Tu inventario está vacío. ¡Sincroniza desde Google Sheets para cargar productos!</p>
-                <a href="{% url 'sincronizar_sheets' %}" class="btn btn-primary btn-lg" style="border-radius: 8px;">
-                    <i class="bi bi-cloud-download"></i> Sincronizar Google Sheets
+                <p class="text-muted mb-4">Tu inventario está vacío. ¡Agrega tu primer producto!</p>
+                <a href="{% url 'crear_producto' %}" class="btn btn-primary btn-lg" style="border-radius: 8px;">
+                    <i class="bi bi-plus-circle"></i> Agregar Producto
                 </a>
             </div>
         </div>
@@ -413,7 +434,7 @@
                         </div>
                         
                         <!-- Tomar foto (solo dispositivos con cámara) -->
-                        <div class="col-12">
+                        <div class="col-12" id="btnContainerCamara" style="display: none;">
                             <label for="inputFotoCamara" class="btn btn-outline-success w-100 py-2 py-md-3" style="border-radius: 8px; border-width: 2px;">
                                 <i class="bi bi-camera"></i> Tomar foto con cámara
                             </label>
@@ -421,7 +442,7 @@
                         </div>
                     </div>
                     
-                    <div class="alert alert-info mt-3 mb-0 small" style="border-radius: 8px;">
+                    <div class="alert alert-info mt-3 mb-0 small" style="border-radius: 8px;" id="tipCamaraContainer">
                         <i class="bi bi-info-circle"></i> <strong>Tip:</strong> En celulares, "Tomar foto" abrirá la cámara directamente
                     </div>
                 </form>
@@ -455,9 +476,19 @@
 let productoActualId = null;
 let modalFoto = null;
 
-// Inicializar modal al cargar página
+// Inicializar modal al cargar página y detectar dispositivo celular
 document.addEventListener('DOMContentLoaded', function() {
     modalFoto = new bootstrap.Modal(document.getElementById('modalFoto'));
+    
+    // Detectar si el usuario está en un dispositivo celular/móvil
+    const esCelular = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (esCelular) {
+        document.getElementById('btnContainerCamara').style.display = 'block';
+        document.getElementById('tipCamaraContainer').style.display = 'block';
+    } else {
+        document.getElementById('btnContainerCamara').style.display = 'none';
+        document.getElementById('tipCamaraContainer').style.display = 'none';
+    }
 });
 
 // Abrir modal para subir foto
@@ -522,7 +553,7 @@ function guardarFoto() {
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subiendo...';
     
     // Enviar mediante AJAX
-    fetch(`/productos/${productoActualId}/subir-foto/`, {
+    fetch(`/productos/subir-foto/${productoActualId}/subir-foto/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken

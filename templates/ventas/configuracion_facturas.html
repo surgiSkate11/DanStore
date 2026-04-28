@@ -12,25 +12,34 @@
     }
     
     .config-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: #1f2937;
+        color: #f9fafb;
         padding: 1.5rem;
         border-radius: 12px 12px 0 0;
     }
     
-    .color-input {
-        width: 80px;
-        height: 40px;
-        border-radius: 8px;
-        border: 2px solid #e5e7eb;
-        cursor: pointer;
+    /* Estilos para el ticket térmico */
+    .thermal-receipt-container {
+        background-color: #e5e7eb;
+        padding: 2rem 1rem;
+        border-radius: 12px;
+        display: flex;
+        justify-content: center;
     }
     
-    .preview-section {
-        background: #f9fafb;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-top: 2rem;
+    .thermal-receipt {
+        background-color: #ffffff;
+        color: #000000;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 14px;
+        line-height: 1.3;
+        padding: 20px;
+        width: 100%;
+        max-width: 380px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        white-space: pre-wrap;
+        border-top: 1px dashed #ccc;
+        border-bottom: 1px dashed #ccc;
     }
 </style>
 {% endblock %}
@@ -40,9 +49,9 @@
     <div class="row mb-4">
         <div class="col">
             <h2>
-                <i class="bi bi-gear-fill"></i> Configuración de Facturas
+                <i class="bi bi-receipt"></i> Configuración de Ticket
             </h2>
-            <p class="text-muted">Personaliza el diseño de tus facturas</p>
+            <p class="text-muted">Personaliza la impresión para tickets térmicos (blanco y negro)</p>
         </div>
         <div class="col-auto">
             <a href="{% url 'lista_ventas' %}" class="btn btn-outline-primary">
@@ -55,29 +64,42 @@
         {% csrf_token %}
         
         <div class="row">
-            <!-- Información de la Empresa -->
-            <div class="col-md-6">
+            <!-- Columna Izquierda: Formulario -->
+            <div class="col-lg-7">
                 <div class="config-card">
                     <div class="config-header">
                         <h5 class="mb-0">
-                            <i class="bi bi-building"></i> Información de la Empresa
+                            <i class="bi bi-building"></i> Información de {{ request.user.profile.tipo_entidad|title|default:'Empresa / Negocio' }}
                         </h5>
                     </div>
                     <div class="card-body p-4">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Nombre de la Empresa</label>
-                            <input type="text" name="nombre_empresa" class="form-control" 
-                                   value="{{ config.nombre_empresa }}" required>
+                            <label class="form-label fw-semibold">Nombre del {{ request.user.profile.tipo_entidad|title|default:'Negocio' }}</label>
+                            <input type="text" name="nombre_empresa" class="form-control config-input" 
+                                   value="{% if config.nombre_personalizado %}{{ config.nombre_empresa }}{% else %}{{ request.user.profile.nombre_negocio|default:request.empresa.nombre }}{% endif %}" required>
+                            <small class="text-muted" style="font-size: 12px; margin-top: 4px; display: block;">
+                                {% if config.nombre_personalizado %}
+                                <i class="bi bi-info-circle text-primary"></i> Nombre personalizado. Modificar tu perfil general ya no afectará a las facturas.
+                                {% else %}
+                                <i class="bi bi-arrow-repeat text-success"></i> Sincronizado automáticamente con el nombre de tu perfil.
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">RUC / Identificación</label>
+                            <input type="text" name="ruc_empresa" class="form-control config-input" 
+                                   value="{{ config.ruc_empresa }}">
                         </div>
                         
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Dirección</label>
-                            <textarea name="direccion_empresa" class="form-control" rows="2">{{ config.direccion_empresa }}</textarea>
+                            <textarea name="direccion_empresa" class="form-control config-input" rows="2">{{ config.direccion_empresa }}</textarea>
                         </div>
                         
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Teléfono</label>
-                            <input type="text" name="telefono_empresa" class="form-control" 
+                            <input type="text" name="telefono_empresa" class="form-control config-input" 
                                    value="{{ config.telefono_empresa }}">
                         </div>
                         
@@ -88,24 +110,17 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Mensaje en Factura</label>
-                            <textarea name="mensaje_factura" class="form-control" rows="3" 
-                                      placeholder="Ej: Gracias por su compra. ¡Vuelva pronto!">{{ config.mensaje_factura }}</textarea>
-                            <small class="text-muted">Mensaje que aparece al pie de la factura</small>
+                            <label class="form-label fw-semibold">Mensaje al Pie del Ticket</label>
+                            <textarea name="mensaje_factura" class="form-control config-input" rows="2" 
+                                      placeholder="Ej: ¡Gracias por su compra!">{{ config.mensaje_factura }}</textarea>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Logo y Colores -->
-            <div class="col-md-6">
-                <div class="config-card">
-                    <div class="config-header">
-                        <h5 class="mb-0">
-                            <i class="bi bi-palette-fill"></i> Diseño y Colores
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mensaje al Compartir Deuda (WhatsApp)</label>
+                            <textarea name="mensaje_deuda" class="form-control" rows="2" 
+                                      placeholder="Ej: Hola, te comparto el detalle de tus productos pendientes.">{{ config.mensaje_deuda }}</textarea>
+                        </div>
+
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-image"></i> Logo de la Empresa
@@ -113,66 +128,127 @@
                             {% if config.logo %}
                             <div class="mb-3">
                                 <img src="{{ config.logo.url }}" alt="Logo" 
-                                     style="max-width: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                     style="max-width: 150px; filter: grayscale(100%);">
                             </div>
                             {% endif %}
                             <input type="file" name="logo" class="form-control" accept="image/*">
-                            <small class="text-muted">Formatos: JPG, PNG. Tamaño recomendado: 500x500px</small>
+                            <small class="text-muted">Formatos: JPG, PNG. Se imprimirá en escala de grises.</small>
                         </div>
                         
                         <hr>
                         
-                        <h6 class="mb-3 fw-semibold">Colores Personalizados</h6>
+                        <h6 class="mb-3 fw-semibold"><i class="bi bi-calculator"></i> Impuestos y Cliente por Defecto</h6>
                         
-                        <div class="mb-3">
-                            <label class="form-label">Color del Borde Lateral</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <input type="color" name="color_borde" class="color-input" 
-                                       value="{{ config.color_borde }}" id="colorBorde">
-                                <input type="text" class="form-control" value="{{ config.color_borde }}" 
-                                       readonly style="max-width: 100px;">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Porcentaje IVA (%)</label>
+                                <input type="number" step="0.01" name="porcentaje_iva" class="form-control config-input" 
+                                       value="{{ config.porcentaje_iva|default:'15.00' }}">
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Texto Consumidor Final</label>
+                                <input type="text" name="texto_consumidor_final" class="form-control config-input" 
+                                       value="{{ config.texto_consumidor_final|default:'CONSUMIDOR FINAL' }}">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Identificación Consumidor Final</label>
+                                <input type="text" name="id_consumidor_final" class="form-control config-input" 
+                                       value="{{ config.id_consumidor_final|default:'9999999999' }}">
                             </div>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Color Principal</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <input type="color" name="color_principal" class="color-input" 
-                                       value="{{ config.color_principal }}" id="colorPrincipal">
-                                <input type="text" class="form-control" value="{{ config.color_principal }}" 
-                                       readonly style="max-width: 100px;">
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Color del Texto</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <input type="color" name="color_texto" class="color-input" 
-                                       value="{{ config.color_texto }}" id="colorTexto">
-                                <input type="text" class="form-control" value="{{ config.color_texto }}" 
-                                       readonly style="max-width: 100px;">
-                            </div>
+                    </div>
+                </div>
+                
+                <!-- Botón Guardar -->
+                <div class="text-center mb-4">
+                    <button type="submit" class="btn btn-dark btn-lg w-100" style="border-radius: 8px;">
+                        <i class="bi bi-save"></i> Guardar Configuración
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Columna Derecha: Live Preview -->
+            <div class="col-lg-5">
+                <div class="sticky-top" style="top: 20px;">
+                    <h5 class="fw-bold mb-3 text-center text-muted">Vista Previa del Ticket</h5>
+                    <div class="thermal-receipt-container">
+                        <div class="thermal-receipt" id="receipt-preview">
+                            <!-- El contenido se genera por JS -->
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Botón Guardar -->
-        <div class="text-center mb-4">
-            <button type="submit" class="btn btn-primary btn-lg px-5" style="border-radius: 8px;">
-                <i class="bi bi-save"></i> Guardar Configuración
-            </button>
-        </div>
     </form>
 </div>
 
 <script>
-// Actualizar campos de texto al cambiar colores
-document.querySelectorAll('.color-input').forEach(input => {
-    input.addEventListener('input', function() {
-        this.nextElementSibling.nextElementSibling.value = this.value;
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.config-input');
+    
+    function updatePreview() {
+        const nombre = document.querySelector('[name="nombre_empresa"]').value || 'NOMBRE EMPRESA';
+        const ruc = document.querySelector('[name="ruc_empresa"]').value || '999999999001';
+        const dir = document.querySelector('[name="direccion_empresa"]').value || 'DIRECCION MATRIZ';
+        const tel = document.querySelector('[name="telefono_empresa"]').value || '0999999999';
+        const iva = document.querySelector('[name="porcentaje_iva"]').value || '15';
+        const txtConsumidor = document.querySelector('[name="texto_consumidor_final"]').value || 'CONSUMIDOR FINAL';
+        const idConsumidor = document.querySelector('[name="id_consumidor_final"]').value || '9999999999';
+        const msg = document.querySelector('[name="mensaje_factura"]').value || '¡Gracias por su compra!';
+        
+        // Utilidad para centrar texto en ~40 caracteres
+        const centerText = (text) => {
+            const maxLen = 40;
+            if (!text) return '';
+            const str = text.substring(0, maxLen);
+            const padding = Math.max(0, Math.floor((maxLen - str.length) / 2));
+            return ' '.repeat(padding) + str;
+        };
+        
+        let html = ``;
+        html += `========================================\n`;
+        {% if config.logo %}
+        html += centerText("[ LOGO ]") + `\n`;
+        {% endif %}
+        html += centerText(nombre.toUpperCase()) + `\n`;
+        if(ruc) html += centerText(`RUC: ${ruc}`) + `\n`;
+        if(dir) html += centerText(dir) + `\n`;
+        if(tel) html += centerText(`Tel: ${tel}`) + `\n`;
+        html += `========================================\n`;
+        html += `Factura: FAC-000123\n`;
+        html += `Fecha: 24/04/2026 14:30   Turno: 1\n`;
+        html += `Cliente: ${txtConsumidor.toUpperCase()}\n`;
+        html += `CI/RUC: ${idConsumidor}\n`;
+        html += `----------------------------------------\n`;
+        html += `Cant | Descripción        | P.Unit|Total\n`;
+        html += `----------------------------------------\n`;
+        html += `  2  | Producto A         |  5.00 |10.00\n`;
+        html += `  1  | Producto B         |  3.50 | 3.50\n`;
+        html += `----------------------------------------\n`;
+        html += `Subtotal:                      $   13.50\n`;
+        html += `Base 0%:                       $    0.00\n`;
+        html += `Base ${iva.padEnd(2, ' ')}%:                       $   13.50\n`;
+        html += `IVA ${iva.padEnd(2, ' ')}%:                        $    2.03\n`;
+        html += `----------------------------------------\n`;
+        html += `TOTAL FINAL:                   $   15.53\n`;
+        html += `========================================\n`;
+        html += `Forma de pago: Efectivo\n`;
+        html += `Valor recibido:                $   20.00\n`;
+        html += `Cambio:                        $    4.47\n`;
+        html += `========================================\n`;
+        if(msg) html += centerText(msg) + `\n`;
+        html += `========================================\n`;
+        
+        document.getElementById('receipt-preview').textContent = html;
+    }
+    
+    // Escuchar eventos en los inputs para actualizar el preview en vivo
+    inputs.forEach(input => {
+        input.addEventListener('input', updatePreview);
     });
+    
+    // Render inicial
+    updatePreview();
 });
 </script>
 {% endblock %}

@@ -4,587 +4,822 @@
 
 {% block extra_css %}
 <style>
-    body {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-        min-height: 100vh;
-    }
-    
-    .container-fluid {
+    main.container, main.container.mt-4 {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
         background: transparent !important;
+        height: auto !important;
+    }
+    footer, .footer, .mt-2 { display: none !important; }
+    html, body { overflow: hidden !important; height: 100% !important; }
+
+    body {
+        background: radial-gradient(circle at 50% 0%, #451a03 0%, #78350f 40%, #1e293b 100%) !important;
+    }
+
+    .cofre-page {
+        height: calc(100vh - 56px);
+        padding: 20px 30px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
     }
     
-    .cofre-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-        padding-bottom: 4rem;
-        min-height: calc(100vh - 100px);
+    .cofre-page::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+') repeat;
+        opacity: 0.2;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .wrapper {
+        max-width: 1200px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 1;
     }
     
+    .header {
+        text-align: center;
+        margin-bottom: 25px;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .header-title-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 15px;
+        padding: 8px 12px 8px 24px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50px;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .header h1 {
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .header h1 i { color: #fcd34d; }
+
+    .live-badge {
+        background: #ef4444;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+        animation: pulse-live 2s infinite;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .live-badge::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: white;
+        border-radius: 50%;
+    }
+
+    @keyframes pulse-live {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 390px;
+        gap: 40px;
+        width: 100%;
+        align-items: start;
+    }
+
+    /* Alert and Banner */
+    .validation-alert {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #6ee7b7;
+        padding: 12px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        width: 100%;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .validation-alert.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+    }
+
+    .instruction-banner {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 100px;
+        padding: 14px 40px;
+        color: white;
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin-bottom: 30px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .instruction-banner.active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #34d399;
+        box-shadow: 0 12px 40px rgba(16, 185, 129, 0.5);
+        transform: scale(1.05);
+    }
+
+    /* Cofres Grid */
+    .cofres-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
     .cofres-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 2rem;
-        margin: 3rem 0;
-        max-width: 1200px;
-        margin-left: auto;
-        margin-right: auto;
+        grid-template-columns: repeat(3, auto);
+        gap: 30px;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding: 20px;
     }
     
     .cofre-item {
-        position: relative;
-        cursor: pointer;
-        transform-style: preserve-3d;
-        transition: all 0.3s ease;
-    }
-    
-    .cofre-item:hover:not(.disabled) {
-        transform: translateY(-10px) scale(1.05);
-    }
-    
-    .cofre-item.disabled {
-        opacity: 0.3;
+        width: 165px; 
+        height: 165px;
+        background: linear-gradient(135deg, #b45309 0%, #78350f 100%);
+        border-radius: 15px;
+        border: 3px solid #fcd34d;
+        box-shadow: 0 10px 25px rgba(180, 83, 9, 0.5), inset 0 4px 15px rgba(255,255,255,0.2);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         cursor: not-allowed;
-        pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        position: relative;
+        opacity: 0.9;
     }
     
-    .cofre-box {
-        background: linear-gradient(135deg, #8b5a3c 0%, #5d3922 100%);
-        border: 5px solid #d4af37;
-        border-radius: 20px;
-        padding: 2.5rem 2rem;
+    .cofre-item::before {
+        content: '🎁';
+        font-size: 5.5rem;
+        filter: drop-shadow(0 4px 5px rgba(0,0,0,0.4));
+        margin-top: -10px;
+    }
+    
+    .cofre-item .numero {
+        position: absolute;
+        bottom: 10px;
+        background: rgba(0,0,0,0.5);
+        color: #fcd34d;
+        font-weight: 800;
+        font-size: 1.2rem;
+        padding: 2px 15px;
+        border-radius: 10px;
+        border: 1px solid rgba(252, 211, 77, 0.5);
+    }
+    
+    .cofre-item.highlight {
+        transform: translateY(-15px) scale(1.1);
+        border-color: #fef08a;
+        box-shadow: 0 15px 40px rgba(252, 211, 77, 0.8), 0 0 20px rgba(255,255,255,0.5);
+        z-index: 10;
+        opacity: 1;
+        animation: pulse-cofre-fast 0.5s infinite;
+    }
+    
+    @keyframes pulse-cofre-fast {
+        0% { box-shadow: 0 15px 30px rgba(245, 158, 11, 0.6); }
+        50% { box-shadow: 0 15px 50px rgba(252, 211, 77, 1); }
+        100% { box-shadow: 0 15px 30px rgba(245, 158, 11, 0.6); }
+    }
+
+    /* Config Panel Integrado */
+    .btn-config-toggle {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 14px 20px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 700;
+        font-size: 0.95rem;
+        width: 100%;
+        backdrop-filter: blur(5px);
+    }
+    .btn-config-toggle:hover { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.4); }
+    .btn-config-toggle.active { background: rgba(255, 255, 255, 0.25); border-color: rgba(255, 255, 255, 0.5); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-config-toggle .icon-gear, .btn-config-toggle .icon-chevron { transition: transform 0.3s ease; }
+    .btn-config-toggle.active .icon-gear, .btn-config-toggle.active .icon-chevron { transform: rotate(180deg); }
+    
+    .config-container { display: grid; grid-template-rows: 0fr; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; visibility: hidden; }
+    .config-container.open { grid-template-rows: 1fr; opacity: 1; visibility: visible; margin-bottom: 5px; }
+    .config-inner { overflow: hidden; }
+    .config-wrapper { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 10px; }
+    
+    .config-group { display: flex; align-items: center; justify-content: space-between; }
+    .config-group label { font-size: 0.85rem; font-weight: 700; color: #374151; margin: 0; }
+    .config-group input { width: 80px; text-align: center; border: 2px solid #e5e7eb; border-radius: 10px; padding: 6px; font-weight: 800; color: #1f2937; transition: all 0.2s ease; }
+    .config-group input:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+
+    .spin-icon {
+        animation: spin-icon-anim 1s linear infinite;
+    }
+    @keyframes spin-icon-anim {
+        100% { transform: rotate(360deg); }
+    }
+    
+    .cofre-item.opened {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        border-color: #4b5563;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.6;
+        animation: none;
+    }
+    
+    .cofre-item.opened::before {
+        content: '🔓';
+        font-size: 4.5rem;
+        filter: grayscale(1);
+        margin-top: 0;
+    }
+    
+    .cofre-item.opened .numero {
+        color: #9ca3af;
+        border-color: #4b5563;
+    }
+    
+    .cofre-item.shaking {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        border-color: #10b981;
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+    }
+    
+    @keyframes pulse-cofre {
+        0% { box-shadow: 0 10px 25px rgba(180, 83, 9, 0.5); }
+        50% { box-shadow: 0 10px 35px rgba(245, 158, 11, 0.8); }
+        100% { box-shadow: 0 10px 25px rgba(180, 83, 9, 0.5); }
+    }
+    
+    @keyframes shake {
+        10%, 90% { transform: translate3d(-2px, 0, 0); }
+        20%, 80% { transform: translate3d(4px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+        40%, 60% { transform: translate3d(8px, 0, 0); }
+    }
+
+    /* Side Panel & Elements */
+    .side-panel {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        height: fit-content;
+        max-height: 100%;
+    }
+
+    .stat-row { display: flex; gap: 15px; margin-top: 5px; }
+    .stat-card {
+        flex: 1;
+        background: rgba(255,255,255,0.9);
+        border-radius: 16px;
+        padding: 18px 12px;
         text-align: center;
-        box-shadow: 
-            0 15px 40px rgba(212, 175, 55, 0.4),
-            inset 0 -10px 20px rgba(0, 0, 0, 0.3),
-            0 0 0 2px rgba(212, 175, 55, 0.2);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         position: relative;
         overflow: hidden;
-        transition: all 0.3s ease;
     }
-    
-    .cofre-item:hover:not(.disabled) .cofre-box {
-        border-color: #ffd700;
-        box-shadow: 
-            0 20px 50px rgba(212, 175, 55, 0.6),
-            inset 0 -10px 20px rgba(0, 0, 0, 0.3),
-            0 0 0 3px rgba(255, 215, 0, 0.4);
-    }
-    
-    .cofre-box::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 10%;
-        right: 10%;
-        height: 8px;
-        background: #d4af37;
-        border-radius: 4px;
-        box-shadow: 0 2px 10px rgba(212, 175, 55, 0.5);
-    }
-    
-    .cofre-icon {
-        font-size: 5rem;
-        animation: pulse 2s infinite;
-        display: block;
-        margin-bottom: 1rem;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-    }
-    
-    .cofre-numero {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #ffd700;
-        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-        margin-top: 1rem;
-    }
-    
-    .cofre-lock {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 1.5rem;
-        opacity: 0.7;
-    }
-    
-    .stage-indicator {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-        backdrop-filter: blur(15px);
-        border-radius: 25px;
-        padding: 2.5rem;
-        text-align: center;
-        color: white;
-        margin-bottom: 3rem;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    }
-    
-    .stage-indicator h2 {
-        font-size: 2.2rem;
-        font-weight: 800;
-        margin-bottom: 1.5rem;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    }
-    
-    .stage-indicator p {
-        font-size: 1.2rem;
-        opacity: 0.95;
-    }
-    
-    .ganador-display {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border-radius: 20px;
-        padding: 2rem;
-        text-align: center;
-        color: white;
-        margin: 2rem auto;
-        max-width: 600px;
-        box-shadow: 0 10px 40px rgba(16, 185, 129, 0.5);
-    }
-    
-    .ganador-display h3 {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-    }
-    
-    .ganador-display .nombre {
-        font-size: 3rem;
-        font-weight: 800;
-        color: #ffd700;
-        text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-    }
-    
-    .premio-reveal {
-        background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.15) 100%);
-        backdrop-filter: blur(15px);
-        border-radius: 25px;
-        padding: 3.5rem;
-        text-align: center;
-        margin: 2rem auto;
-        max-width: 700px;
-        animation: slideUp 0.5s ease;
-        border: 2px solid rgba(139, 92, 246, 0.3);
-        box-shadow: 0 15px 50px rgba(139, 92, 246, 0.4);
-    }
-    
-    @keyframes slideUp {
-        from {
-            transform: translateY(50px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-    
-    .premio-reveal .premio-icon {
-        font-size: 8rem;
-        margin-bottom: 1rem;
-    }
-    
-    .premio-reveal .premio-nombre {
-        font-size: 3rem;
-        font-weight: 800;
-        color: #ffd700;
-        margin-bottom: 1rem;
-        text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
-    }
-    
-    .premio-reveal .premio-descripcion {
-        font-size: 1.3rem;
-        color: white;
-        margin-bottom: 2rem;
-    }
-    
-    .btn-accion {
-        font-size: 1.4rem;
-        padding: 1.2rem 3.5rem;
-        border-radius: 50px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
+    .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+    .stat-card:first-child::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-card:last-child::after { background: linear-gradient(90deg, #22c55e, #10b981); }
+    .stat-card i { font-size: 1.4rem; margin-bottom: 4px; }
+    .stat-card:first-child i { color: #f59e0b; }
+    .stat-card:last-child i { color: #22c55e; }
+    .stat-card .num { font-size: 1.8rem; font-weight: 900; color: #1f2937; line-height: 1; }
+    .stat-card .label { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px; margin-top: 4px; }
+
+    .btn-spin {
+        width: 100%;
+        padding: 18px;
+        font-size: 1.1rem;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 2px;
-        transition: all 0.3s ease;
+        letter-spacing: 1px;
+        border: none;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: #fff;
         cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4), inset 0 2px 4px rgba(255,255,255,0.3);
     }
+    .btn-spin:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(34, 197, 94, 0.5); }
+    .btn-spin:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(50%); }
+    .btn-spin.completed { background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4); }
+
+    .participants-box .title { font-size: 0.8rem; font-weight: 800; color: #e2e8f0; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.5px; }
+    .participants-box .title-left { display: flex; align-items: center; gap: 5px; color: white; }
+    .participants-list { min-height: 50px; }
+    .p-item { background: rgba(255,255,255,0.9); padding: 8px 10px; border-radius: 10px; margin-bottom: 6px; font-size: 0.85rem; color: #1f2937; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); animation: slideInRight 0.3s ease forwards; opacity: 0; transform: translateX(20px); }
+    @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
+    .p-item i { color: #f59e0b; font-size: 0.85rem; }
     
-    .btn-sortear {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5), 0 0 0 0 rgba(245, 158, 11, 0.4);
-        animation: pulse-button 2s ease-in-out infinite;
+    .pagination-controls { display: flex; align-items: center; gap: 8px; }
+    .pagination-controls button { width: 24px; height: 24px; border: none; background: rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: white; padding: 0; }
+    .pagination-controls button:hover:not(:disabled) { background: rgba(255,255,255,0.4); }
+    .pagination-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .pagination-info { font-size: 0.75rem; color: rgba(255,255,255,0.8); font-weight: 700; }
+
+    .back-link { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 12px; color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.85rem; font-weight: 700; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); transition: all 0.15s; margin-top: auto; }
+    .back-link:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* Modal (Trophy design) */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(12px); }
+    .modal-overlay.show { display: flex; }
+    .modal-box { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-radius: 24px; padding: 40px 35px; text-align: center; max-width: 380px; width: 90%; animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 70px rgba(0,0,0,0.4), 0 0 0 4px rgba(255,255,255,0.2); }
+    @keyframes pop-in { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .trophy-icon { width: 80px; height: 80px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 10px 30px rgba(251, 191, 36, 0.4); animation: bounce-trophy 1s ease-in-out infinite; }
+    @keyframes bounce-trophy { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .trophy-icon i { font-size: 2.2rem; color: #fff; }
+    .modal-title { font-size: 1rem; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .winner-name { font-size: 1.8rem; font-weight: 900; color: #1f2937; margin-bottom: 16px; line-height: 1.1; text-transform: uppercase; background: linear-gradient(135deg, #1e3a8a, #4f46e5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .prize-card { background: linear-gradient(135deg, #fef9c3, #fef08a); border-radius: 14px; padding: 14px; margin-bottom: 24px; border: 1px solid rgba(234, 179, 8, 0.3); }
+    .prize-card .lbl { font-size: 0.65rem; color: #a16207; text-transform: uppercase; font-weight: 800; margin-bottom: 3px; letter-spacing: 0.5px; }
+    .prize-card .val { font-size: 1.1rem; font-weight: 900; color: #78350f; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .prize-card .val i { color: #eab308; }
+    .btn-continue { background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; padding: 14px 30px; font-size: 1rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 3px 12px rgba(34, 197, 94, 0.35); width: 100%; text-transform: uppercase; letter-spacing: 1px; }
+    .btn-continue:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(34, 197, 94, 0.45); }
+    .btn-continue.final { background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35); }
+    .btn-continue.final:hover { box-shadow: 0 6px 15px rgba(99, 102, 241, 0.45); }
+
+    /* Confetti */
+    .confetti { position: fixed; z-index: 10001; animation: fall 3s linear forwards; }
+    @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+    @media (max-width: 900px) {
+        .main-grid { grid-template-columns: 1fr; gap: 20px; }
+        .side-panel { max-width: 450px; margin: 0 auto; }
+        .cofre-page { padding: 20px; justify-content: flex-start; height: auto; min-height: calc(100vh - 56px); }
     }
-    
-    .btn-sortear:hover:not(:disabled) {
-        transform: scale(1.08) translateY(-2px);
-        box-shadow: 0 15px 40px rgba(245, 158, 11, 0.7);
-        border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    .btn-continuar {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.5);
-    }
-    
-    .btn-continuar:hover {
-        transform: scale(1.08) translateY(-2px);
-        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.7);
-        border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    .cofre-glow {
-        animation: glow 1.5s infinite alternate;
-    }
-    
-    @keyframes glow {
-        from {
-            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
-        }
-        to {
-            box-shadow: 0 10px 50px rgba(212, 175, 55, 0.8),
-                        0 0 30px rgba(255, 215, 0, 0.6);
-        }
-    }
-    
-    .confetti {
-        position: fixed;
-        width: 10px;
-        height: 10px;
-        background: #ffd700;
-        position: absolute;
-        animation: confetti-fall 3s linear;
-    }
-    
-    @keyframes confetti-fall {
-        0% {
-            top: -10%;
-            transform: translateX(0) rotate(0deg);
-            opacity: 1;
-        }
-        100% {
-            top: 110%;
-            transform: translateX(100px) rotate(720deg);
-            opacity: 0;
-        }
+    @media (max-width: 500px) {
+        .header h1 { font-size: 1.1rem; }
+        .header-title-wrapper { padding: 6px 10px 6px 18px; gap: 10px; }
+        .side-panel { padding: 18px; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="cofre-container">
-    <!-- Header -->
-    <div class="text-center mb-5">
-        <h1 class="text-white mb-3" style="font-size: 3.5rem; font-weight: 800; text-shadow: 0 0 30px rgba(212,175,55,0.7), 0 4px 20px rgba(0,0,0,0.6);">
-            🎁 {{ sorteo.nombre }}
-        </h1>
-        <p class="text-white" style="font-size: 1.3rem; opacity: 0.95; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">¡El ganador elige su cofre sorpresa!</p>
-        {% if sorteo.descripcion %}
-        <p class="text-white-50" style="font-size: 1.1rem; margin-top: 0.5rem;">{{ sorteo.descripcion }}</p>
-        {% endif %}
-    </div>
-    
-    <!-- Stage Indicator -->
-    <div class="stage-indicator">
-        <div id="stage1" style="display: block;">
-            <h2>🎯 Etapa 1: Sortear Ganador</h2>
-            <button class="btn-accion btn-sortear" onclick="sortearGanador()">
-                <i class="bi bi-shuffle"></i> SORTEAR GANADOR
-            </button>
+<div class="cofre-page">
+    <div class="wrapper">
+        <div class="header">
+            <div class="header-title-wrapper">
+                <h1><i class="bi bi-box2-heart-fill"></i> {{ sorteo.nombre }}</h1>
+                <div class="live-badge">EN VIVO</div>
+            </div>
         </div>
-        
-        <div id="stage2" style="display: none;">
-            <h2>🎁 Etapa 2: Elegir Cofre</h2>
-            <p style="font-size: 1.2rem;">¡El ganador debe elegir su cofre!</p>
+
+        <div class="main-grid">
+            <div class="cofres-area">
+                <div id="instructionBanner" class="instruction-banner">
+                    <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                </div>
+
+                <div class="cofres-grid" id="cofresGrid"></div>
+            </div>
+            
+            <div class="side-panel">
+                <!-- Panel de Configuración de Tiempos -->
+                <button class="btn-config-toggle" onclick="toggleConfig()" title="Ajustes de Animación">
+                    <span class="d-flex align-items-center gap-2">
+                        <i class="bi bi-gear-fill icon-gear"></i> Ajustes de Animación
+                    </span>
+                    <i class="bi bi-chevron-down icon-chevron"></i>
+                </button>
+                
+                <div class="config-container" id="configContainer">
+                    <div class="config-inner">
+                        <div class="config-wrapper">
+                            <div class="config-group">
+                                <label for="spinDuration">Sorteo Cliente (seg)</label>
+                                <input type="number" id="spinDuration" value="3" min="1" max="10">
+                            </div>
+                            <div class="config-group">
+                                <label for="boxDuration">Sorteo Cofre (seg)</label>
+                                <input type="number" id="boxDuration" value="4" min="1" max="10">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-row">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill"></i>
+                        <div class="num" id="numPart">0</div>
+                        <div class="label">Participantes</div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="bi bi-box2-heart-fill"></i>
+                        <div class="num" id="numPremios">{{ sorteo.cantidad_cofres }}</div>
+                        <div class="label">Cofres</div>
+                    </div>
+                </div>
+
+                <button id="btnSpin" class="btn-spin" onclick="spin()">
+                    <i class="bi bi-play-circle-fill"></i> INICIAR SORTEO
+                </button>
+
+                <div class="participants-box">
+                    <div class="title">
+                        <div class="title-left"><i class="bi bi-people"></i> Lista</div>
+                        <div class="pagination-controls">
+                            <button id="prevPage" onclick="prevPage()" disabled><i class="bi bi-chevron-left"></i></button>
+                            <span class="pagination-info" id="pageInfo">1/1</span>
+                            <button id="nextPage" onclick="nextPage()"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="participants-list" id="partList"></div>
+                </div>
+
+                <a href="{% url 'detalle_sorteo' sorteo.id %}" class="back-link">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
         </div>
-        
-        <div id="stage3" style="display: none;">
-            <h2>🎉 ¡Premio Revelado!</h2>
-        </div>
-    </div>
-    
-    <!-- Ganador Display -->
-    <div class="ganador-display" id="ganadorDisplay" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 3rem; border-radius: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.5); margin: 2rem auto; max-width: 600px;">
-        <h3 style="font-size: 2.5rem; font-weight: 800; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.3); margin-bottom: 1.5rem;">🏆 ¡GANADOR!</h3>
-        <div class="nombre" id="nombreGanador" style="font-size: 4rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 4px 15px rgba(0,0,0,0.5); animation: pulse-glow 2s ease-in-out infinite;"></div>
-        <p style="font-size: 1.8rem; margin-top: 1.5rem; color: white; font-weight: 600;" id="telefonoGanador"></p>
-    </div>
-    
-    <!-- Cofres Grid -->
-    <div class="cofres-grid" id="cofresGrid">
-        <!-- Los cofres se generan dinámicamente -->
-    </div>
-    
-    <!-- Premio Reveal -->
-    <div class="premio-reveal" id="premioReveal" style="display: none;">
-        <div class="premio-icon" id="premioIcon"></div>
-        <div class="premio-nombre" id="premioNombre"></div>
-        <div class="premio-descripcion" id="premioDescripcion"></div>
-        
-        <button class="btn-accion btn-continuar" onclick="registrarYContinuar()">
-            <i class="bi bi-check-circle"></i> Registrar y Continuar
-        </button>
-        <button class="btn-accion btn-outline-light ms-3" onclick="nuevoSorteo()">
-            <i class="bi bi-arrow-repeat"></i> Otro Sorteo
-        </button>
-    </div>
-    
-    <!-- Botones de Control -->
-    <div class="text-center mt-5">
-        <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-outline-light btn-lg me-3" style="min-width: 150px; padding: 0.75rem 2rem; font-weight: 600; border-width: 2px;">
-            <i class="bi bi-arrow-left"></i> Volver
-        </a>
-        <button class="btn btn-danger btn-lg" onclick="finalizarSorteo()" style="min-width: 180px; padding: 0.75rem 2rem; font-weight: 600; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
-            <i class="bi bi-stop-circle"></i> Finalizar Sorteo
-        </button>
     </div>
 </div>
 
+<!-- Modal Resultado -->
+<div id="modal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="trophy-icon"><i class="bi bi-trophy-fill"></i></div>
+        <div class="modal-title">🎉 ¡Felicitaciones!</div>
+        <div class="winner-name" id="winnerName"></div>
+        <div class="prize-card">
+            <div class="lbl">Ha ganado</div>
+            <div class="val"><i id="prizeIcon" class="bi bi-gift-fill me-1"></i><span id="prizeName"></span></div>
+        </div>
+        <button id="btnModalContinue" class="btn-continue" onclick="closeModal()">Continuar</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-const sorteoId = {{ sorteo.id }};
-const participantes = {{ participantes_json|safe }};
-const premios = {{ premios_json|safe }};
-const cantidadCofres = {{ sorteo.cantidad_cofres }};
+    const sorteoId = {{ sorteo.id }};
+    const participantes = {{ participantes_json|safe }};
+    const premios = {{ premios_json|safe }};
+    const cantidadCofres = {{ sorteo.cantidad_cofres }};
 
-let ganadorActual = null;
-let premioSeleccionado = null;
-
-// Nota: La función mostrarMensaje está definida en base.html
-
-// Inicializar cofres
-function inicializarCofres() {
-    const grid = document.getElementById('cofresGrid');
-    grid.innerHTML = '';
+    let premiosDisponibles = premios.filter(p => !p.asignado);
+    let ganadorActual = null;
+    let premioActual = null;
     
-    for (let i = 1; i <= cantidadCofres; i++) {
-        const cofreDiv = document.createElement('div');
-        cofreDiv.className = 'cofre-item disabled';
-        cofreDiv.id = `cofre-${i}`;
-        cofreDiv.onclick = () => abrirCofre(i);
-        
-        cofreDiv.innerHTML = `
-            <div class="cofre-box">
-                <div class="cofre-lock">🔒</div>
-                <span class="cofre-icon">🎁</span>
-                <div class="cofre-numero">Cofre ${i}</div>
-            </div>
-        `;
-        
-        grid.appendChild(cofreDiv);
-    }
-}
+    let btnSpin = document.getElementById('btnSpin');
+    let instructionBanner = document.getElementById('instructionBanner');
+    
+    let currentPage = 0;
+    const itemsPerPage = 5;
 
-// Sortear ganador
-function sortearGanador() {
-    // Validar que hay participantes
-    if (!participantes || participantes.length === 0) {
-        mostrarMensaje('No hay participantes elegibles para este sorteo', 'danger');
-        return;
+    function init() {
+        document.getElementById('numPart').textContent = participantes.length;
+        renderList();
+        renderCofres();
+        checkValidation();
     }
     
-    // Validar que hay premios
-    if (!premios || premios.length === 0) {
-        mostrarMensaje('No hay premios configurados para este sorteo', 'danger');
-        return;
+    function toggleConfig() {
+        document.getElementById('configContainer').classList.toggle('open');
+        document.querySelector('.btn-config-toggle').classList.toggle('active');
     }
-    
-    fetch(`/sorteos/${sorteoId}/sortear/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
+
+    function checkValidation() {
+        if (premios.length !== cantidadCofres) {
+            btnSpin.disabled = true;
+            btnSpin.innerHTML = '<i class="bi bi-lock-fill"></i> FALTAN PREMIOS';
+            
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast(`Sorteo bloqueado: Hay ${cantidadCofres} cofres, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
+                }
+            }, 500);
+        } else if (premiosDisponibles.length === 0) {
+            btnSpin.disabled = false;
+            btnSpin.classList.add('completed');
+            btnSpin.innerHTML = '<i class="bi bi-list-stars"></i> VER RESULTADOS';
+            btnSpin.onclick = () => window.location.href = `/sorteos/${sorteoId}/`;
+            
+            instructionBanner.innerHTML = '<i class="bi bi-stars"></i> SORTEO FINALIZADO';
+            instructionBanner.className = 'instruction-banner';
+        } else {
+            btnSpin.disabled = false;
         }
-    })
-    .then(res => {
-        if (!res.ok) throw new Error('Error en la respuesta del servidor');
-        return res.json();
-    })
-    .then(data => {
-        if (data.success && data.ganador) {
+    }
+
+    function renderCofres() {
+        const grid = document.getElementById('cofresGrid');
+        grid.innerHTML = '';
+        
+        // Identificar qué cofres ya fueron abiertos por su numero_cofre
+        const cofresAbiertos = premios.filter(p => p.asignado).map(p => p.numero_cofre);
+        let genericosAbiertos = premios.filter(p => p.asignado && !p.numero_cofre).length;
+        
+        for (let i = 1; i <= cantidadCofres; i++) {
+            const box = document.createElement('div');
+            box.id = `cofre-${i}`;
+            
+            let isOpened = cofresAbiertos.includes(i);
+            if (!isOpened && genericosAbiertos > 0) {
+                isOpened = true;
+                genericosAbiertos--;
+            }
+            
+            if (isOpened) {
+                box.className = 'cofre-item opened';
+                box.innerHTML = `<span class="numero">${i}</span>`;
+            } else {
+                box.className = 'cofre-item';
+                box.innerHTML = `<span class="numero">${i}</span>`;
+            }
+            grid.appendChild(box);
+        }
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function spin() {
+        if (premios.length !== cantidadCofres) {
+            if (typeof showToast === 'function') {
+                showToast(`Sorteo bloqueado: Hay ${cantidadCofres} cofres, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
+            }
+            return;
+        }
+        if (participantes.length === 0) {
+            if (typeof showToast === 'function') showToast('No hay participantes elegibles para este sorteo', 'warning');
+            return;
+        }
+        
+        btnSpin.disabled = true;
+        btnSpin.innerHTML = '<i class="bi bi-arrow-repeat spin-icon"></i> SORTEANDO...';
+        
+        const durationCliente = (parseInt(document.getElementById('spinDuration').value) || 3) * 1000;
+        const durationCofre = (parseInt(document.getElementById('boxDuration').value) || 4) * 1000;
+        
+        // Iniciar animación rápida de nombres de clientes
+        let cycleInterval = setInterval(() => {
+            const randomPart = participantes[Math.floor(Math.random() * participantes.length)];
+            instructionBanner.innerHTML = `<i class="bi bi-person"></i> ${randomPart.nombre.toUpperCase()}`;
+            instructionBanner.classList.add('active');
+        }, 100);
+        
+        fetch(`/sorteos/${sorteoId}/sortear/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            
             ganadorActual = data.ganador;
-            mostrarGanador();
-        } else {
-            mostrarMensaje('No se pudo sortear el ganador. Intenta nuevamente.', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarMensaje('No se pudo sortear el ganador. Intenta nuevamente.', 'danger');
-    });
-}
-
-// Mostrar ganador
-function mostrarGanador() {
-    const ganadorDisplay = document.getElementById('ganadorDisplay');
-    document.getElementById('nombreGanador').textContent = ganadorActual.nombre || 'Ganador';
-    document.getElementById('telefonoGanador').textContent = `📞 ${ganadorActual.telefono || 'N/A'}`;
-    ganadorDisplay.style.display = 'block';
-    console.log('Ganador mostrado:', ganadorActual);
-    
-    // Cambiar a etapa 2
-    document.getElementById('stage1').style.display = 'none';
-    document.getElementById('stage2').style.display = 'block';
-    
-    // Habilitar cofres
-    document.querySelectorAll('.cofre-item').forEach(item => {
-        item.classList.remove('disabled');
-        item.querySelector('.cofre-box').classList.add('cofre-glow');
-        item.querySelector('.cofre-lock').textContent = '✨';
-    });
-}
-
-// Abrir cofre
-function abrirCofre(numeroCofre) {
-    if (!ganadorActual) return;
-    
-    // Deshabilitar otros cofres
-    document.querySelectorAll('.cofre-item').forEach(item => {
-        item.classList.add('disabled');
-    });
-    
-    // Animación del cofre seleccionado
-    const cofreSeleccionado = document.getElementById(`cofre-${numeroCofre}`);
-    cofreSeleccionado.style.transform = 'scale(1.2)';
-    cofreSeleccionado.querySelector('.cofre-icon').textContent = '📦';
-    
-    // Buscar premio para este cofre
-    const premio = premios.find(p => p.numero_cofre === numeroCofre);
-    
-    if (!premio) {
-        mostrarMensaje('Este cofre no tiene premio asignado. Configura premios primero.', 'danger');
-        document.querySelectorAll('.cofre-item').forEach(c => c.classList.remove('disabled'));
-        return;
+            
+            // Detener la ruleta de nombres después de su duración
+            setTimeout(() => {
+                clearInterval(cycleInterval);
+                instructionBanner.innerHTML = `<i class="bi bi-person-check-fill"></i> ¡GANADOR: ${ganadorActual.nombre.toUpperCase()}!`;
+                
+                // Esperar 1.5s para apreciar el ganador y comenzar animación de caja
+                setTimeout(() => {
+                    autoSelectBox(durationCofre);
+                }, 1500);
+                
+            }, durationCliente);
+        })
+        .catch(err => {
+            clearInterval(cycleInterval);
+            if (typeof showToast === 'function') showToast('Error al sortear ganador. Intente de nuevo.', 'error');
+            resetUI();
+        });
     }
-    
-    setTimeout(() => {
-        revelarPremio(premio);
-    }, 1000);
-}
 
-// Revelar premio
-function revelarPremio(premio) {
-    premioSeleccionado = premio;
-    
-    // Iconos según tipo de premio
-    const iconos = {
-        'descuento_porcentaje': '💰',
-        'descuento_fijo': '💵',
-        'producto_gratis': '🎁',
-        'envio_gratis': '🚚',
-        'cupon': '🎟️',
-        'combo': '📦'
-    };
-    
-    // Mostrar premio
-    document.getElementById('premioIcon').textContent = iconos[premio.tipo] || '🎁';
-    document.getElementById('premioNombre').textContent = premio.nombre;
-    document.getElementById('premioDescripcion').textContent = premio.descripcion || '¡Felicidades por tu premio!';
-    
-    // Cambiar a etapa 3
-    document.getElementById('stage2').style.display = 'none';
-    document.getElementById('stage3').style.display = 'block';
-    document.getElementById('premioReveal').style.display = 'block';
-    
-    // Generar confetti
-    generarConfetti();
-}
-
-// Generar confetti
-function generarConfetti() {
-    const colores = ['#ffd700', '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8dadc', '#f1a7f5'];
-    
-    for (let i = 0; i < 50; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = Math.random() * 100 + '%';
-        confetti.style.top = '-10%';
-        confetti.style.background = colores[Math.floor(Math.random() * colores.length)];
-        confetti.style.animationDelay = Math.random() * 2 + 's';
-        document.body.appendChild(confetti);
+    function autoSelectBox(durationCofre) {
+        instructionBanner.innerHTML = `<i class="bi bi-box-seam"></i> ELIGIENDO COFRE AL AZAR...`;
         
-        setTimeout(() => confetti.remove(), 3000);
+        const availableBoxes = document.querySelectorAll('.cofre-item:not(.opened)');
+        if (availableBoxes.length === 0) return;
+        
+        // Animación rápida saltando entre los cofres
+        let boxCycleInterval = setInterval(() => {
+            availableBoxes.forEach(b => b.classList.remove('highlight'));
+            const randomBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
+            randomBox.classList.add('highlight');
+        }, 150);
+
+        // Detenerse en un cofre ganador
+        setTimeout(() => {
+            clearInterval(boxCycleInterval);
+            availableBoxes.forEach(b => b.classList.remove('highlight'));
+            
+            const finalBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
+            finalBox.classList.add('highlight');
+            
+            const boxId = finalBox.id.split('-')[1];
+            
+            setTimeout(() => {
+                selectCofre(boxId);
+            }, 800); // Pequeña pausa antes de abrirlo para el suspenso
+            
+        }, durationCofre);
     }
-}
 
-// Registrar y continuar
-function registrarYContinuar() {
-    if (!ganadorActual || !premioSeleccionado) return;
-    
-    const formData = new FormData();
-    formData.append('cliente_id', ganadorActual.id);
-    formData.append('premio_id', premioSeleccionado.id);
-    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-    
-    fetch(`/sorteos/${sorteoId}/registrar/`, {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            mostrarMensaje(data.mensaje, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            mostrarMensaje(data.error || 'No se pudo registrar el resultado', 'danger');
+    function selectCofre(boxIndex) {
+        
+        const box = document.getElementById(`cofre-${boxIndex}`);
+        box.classList.add('shaking');
+        
+        // Buscar si hay un premio específico asignado a este número de cofre
+        premioActual = premiosDisponibles.find(p => p.numero_cofre == boxIndex);
+        if (!premioActual) {
+            // Fallback: Si no le asignaron número, tomar uno al azar de los disponibles
+            premioActual = premiosDisponibles[Math.floor(Math.random() * premiosDisponibles.length)];
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarMensaje('No se pudo registrar el resultado. Intenta nuevamente.', 'danger');
-    });
-}
+        
+        instructionBanner.innerHTML = '<i class="bi bi-stars"></i> ABRIENDO EL COFRE SORPRESA...';
+        
+        setTimeout(() => {
+            registrarResultado(box);
+        }, 1500); // 1.5s delay dramático
+    }
 
-// Nuevo sorteo
-function nuevoSorteo() {
-    location.reload();
-}
+    function registrarResultado(boxElement) {
+        const formData = new FormData();
+        formData.append('cliente_id', ganadorActual.id);
+        formData.append('premio_id', premioActual.id);
+        
+        fetch(`/sorteos/${sorteoId}/registrar/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCookie('csrftoken')},
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                premiosDisponibles = premiosDisponibles.filter(p => p.id !== premioActual.id);
+                boxElement.className = 'cofre-item opened';
+                showWinnerModal();
+            } else {
+                if (typeof showToast === 'function') showToast(data.error, 'error');
+                resetUI();
+            }
+        })
+        .catch(() => {
+            if (typeof showToast === 'function') showToast('Error de red al registrar premio', 'error');
+            resetUI();
+        });
+    }
 
-// Finalizar sorteo
-function finalizarSorteo() {
-    const modal = new bootstrap.Modal(document.getElementById('modalFinalizarSorteo'));
-    modal.show();
-}
+    function showWinnerModal() {
+        document.getElementById('winnerName').textContent = ganadorActual.nombre;
+        document.getElementById('prizeName').textContent = premioActual.nombre;
+        
+        const btnContinue = document.getElementById('btnModalContinue');
+        if (premiosDisponibles.length === 0) {
+            btnContinue.innerHTML = '<i class="bi bi-check-circle-fill"></i> Aceptar y Finalizar';
+            btnContinue.className = 'btn-continue final';
+        } else {
+            btnContinue.innerHTML = '<i class="bi bi-play-fill"></i> Siguiente Sorteo';
+            btnContinue.className = 'btn-continue';
+        }
+        
+        document.getElementById('modal').classList.add('show');
+        confetti();
+    }
 
-// Confirmar finalizar sorteo
-function confirmarFinalizarSorteo() {
-    window.location.href = `/sorteos/${sorteoId}/finalizar/`;
-}
+    function closeModal() {
+        document.getElementById('modal').classList.remove('show');
+        checkValidation();
+        if (premiosDisponibles.length > 0) {
+            resetUI();
+        }
+    }
 
-// Inicializar
-document.addEventListener('DOMContentLoaded', function() {
-    inicializarCofres();
-});
+    function resetUI() {
+        btnSpin.disabled = false;
+        btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+        instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+        instructionBanner.classList.remove('active');
+    }
+
+    function renderList() {
+        const list = document.getElementById('partList');
+        if (participantes.length === 0) {
+            list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:10px;font-size:0.7rem;">Sin participantes</div>';
+            return;
+        }
+        const totalPages = Math.ceil(participantes.length / itemsPerPage);
+        const start = currentPage * itemsPerPage;
+        const pageItems = participantes.slice(start, start + itemsPerPage);
+        list.innerHTML = pageItems.map((p, i) => `<div class="p-item" style="animation-delay: ${i * 0.05}s"><i class="bi bi-person-fill"></i>${p.nombre}</div>`).join('');
+        
+        document.getElementById('pageInfo').textContent = `${currentPage + 1}/${totalPages}`;
+        document.getElementById('prevPage').disabled = currentPage === 0;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages - 1;
+    }
+
+    function prevPage() { if (currentPage > 0) { currentPage--; renderList(); } }
+    function nextPage() { if (currentPage < Math.ceil(participantes.length / itemsPerPage) - 1) { currentPage++; renderList(); } }
+
+    function confetti() {
+        const cols = ['#facc15', '#f59e0b', '#d97706', '#b45309', '#ef4444', '#ffffff'];
+        for (let i = 0; i < 100; i++) {
+            setTimeout(() => {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = '-10px';
+                c.style.background = cols[Math.floor(Math.random() * cols.length)];
+                c.style.width = (5 + Math.random() * 8) + 'px';
+                c.style.height = (5 + Math.random() * 8) + 'px';
+                c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                c.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }, i * 20);
+        }
+    }
+
+    window.addEventListener('load', init);
 </script>
-
-<!-- Modal Finalizar Sorteo -->
-<div class="modal fade" id="modalFinalizarSorteo" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-stop-circle-fill"></i> Finalizar Sorteo
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center py-4">
-                <i class="bi bi-exclamation-circle" style="font-size: 3rem; color: #dc3545;"></i>
-                <h5 class="mt-3">¿Finalizar este sorteo?</h5>
-                <p class="text-muted">No podrás abrir más cofres después de finalizarlo.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="button" class="btn btn-danger" onclick="confirmarFinalizarSorteo()">
-                    <i class="bi bi-stop-circle"></i> Sí, Finalizar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
