@@ -35,7 +35,7 @@ class Producto(models.Model):
     # ── ESTADOS (universales para cualquier negocio) ───────────────────────
     ESTADO_CHOICES = [
         ('disponible', 'Disponible'),
-        ('separado', 'Reservado'),     # "Separado" en ropa = "Reservado" en otros
+        ('reservado', 'Reservado'),
         ('vendido', 'Vendido'),
     ]
 
@@ -174,11 +174,6 @@ class Producto(models.Model):
         verbose_name='Fila de Google Sheets',
         db_index=True
     )
-    sincronizado_sheets = models.BooleanField(
-        default=False,
-        verbose_name='Sincronizado desde Sheets',
-        db_index=True
-    )
     precio_real = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -194,11 +189,6 @@ class Producto(models.Model):
         default='manual',
         verbose_name='Origen del producto',
         db_index=True
-    )
-    fecha_importacion = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name='Fecha de importación'
     )
 
     # ── AUDITORÍA ─────────────────────────────────────────────────────────────

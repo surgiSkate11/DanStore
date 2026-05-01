@@ -109,6 +109,18 @@
         </div>
     </div>
     
+    <!-- Buscador en tiempo real -->
+    <div class="row mb-4">
+        <div class="col-12 col-md-6 col-lg-5">
+            <div class="input-group shadow-sm" style="border-radius: 12px; overflow: hidden; border: 2px solid #e5e7eb; background: white;">
+                <span class="input-group-text bg-white border-0 text-primary">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" id="buscadorFacturas" class="form-control border-0 form-control-lg shadow-none" placeholder="Buscar por cliente o N° de factura...">
+            </div>
+        </div>
+    </div>
+    
     <!-- Lista de Ventas -->
     {% if ventas %}
     <div class="row">
@@ -117,7 +129,7 @@
             <div class="card venta-card">
                 <div class="card-body">
                     <div class="row align-items-center g-3">
-                        <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+                        <div class="col-12 col-md-3 col-lg-2">
                             <h5 class="mb-1" style="color: #667eea;">
                                 <i class="bi bi-file-earmark-text"></i>
                                 {{ venta.numero_factura }}
@@ -125,7 +137,7 @@
                             <small class="text-muted">{{ venta.fecha|date:"d/m/Y H:i" }}</small>
                         </div>
                         
-                        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                        <div class="col-12 col-md-3 col-lg-3">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-person-circle me-2 d-none d-md-inline" style="font-size: 2rem; color: #667eea;"></i>
                                 <div>
@@ -138,29 +150,36 @@
                             </div>
                         </div>
                         
-                        <div class="col-6 col-sm-4 col-md-2 text-center">
+                        <div class="col-6 col-md-auto text-center px-md-3">
                             <small class="text-muted d-block">Productos</small>
                             <strong style="font-size: 1.2rem;">{{ venta.cantidad_productos }}</strong>
                         </div>
                         
-                        <div class="col-6 col-sm-4 col-md-2 text-end text-sm-center">
+                        <div class="col-6 col-md text-end pe-md-4">
                             <h4 class="mb-0" style="color: #10b981;">${{ venta.total|floatformat:2 }}</h4>
                         </div>
                         
-                        <div class="col-12 col-sm-4 col-md-3 col-lg-2 text-center text-md-end">
-                            <div class="btn-group" role="group">
+                        <div class="col-12 col-md-auto mt-3 mt-md-0">
+                            <div class="d-flex justify-content-center justify-content-md-end align-items-center flex-wrap flex-xl-nowrap gap-2">
                                 <a href="{% url 'detalle_venta' venta.id %}" 
                                    class="btn btn-sm btn-outline-primary" title="Ver detalle">
-                                    <i class="bi bi-eye"></i><span class="d-none d-lg-inline ms-1">Ver</span>
+                                    <i class="bi bi-eye"></i><span class="d-none d-xl-inline ms-1">Ver</span>
                                 </a>
-                                <a href="{% url 'editar_venta' venta.id %}" 
+                                {% if venta.origen != 'sheets' %}
+                                <a href="{% url 'editar_venta' venta.id %}"
+                                   class="btn btn-sm btn-outline-warning"
+                                   title="Editar venta">
+                                    <i class="bi bi-pencil-square"></i><span class="d-none d-xl-inline ms-1">Editar</span>
+                                </a>
+                                {% else %}
+                                <button type="button" 
                                    class="btn btn-sm" 
-                                   style="color: #f97316; border-color: #f97316; background: rgba(249, 115, 22, 0.1);" 
-                                   title="Editar venta"
-                                   onmouseover="this.style.backgroundColor='#f97316'; this.style.color='white';"
-                                   onmouseout="this.style.backgroundColor='rgba(249, 115, 22, 0.1)'; this.style.color='#f97316';">
-                                    <i class="bi bi-pencil-square"></i><span class="d-none d-lg-inline ms-1">Editar</span>
-                                </a>
+                                   style="background-color: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; cursor: not-allowed;"
+                                   title="No editable (Fuente externa: {{ venta.get_origen_display }})"
+                                   onclick="showDjangoToast('Esta factura proviene de una fuente externa ({{ venta.get_origen_display|default:'Sheets/Excel/CSV' }}) y no puede ser editada desde el sistema.', 'warning')">
+                                    <i class="bi bi-pencil-square"></i><span class="d-none d-xl-inline ms-1">Editar</span>
+                                </button>
+                                {% endif %}
                                 <button type="button" 
                                    data-url="{% url 'generar_factura_pdf' venta.id %}"
                                    data-filename="Factura_{{ venta.numero_factura }}.pdf"
@@ -168,11 +187,15 @@
                                    data-text="Hola, te comparto el comprobante/factura de tu compra."
                                    onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)" 
                                    class="btn btn-sm btn-outline-info" title="Compartir">
-                                    <i class="bi bi-share"></i><span class="d-none d-lg-inline ms-1">Compartir</span>
+                                    <i class="bi bi-share"></i><span class="d-none d-xl-inline ms-1">Compartir</span>
                                 </button>
-                                <a href="{% url 'generar_factura_pdf' venta.id %}" 
+                                <a href="{% url 'generar_factura_pdf' venta.id %}?html=1" target="_blank"
+                                   class="btn btn-sm btn-outline-secondary" title="Imprimir Ticket">
+                                    <i class="bi bi-printer"></i><span class="d-none d-xl-inline ms-1">Imprimir</span>
+                                </a>
+                                <a href="{% url 'generar_factura_pdf' venta.id %}"
                                    class="btn btn-sm btn-outline-success" title="Descargar PDF">
-                                    <i class="bi bi-file-pdf"></i><span class="d-none d-lg-inline ms-1">PDF</span>
+                                    <i class="bi bi-file-pdf"></i><span class="d-none d-xl-inline ms-1">PDF</span>
                                 </a>
                             </div>
                         </div>
@@ -207,4 +230,43 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const buscador = document.getElementById('buscadorFacturas');
+    const facturas = document.querySelectorAll('.venta-card');
+    
+    /**
+     * Normaliza un texto: quita tildes, convierte a minúsculas y elimina espacios.
+     * @param {string} texto - El texto a normalizar.
+     * @returns {string} El texto normalizado.
+     */
+    function normalizarTexto(texto) {
+        if (!texto) return '';
+        return texto
+            .normalize("NFD") // Separa caracteres de sus acentos (ej: 'é' -> 'e' + '´')
+            .replace(/[\u0300-\u036f]/g, "") // Elimina los diacríticos (acentos, etc.)
+            .toLowerCase() // Convierte a minúsculas
+            .trim(); // Elimina espacios al inicio y final
+    }
+
+    if (buscador) {
+        buscador.addEventListener('input', function(e) {
+            const term = normalizarTexto(e.target.value);
+            
+            facturas.forEach(factura => {
+                // Busca coincidencias en todo el texto (cliente, monto, # de factura)
+                const contenido = normalizarTexto(factura.textContent);
+                if (contenido.includes(term)) {
+                    factura.style.display = '';
+                } else {
+                    factura.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

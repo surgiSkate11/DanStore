@@ -46,6 +46,15 @@ class Venta(models.Model):
     descripcion_otros = models.CharField(max_length=200, blank=True, verbose_name="Descripción otros gastos")
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Total")
     notas = models.TextField(blank=True, verbose_name="Notas de la venta")
+    
+    ORIGEN_CHOICES = [
+        ('sistema', 'Sistema / Manual'),
+        ('sheets', 'Google Sheets'),
+    ]
+    origen = models.CharField(
+        max_length=20, choices=ORIGEN_CHOICES, default='sistema', verbose_name="Origen"
+    )
+    
     creado_en = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     actualizado_en = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
     
@@ -124,7 +133,6 @@ class ConfiguracionFactura(models.Model):
     direccion_empresa = models.TextField(blank=True, verbose_name="Dirección")
     telefono_empresa = models.CharField(max_length=50, blank=True, verbose_name="Teléfono")
     email_empresa = models.EmailField(blank=True, verbose_name="Email")
-    logo = models.ImageField(upload_to='facturas/logos/', blank=True, null=True, verbose_name="Logo de la empresa")
     
     # Configuración de Impuestos y Cliente por defecto
     porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, verbose_name="Porcentaje de IVA")

@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bandeja de Soporte | SaaS{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f1f5f9; } /* Restauramos el scroll natural por si la pantalla es muy pequeña */
+    main.container-fluid { padding: 2rem 1.5rem 3rem 1.5rem !important; height: calc(100vh - 85px); min-height: 650px; }
+    
+    .inbox-container { 
+        height: 100%; 
+        display: flex; 
+        background: #f4f7fb; 
+        border-radius: 24px; 
+        box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); 
+        border: 1px solid rgba(226, 232, 240, 0.8); 
+        overflow: hidden; 
+    }
+    
+    /* Columna Izquierda (Lista) */
+    .inbox-list { width: 380px; border-right: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
+    .inbox-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; z-index: 10; }
+    .ticket-list-wrapper { flex-grow: 1; overflow-y: auto; padding: 1rem 0; }
+    
+    .ticket-item { 
+        margin: 0 1rem 0.5rem 1rem; padding: 1.25rem; border-radius: 16px; border: 1px solid transparent; 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); text-decoration: none; display: block; color: inherit; position: relative; 
+    }
+    .ticket-item:hover { background-color: rgba(255,255,255,0.6); border-color: #e2e8f0; }
+    .ticket-item.active { background-color: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05); }
+    .ticket-item.active::before { 
+        content: ''; position: absolute; left: -1px; top: 15%; height: 70%; width: 4px; 
+        background: #3b82f6; border-radius: 0 4px 4px 0; 
+    }
+    
+    /* Columna Derecha (Chat) */
+    .inbox-detail { flex-grow: 1; display: flex; flex-direction: column; background: #f4f7fb; height: 100%; }
+    .chat-header { padding: 1.5rem 2rem; border-bottom: 1px solid #e2e8f0; background: #ffffff; z-index: 10; box-shadow: 0 4px 15px -10px rgba(0,0,0,0.05); }
+    .chat-body { flex-grow: 1; overflow-y: auto; padding: 2rem; background: #f4f7fb; }
+    .chat-footer { padding: 1.5rem 2rem; background: #ffffff; z-index: 10; border-top: 1px solid #e2e8f0; margin-top: auto; }
+    
+    /* Burbujas de Chat */
+    .chat-bubble { max-width: 75%; padding: 1.25rem; border-radius: 20px; margin-bottom: 1.5rem; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .bubble-customer { background: #ffffff; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; margin-right: auto; color: #334155; }
+    .bubble-staff { background: linear-gradient(135deg, #3b82f6, #2563eb); border-bottom-right-radius: 4px; margin-left: auto; color: white; border: 1px solid #2563eb; }
+    .bubble-meta { font-size: 0.75rem; font-weight: 600; opacity: 0.7; margin-top: 8px; display: block; }
+    
+    /* Input Footer Premium */
+    .chat-input-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 0.5rem; display: flex; align-items: flex-end; transition: all 0.3s; }
+    .chat-input-wrapper:focus-within { background: #ffffff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+    .chat-input { background: transparent !important; border: none !important; resize: none; padding: 0.75rem 1rem; max-height: 150px; min-height: 48px; box-shadow: none !important; }
+    .chat-input:focus { outline: none; }
+    
+    .empty-state { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; background: #f4f7fb; }
+    
+    /* Animación de recarga */
+    @keyframes spinFast { 100% { transform: rotate(360deg); } }
+    .spin-icon { animation: spinFast 0.8s linear infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inbox-container">
+    <!-- PANEL IZQUIERDO: LISTA DE TICKETS -->
+    <div class="inbox-list">
+        <div class="inbox-header position-sticky top-0 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bolder text-dark mb-0" style="letter-spacing: -0.5px;"><i class="bi bi-inbox-fill text-primary me-2"></i>Bandeja de Soporte</h5>
+            <button onclick="recargarBandeja(this)" class="btn btn-sm btn-light border-0 rounded-circle text-primary shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Actualizar bandeja" data-bs-toggle="tooltip">
+                <i class="bi bi-arrow-clockwise fs-5"></i>
+            </button>
+        </div>
+        
+        <div class="ticket-list-wrapper">
+        {% for ticket in tickets %}
+        <a href="?id={{ ticket.id }}" class="ticket-item {% if ticket_activo and ticket_activo.id == ticket.id %}active{% endif %}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="fw-bold text-dark text-truncate d-block" style="max-width: 80%;">{{ ticket.empresa.nombre }}</span>
+                <span class="small text-muted" style="font-size: 0.7rem;">{{ ticket.actualizado_en|date:"d M" }}</span>
+            </div>
+            <p class="small text-muted mb-2 text-truncate fw-semibold">{{ ticket.asunto }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="badge 
+                    {% if ticket.estado == 'abierto' %}bg-danger bg-opacity-10 text-danger
+                    {% elif ticket.estado == 'en_progreso' %}bg-warning bg-opacity-10 text-warning
+                    {% else %}bg-success bg-opacity-10 text-success{% endif %} rounded-pill px-2 py-1" style="font-size: 0.7rem;">
+                    {{ ticket.get_estado_display }}
+                </span>
+                {% if ticket.prioridad == 'alta' or ticket.prioridad == 'critica' %}
+                    <i class="bi bi-exclamation-circle-fill text-danger" title="Prioridad Alta"></i>
+                {% endif %}
+            </div>
+        </a>
+        {% empty %}
+        <div class="p-5 text-center text-muted">
+            <i class="bi bi-check-circle-fill text-success opacity-50 fs-1 d-block mb-2"></i>
+            <p class="small fw-semibold">No hay tickets pendientes.</p>
+        </div>
+        {% endfor %}
+        </div>
+    </div>
+
+    <!-- PANEL DERECHO: DETALLE DEL TICKET -->
+    <div class="inbox-detail">
+        {% if ticket_activo %}
+        <div class="chat-header d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="fw-bolder text-dark mb-1" style="letter-spacing: -0.5px;">{{ ticket_activo.asunto }}</h4>
+                <p class="text-muted small fw-semibold mb-0">
+                    <span class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle me-1" style="width: 24px; height: 24px;">
+                        {{ ticket_activo.empresa.nombre|make_list|first|upper }}
+                    </span>
+                    {{ ticket_activo.empresa.nombre }}
+                    <span class="mx-2 opacity-25">|</span>
+                    <i class="bi bi-tag ms-2 me-1"></i> {{ ticket_activo.get_categoria_display }}
+                </p>
+            </div>
+            <form method="POST" action="?id={{ ticket_activo.id }}" class="d-flex align-items-center gap-2">
+                {% csrf_token %}
+                <select name="estado" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary rounded-pill px-3 shadow-sm" onchange="this.form.submit()">
+                    <option value="abierto" {% if ticket_activo.estado == 'abierto' %}selected{% endif %}>🔴 Abierto</option>
+                    <option value="en_progreso" {% if ticket_activo.estado == 'en_progreso' %}selected{% endif %}>🟡 En Progreso</option>
+                    <option value="resuelto" {% if ticket_activo.estado == 'resuelto' %}selected{% endif %}>🟢 Resuelto</option>
+                </select>
+            </form>
+        </div>
+        
+        <div class="chat-body" id="chatBody">
+            {% for msj in ticket_activo.mensajes.all %}
+            <div class="chat-bubble {% if msj.es_staff %}bubble-staff{% else %}bubble-customer{% endif %}">
+                <div class="fw-bold mb-1" style="font-size: 0.8rem; opacity: 0.8;">
+                    {% if msj.es_staff %}<i class="bi bi-headset me-1"></i> Soporte Tiendita{% else %}<i class="bi bi-person-circle me-1"></i> {{ msj.remitente.first_name|default:msj.remitente.username }}{% endif %}
+                </div>
+                {{ msj.mensaje|linebreaksbr }}
+                
+                {% if msj.adjunto %}
+                <div class="mt-3 p-3 rounded-3" style="background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.05);">
+                    <a href="{{ msj.adjunto.url }}" target="_blank" class="text-decoration-none {% if msj.es_staff %}text-white{% else %}text-primary{% endif %} fw-bold small d-flex align-items-center gap-2">
+                        <i class="bi bi-paperclip fs-5 me-2"></i> Ver archivo adjunto
+                    </a>
+                </div>
+                {% endif %}
+                
+                <span class="bubble-meta">{{ msj.creado_en|date:"d M, H:i" }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="chat-footer">
+            <form method="POST" action="?id={{ ticket_activo.id }}" enctype="multipart/form-data" class="mb-0">
+                {% csrf_token %}
+                <div class="chat-input-wrapper">
+                    <label class="btn btn-link text-secondary rounded-circle d-flex align-items-center justify-content-center p-0 m-1" style="width: 40px; height: 40px; cursor: pointer;">
+                        <i class="bi bi-paperclip fs-4"></i>
+                        <input type="file" name="adjunto" class="d-none">
+                    </label>
+                    <textarea name="mensaje" class="form-control chat-input" rows="1" placeholder="Escribe tu respuesta aquí..." required oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+                    <button type="submit" class="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center m-1" style="width: 40px; height: 40px;">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-chat-square-dots-fill text-primary" style="font-size: 5rem; opacity: 0.15;"></i>
+            <h4 class="mt-3 fw-bold text-dark">Bandeja de Entrada</h4>
+            <p>Selecciona un ticket de la lista a la izquierda para comenzar a responder.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Auto-scroll al fondo del chat
+    const chatBody = document.getElementById('chatBody');
+    if (chatBody) { chatBody.scrollTop = chatBody.scrollHeight; }
+    
+    // Función para recargar la bandeja con animación
+    function recargarBandeja(btn) {
+        const icon = btn.querySelector('i');
+        icon.classList.add('spin-icon');
+        // Recarga la página limpiando los parámetros GET extras (como el id del ticket activo si deseas)
+        window.location.reload();
+    }
+</script>
+{% endblock %}

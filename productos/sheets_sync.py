@@ -13,6 +13,7 @@ from clientes.models import Cliente
 import os
 import json
 import re
+from empresas.mixins import requiere_modulo
 
 
 # Permitir OAuth sobre HTTP (solo para entorno de desarrollo local)
@@ -78,6 +79,7 @@ def conectar_google_sheets(empresa=None):
 
 
 @login_required
+@requiere_modulo('productos')
 def sincronizar_sheets(request):
     """Vista para sincronizar productos desde Google Sheets"""
     if not getattr(request, 'empresa', None):
@@ -281,17 +283,22 @@ def sincronizar_sheets(request):
                     variante_nueva = talla
                     
                     # Determinar estado desde la columna "Estado" del Sheet
+                    # Mapeo inteligente con sinónimos
                     mapeo_estado = {
-                        'disponible': 'disponible',
-                        'separado': 'separado',
-                        'vendido': 'vendido'
+                        'disponible': 'disponible', 'stock': 'disponible', 'libre': 'disponible',
+                        'reservado': 'reservado', 'separado': 'reservado', 'apartado': 'reservado', 'pendiente': 'reservado',
+                        'vendido': 'vendido', 'vendida': 'vendido', 'pagado': 'vendido', 'entregado': 'vendido'
                     }
                     
-                    if estado_sheets and estado_sheets in mapeo_estado:
-                        estado = mapeo_estado[estado_sheets]
-                    else:
-                        # Fallback: si tiene cliente → vendido, si está vacío → disponible
-                        estado = 'vendido' if vendido_a else 'disponible'
+                    estado = 'disponible' # Default
+                    for clave, valor_oficial in mapeo_estado.items():
+                        if estado_sheets and clave in estado_sheets:
+                            estado = valor_oficial
+                            break
+                            
+                    # Si está completamente vacío pero tiene cliente, lo forzamos a vendido
+                    if not estado_sheets and vendido_a:
+                        estado = 'vendido'
                     
                     # Generar descripción automática
                     descripcion_partes = []
@@ -363,9 +370,7 @@ def sincronizar_sheets(request):
                             producto_existente.descripcion = descripcion
                             producto_existente.vendido_a = vendido_a
                             producto_existente.estado = estado
-                            producto_existente.sincronizado_sheets = True
                             producto_existente.origen = 'sheets'
-                            producto_existente.fecha_importacion = timezone.now()
                             productos_a_actualizar.append(producto_existente)
                     else:
                         # Preparar producto nuevo para bulk_create
@@ -384,9 +389,7 @@ def sincronizar_sheets(request):
                                 vendido_a=vendido_a,
                                 estado=estado,
                                 google_sheets_row=idx,
-                                sincronizado_sheets=True,
                                 origen='sheets',
-                                fecha_importacion=timezone.now(),
                             )
                         )
                 except Exception as e:
@@ -401,8 +404,7 @@ def sincronizar_sheets(request):
                 Producto.objects.bulk_update(
                     productos_a_actualizar,
                     ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante', 
-                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'sincronizado_sheets',
-                     'origen', 'fecha_importacion'],
+                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'origen'],
                     batch_size=500
                 )
                 productos_actualizados = len(productos_a_actualizar)
@@ -440,13 +442,13 @@ def sincronizar_sheets(request):
             # LIMPIEZA DE CONSISTENCIA - PASO 1
             # ========================================
             # IMPORTANTE: Primero limpiar facturas inconsistentes ANTES de crear nuevas
-            # Esto evita que se vuelvan a facturar productos que cambiaron de estado
+            # Esto evita que se vuelvan a facturar productos que cambiaron de estado (ej: cancelaron compra)
             from ventas.models import DetalleVenta, Venta
             
-            # Buscar productos en estado 'separado' o 'disponible' que tengan facturas
+            # Buscar productos en estado 'reservado' o 'disponible' que tengan facturas
             productos_no_vendidos = Producto.objects.filter(
                 empresa=request.empresa,
-                estado__in=['separado', 'disponible']
+                estado__in=['reservado', 'disponible']
             ).values_list('id', flat=True)
             
             # Buscar detalles de venta de estos productos
@@ -481,7 +483,7 @@ def sincronizar_sheets(request):
                 
                 # Mostrar mensaje de limpieza
                 if ventas_eliminadas > 0:
-                    messages.info(request, f'Limpieza: {ventas_eliminadas} factura(s) eliminada(s) porque los productos cambiaron a estado "separado" o "disponible"')
+                    messages.info(request, f'Limpieza: {ventas_eliminadas} factura(s) eliminada(s) porque los productos cambiaron a estado "reservado" o "disponible"')
                 if ventas_actualizadas > 0:
                     messages.info(request, f'Limpieza: {ventas_actualizadas} factura(s) actualizada(s) después de eliminar {cantidad_detalles} producto(s) no vendido(s)')
             
@@ -513,7 +515,7 @@ def sincronizar_sheets(request):
         return redirect('sincronizar_sheets')
     
     # GET: Mostrar formulario
-    total_productos = Producto.objects.filter(empresa=request.empresa, sincronizado_sheets=True).count()
+    total_productos = Producto.objects.filter(empresa=request.empresa, origen='sheets').count()
     
     from django.db.models import Sum
     
@@ -522,7 +524,7 @@ def sincronizar_sheets(request):
         empresas=request.empresa, notas__icontains='Google Sheets'
     ).count()
     valor_total = Producto.objects.filter(
-        empresa=request.empresa, sincronizado_sheets=True
+        empresa=request.empresa, origen='sheets'
     ).aggregate(total=Sum('precio'))['total'] or 0
     
     context = {
@@ -600,6 +602,7 @@ def mapear_talla(talla, categoria):
 
 
 @login_required
+@requiere_modulo('productos')
 def subir_fotos_productos(request):
     """Vista para subir fotos a productos sincronizados desde Sheets"""
     if not getattr(request, 'empresa', None):
@@ -612,7 +615,7 @@ def subir_fotos_productos(request):
         
         if producto_id and imagen:
             try:
-                producto = Producto.objects.get(id=producto_id, sincronizado_sheets=True, empresa=request.empresa)
+                producto = Producto.objects.get(id=producto_id, origen='sheets', empresa=request.empresa)
                 producto.imagen = imagen
                 producto.save()
                 messages.success(request, f'Foto subida para el producto')
@@ -624,7 +627,7 @@ def subir_fotos_productos(request):
     # GET: Listar productos sin foto (campo vacío o NULL) - Limitar a 100 más recientes
     productos_sin_foto = Producto.objects.select_related('tipo_producto').filter(
         empresa=request.empresa,
-        sincronizado_sheets=True
+        origen='sheets'
     ).filter(
         models.Q(imagen='') | models.Q(imagen__isnull=True)
     ).exclude(estado='vendido').order_by('-creado_en')[:100]
@@ -804,7 +807,8 @@ def sincronizar_ventas_desde_sheets(empresa):
                 venta = Venta.objects.create(
                     empresa=empresa,
                     cliente=cliente,
-                    notas=''
+                    notas='',
+                    origen='sheets'
                 )
                 
                 # Calcular totales y preparar detalles

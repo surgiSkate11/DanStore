@@ -18,9 +18,11 @@ import os
 import json
 from PIL import Image as PILImage
 from PyPDF2 import PdfReader, PdfWriter
+from empresas.mixins import requiere_modulo
 
 
 @login_required
+@requiere_modulo('catalogos')
 def generar_catalogo(request):
     """Vista para configurar y generar catálogo PDF"""
     filtro_form = ProductoFiltroForm(request.GET or None, empresa=request.empresa)
@@ -55,6 +57,7 @@ def generar_catalogo(request):
 
 
 @login_required
+@requiere_modulo('catalogos')
 def preview_catalogo(request):
     """Vista para mostrar previsualización HTML del catálogo antes de descargar PDF"""
     
@@ -145,6 +148,7 @@ def get_fondo_pagina_callback(catalogo_dir):
 
 
 @login_required
+@requiere_modulo('catalogos')
 def descargar_catalogo(request):
     """Vista para generar y descargar el PDF del catálogo con diseño personalizado"""
     
@@ -705,6 +709,7 @@ def descargar_catalogo(request):
 
 
 @login_required
+@requiere_modulo('catalogos')
 def personalizar_catalogo(request):
     """Vista para subir y gestionar las imágenes personalizadas del catálogo"""
     

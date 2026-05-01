@@ -1,5 +1,6 @@
 import json
-from django.http import JsonResponse, Http404
+import csv
+from django.http import JsonResponse, Http404, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,6 +12,8 @@ from ventas.models import Venta, DetalleVenta
 from productos.models import Producto
 from .models import Cliente
 from .forms import ClienteForm
+from empresas.mixins import requiere_modulo
+from tiendita_project.utils import form_errors_to_messages
 
 @login_required
 def api_crear_cliente(request):
@@ -46,6 +49,7 @@ def api_crear_cliente(request):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 @login_required
+@requiere_modulo('clientes')
 def lista_clientes(request):
     """Dashboard unificado de clientes: top compradores, directorio y control de deudas."""
     empresa = getattr(request, 'empresa', None)
@@ -107,6 +111,7 @@ def lista_clientes(request):
 
 
 @login_required
+@requiere_modulo('clientes')
 def crear_cliente(request):
     """Vista para crear un nuevo cliente desde un template dedicado (sin modal)."""
     if request.method == 'POST':
@@ -121,12 +126,15 @@ def crear_cliente(request):
                 cliente.empresas.add(request.empresa)
             
             return redirect('lista_clientes')
+        else:
+            form_errors_to_messages(request, form)
     else:
         form = ClienteForm()
 
     return render(request, 'clientes/crear_cliente.html', {'form': form})
 
 @login_required
+@requiere_modulo('clientes')
 def detalle_cliente(request, cliente_id):
     """Muestra la información de un cliente específico y su historial de compras."""
     from datetime import timedelta
@@ -174,6 +182,7 @@ def detalle_cliente(request, cliente_id):
     return render(request, 'clientes/detalle_cliente.html', context)
 
 @login_required
+@requiere_modulo('clientes')
 def editar_cliente(request, cliente_id):
     """Permite editar los datos de un cliente temporal o existente."""
     empresa = getattr(request, 'empresa', None)
@@ -186,6 +195,8 @@ def editar_cliente(request, cliente_id):
             form.save()
             messages.success(request, f'La información de "{cliente.nombre}" ha sido actualizada.')
             return redirect('lista_clientes')
+        else:
+            form_errors_to_messages(request, form)
     else:
         form = ClienteForm(instance=cliente)
 
@@ -194,3 +205,28 @@ def editar_cliente(request, cliente_id):
         'cliente': cliente
     }
     return render(request, 'clientes/editar_cliente.html', context)
+
+
+@login_required
+@requiere_modulo('clientes')
+def exportar_clientes_csv(request):
+    """Exportación profesional de datos para el Tenant"""
+    empresa = getattr(request, 'empresa', None)
+    if not empresa:
+        messages.error(request, "No tienes una empresa activa.")
+        return redirect('lista_clientes')
+        
+    # Configurar la respuesta HTTP para descargar un archivo
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    filename = f'clientes_{empresa.slug}_{timezone.now().strftime("%Y%m%d")}.csv'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Escribir CSV
+    writer = csv.writer(response)
+    writer.writerow(['Nombre', 'RUC/Cédula', 'Teléfono', 'Email', 'Total Gastado', 'Fecha de Registro'])
+    
+    clientes = Cliente.objects.filter(empresas=empresa)
+    for c in clientes:
+        writer.writerow([c.nombre, c.ruc_cedula, c.telefono, c.email, '', c.creado_en.strftime("%Y-%m-%d")])
+        
+    return response

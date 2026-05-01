@@ -978,7 +978,7 @@
                 <p class="page-subtitle mb-0">
                     <i class="bi bi-info-circle"></i> 
                     {% if modo_edicion %}
-                    Modifica los productos, costos adicionales o notas de esta venta
+                    Ajusta los descuentos, costos adicionales o notas de esta venta
                     {% else %}
                     Selecciona productos y completa la información para generar la factura
                     {% endif %}
@@ -992,8 +992,7 @@
         </div>
     </div>
     
-    <form method="post" id="formVenta">
-        {% csrf_token %}
+    <form method="post" id="formVenta"
         
         <!-- SECCIÓN 1: Información del Cliente -->
         <div class="row">
@@ -1076,9 +1075,6 @@
                     <h5>
                         <i class="bi bi-bag-check-fill" style="color: #667eea;"></i> Productos de esta Venta
                     </h5>
-                    <p class="text-muted small mb-3">
-                        <i class="bi bi-info-circle"></i> Estos productos fueron sincronizados desde Google Sheets. Solo puedes ajustar gastos adicionales.
-                    </p>
                     
                     <!-- Grid de productos en forma de tarjetas -->
                     <div class="row g-3">
@@ -1249,14 +1245,17 @@
                         <thead>
                             <tr>
                                 <th style="width: 10%; text-align: center;">#</th>
-                                <th style="width: 45%;">Producto</th>
+                                <th style="width: {% if modo_edicion %}45%{% else %}40%{% endif %};">Producto</th>
                                 <th style="width: 25%;">Categoría</th>
-                                <th style="width: 20%; text-align: center;">Precio</th>
+                                <th style="width: {% if modo_edicion %}20%{% else %}15%{% endif %}; text-align: center;">Precio</th>
+                                {% if not modo_edicion %}
+                                <th style="width: 10%; text-align: center;">Acción</th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody id="tablaProductosSeleccionados">
                             <tr class="tabla-vacia">
-                                <td colspan="4">
+                                <td colspan="{% if modo_edicion %}4{% else %}5{% endif %}">
                                     <div style="padding: 2rem; text-align: center; color: #9ca3af;">
                                         <i class="bi bi-cart-x" style="font-size: 3rem; opacity: 0.3;"></i>
                                         <p style="margin-top: 1rem; font-size: 1.1rem; font-weight: 600; color: #6b7280;">No hay productos seleccionados</p>
@@ -1576,7 +1575,7 @@ function agregarProductoTabla(productoId) {
                 <i class="bi bi-tag-fill"></i> ${categoriaNombre}
             </span>
         </td>
-        <td style="text-align: right; font-weight: 800; font-size: 1.25rem; color: #059669; padding-right: 1.5rem; font-family: 'Courier New', monospace; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 3px solid #10b981;">
+        <td style="text-align: center; font-weight: 800; font-size: 1.25rem; color: #059669; font-family: 'Courier New', monospace; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 3px solid #10b981;">
             $${precio.toFixed(2)}
         </td>
         <td style="text-align: center;">
@@ -1685,6 +1684,33 @@ function actualizarContador() {
 
 // Agregar productos seleccionados al formulario antes de enviar
 document.getElementById('formVenta').addEventListener('submit', function(e) {
+    // Validación HTML5 personalizada sin alertas de navegador
+    if (!this.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        let primerError = null;
+        Array.from(this.elements).forEach(input => {
+            if (!input.checkValidity()) {
+                input.classList.add('is-invalid');
+                input.style.borderColor = '#ef4444';
+                input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                
+                if (!primerError) primerError = input;
+                input.addEventListener('input', function() {
+                    if (this.checkValidity()) {
+                        this.classList.remove('is-invalid');
+                        this.style.borderColor = '';
+                        this.style.boxShadow = '';
+                    }
+                }, { once: true });
+            }
+        });
+        showDjangoToast('Por favor, completa todos los campos obligatorios resaltados en rojo.', 'warning');
+        if (primerError) primerError.focus();
+        return;
+    }
+    
     // Limpiar inputs previos
     document.querySelectorAll('input[name="productos"]').forEach(input => input.remove());
     
@@ -1711,93 +1737,6 @@ document.querySelectorAll('.producto-seleccionable').forEach(card => {
     const precio = parseFloat(card.dataset.precio) || 0;
     preciosProductos[productoId] = precio;
 });
-
-// Función para agregar producto a la tabla de facturación
-function agregarProductoTabla(productoId) {
-    const card = document.querySelector(`.producto-seleccionable[data-producto-id="${productoId}"]`);
-    if (!card) return;
-    
-    const nombre = card.querySelector('.card-title').textContent.trim();
-    const precio = parseFloat(card.dataset.precio) || 0;
-    const categoria = card.dataset.categoria || 'Sin categoría';
-    const categoriaNombre = categoria;
-    
-    const tbody = document.getElementById('tablaProductosSeleccionados');
-    
-    // Eliminar mensaje de tabla vacía si existe
-    const filaVacia = tbody.querySelector('.tabla-vacia');
-    if (filaVacia) {
-        filaVacia.remove();
-    }
-    
-    // Crear nueva fila
-    const fila = document.createElement('tr');
-    fila.dataset.productoId = productoId;
-    fila.style.animation = 'slideIn 0.3s ease-out';
-    fila.innerHTML = `
-        <td style="text-align: center; font-weight: 700; color: #667eea;">${tbody.children.length + 1}</td>
-        <td style="font-weight: 600;">${nombre}</td>
-        <td>
-            <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">
-                <i class="bi bi-tag-fill"></i> ${categoriaNombre}
-            </span>
-        </td>
-        <td style="text-align: right; font-weight: 700; font-size: 1.1rem; color: #10b981;">$${precio.toFixed(2)}</td>
-        <td style="text-align: center;">
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarProductoTabla('${productoId}')" style="border-radius: 8px;">
-                <i class="bi bi-trash-fill"></i>
-            </button>
-        </td>
-    `;
-    
-    tbody.appendChild(fila);
-    calcularTotales();
-}
-
-// Función para eliminar producto de la tabla
-function eliminarProductoTabla(productoId) {
-    const tbody = document.getElementById('tablaProductosSeleccionados');
-    const fila = tbody.querySelector(`tr[data-producto-id="${productoId}"]`);
-    
-    if (fila) {
-        fila.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => {
-            fila.remove();
-            
-            // Renumerar filas
-            const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
-            filas.forEach((f, index) => {
-                const numeroCell = f.querySelector('td:first-child');
-                if (numeroCell) numeroCell.textContent = index + 1;
-            });
-            
-            // Si no hay productos, mostrar mensaje vacío
-            if (filas.length === 0) {
-                tbody.innerHTML = `
-                    <tr class="tabla-vacia">
-                        <td colspan="5">
-                            <div style="padding: 2rem; text-align: center; color: #9ca3af;">
-                                <i class="bi bi-cart-x" style="font-size: 3rem; opacity: 0.3;"></i>
-                                <p style="margin-top: 1rem; font-size: 1.1rem; font-weight: 600; color: #6b7280;">No hay productos seleccionados</p>
-                                <p style="margin: 0; font-size: 0.9rem;">Haz clic en los productos del catálogo para agregarlos a la factura</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-            
-            calcularTotales();
-            
-            // Deseleccionar el producto en el grid
-            const card = document.querySelector(`.producto-seleccionable[data-producto-id="${productoId}"]`);
-            if (card) {
-                card.classList.remove('producto-seleccionado');
-                productosSeleccionados.delete(productoId);
-                actualizarContador();
-            }
-        }, 300);
-    }
-}
 
 function calcularTotales() {
     // Calcular subtotal de productos seleccionados

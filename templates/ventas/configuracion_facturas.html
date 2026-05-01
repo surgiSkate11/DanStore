@@ -60,7 +60,7 @@
         </div>
     </div>
     
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" id="configForm" novalidate>
         {% csrf_token %}
         
         <div class="row">
@@ -121,20 +121,6 @@
                                       placeholder="Ej: Hola, te comparto el detalle de tus productos pendientes.">{{ config.mensaje_deuda }}</textarea>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-image"></i> Logo de la Empresa
-                            </label>
-                            {% if config.logo %}
-                            <div class="mb-3">
-                                <img src="{{ config.logo.url }}" alt="Logo" 
-                                     style="max-width: 150px; filter: grayscale(100%);">
-                            </div>
-                            {% endif %}
-                            <input type="file" name="logo" class="form-control" accept="image/*">
-                            <small class="text-muted">Formatos: JPG, PNG. Se imprimirá en escala de grises.</small>
-                        </div>
-                        
                         <hr>
                         
                         <h6 class="mb-3 fw-semibold"><i class="bi bi-calculator"></i> Impuestos y Cliente por Defecto</h6>
@@ -207,9 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let html = ``;
         html += `========================================\n`;
-        {% if config.logo %}
-        html += centerText("[ LOGO ]") + `\n`;
-        {% endif %}
         html += centerText(nombre.toUpperCase()) + `\n`;
         if(ruc) html += centerText(`RUC: ${ruc}`) + `\n`;
         if(dir) html += centerText(dir) + `\n`;
@@ -249,6 +232,40 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Render inicial
     updatePreview();
+    
+    // Validación del formulario (Client-side)
+    const form = document.getElementById('configForm');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                let primerError = null;
+                
+                Array.from(form.elements).forEach(input => {
+                    if (!input.checkValidity()) {
+                        input.classList.add('is-invalid');
+                        input.style.borderColor = '#ef4444';
+                        input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                        
+                        if (!primerError) primerError = input;
+                        
+                        input.addEventListener('input', function() {
+                            if (this.checkValidity()) {
+                                this.classList.remove('is-invalid');
+                                this.style.borderColor = '';
+                                this.style.boxShadow = '';
+                            }
+                        }, { once: true });
+                    }
+                });
+                
+                showDjangoToast('Por favor, revisa y completa los campos resaltados en rojo.', 'warning');
+                if (primerError) primerError.focus();
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

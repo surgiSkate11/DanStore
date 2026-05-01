@@ -4,232 +4,373 @@
 
 {% block extra_css %}
 <style>
-    .bg-purple {
-        background-color: #8b5cf6 !important;
-    }
-    
-    .factura-container {
-        max-width: 900px;
+    /* Contenedor Principal Premium */
+    .factura-card {
+        max-width: 950px;
         margin: 0 auto;
-        background: white;
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+    
+    /* Cabecera con Gradiente SaaS */
+    .factura-header-premium {
+        background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+        padding: 2.5rem 3rem;
+        color: white;
+        position: relative;
+    }
+    
+    .factura-header-premium::before {
+        content: '';
+        position: absolute;
+        top: -50px;
+        right: -20px;
+        width: 250px;
+        height: 250px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+    }
+    
+    .factura-header-premium::after {
+        content: '';
+        position: absolute;
+        bottom: -30px;
+        left: 10%;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+        pointer-events: none;
+    }
+    
+    /* Tarjetas de Información */
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 1px solid #f3f4f6;
+        height: 100%;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.04);
+    }
+    
+    .icon-box {
+        width: 45px;
+        height: 45px;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        padding: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 1rem;
     }
     
-    .factura-header {
-        border-left: 6px solid #667eea;
-        padding-left: 1.5rem;
+    .icon-box.blue { background: #eff6ff; color: #3b82f6; }
+    .icon-box.purple { background: #f3e8ff; color: #8b5cf6; }
+    
+    /* Lista de Productos */
+    .productos-header {
+        background: #f8f9fa;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 700;
+        color: #4b5563;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .producto-row {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #f3f4f6;
+        transition: background-color 0.2s ease;
+        border-radius: 8px;
+    }
+    
+    .producto-row:hover {
+        background-color: #f8f9ff;
+    }
+    
+    .producto-img-container {
+        width: 65px;
+        height: 65px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    /* Panel de Totales */
+    .totales-panel {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 1.5rem;
+        border: 2px solid #f3f4f6;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.6rem 0;
+        font-size: 1rem;
+    }
+    
+    .total-final-box {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1rem;
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.25);
+    }
+    
+    /* Botones de acción superior */
+    .action-bar {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         margin-bottom: 2rem;
+        border: 1px solid #e5e7eb;
     }
     
-    .info-section {
-        background: #f9fafb;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .producto-item {
-        border-bottom: 1px solid #e5e7eb;
-        padding: 1rem 0;
-    }
-    
-    .producto-item:last-child {
-        border-bottom: none;
-    }
-    
-    .totales-section {
-        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-        border-radius: 8px;
-        padding: 1.5rem;
+    .nota-box {
+        background: linear-gradient(to right, #fffbeb, #fef3c7);
+        border-left: 4px solid #f59e0b;
+        padding: 1.25rem;
+        border-radius: 0 12px 12px 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <!-- Botones de acción -->
-    <div class="row mb-4">
-        <div class="col">
-            <a href="{% url 'lista_ventas' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Volver a Ventas
+    <!-- Botones de Acción (Action Bar) -->
+    <div class="action-bar d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <a href="{% url 'lista_ventas' %}" class="btn btn-light fw-semibold" style="border: 1px solid #d1d5db; color: #4b5563;">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Ventas
+        </a>
+        
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'detalle_cliente' venta.cliente.id %}" class="btn btn-outline-primary fw-semibold rounded-pill px-3">
+                <i class="bi bi-person-circle"></i> Ver Cliente
             </a>
-        </div>
-        <div class="col-auto">
-        <button type="button" 
-                data-url="{% url 'generar_factura_pdf' venta.id %}"
-                data-filename="Factura_{{ venta.numero_factura }}.pdf"
-                data-title="Factura {{ venta.numero_factura }}"
-                data-text="Hola, te comparto el comprobante/factura de tu compra."
-                onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)" 
-                class="btn btn-info text-white">
+            
+            {% if venta.origen != 'sheets' %}
+            <a href="{% url 'editar_venta' venta.id %}" class="btn btn-outline-warning fw-semibold rounded-pill px-3">
+                <i class="bi bi-pencil-square"></i> Editar Venta
+            </a>
+            {% else %}
+            <button type="button" class="btn fw-semibold rounded-pill px-3" style="background-color: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; cursor: not-allowed;" onclick="showDjangoToast('Esta factura proviene de una fuente externa ({{ venta.get_origen_display|default:'Sheets/Excel/CSV' }}) y no puede ser editada desde el sistema.', 'warning')">
+                <i class="bi bi-pencil-square"></i> No Editable
+            </button>
+            {% endif %}
+            
+            <button type="button" 
+                    data-url="{% url 'generar_factura_pdf' venta.id %}"
+                    data-filename="Factura_{{ venta.numero_factura }}.pdf"
+                    data-title="Factura {{ venta.numero_factura }}"
+                    data-text="Hola, te comparto el comprobante/factura de tu compra."
+                    onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)" 
+                    class="btn btn-info text-white fw-semibold rounded-pill px-3">
                 <i class="bi bi-share-fill"></i> Compartir
             </button>
-            <a href="{% url 'generar_factura_pdf' venta.id %}" class="btn btn-success">
-                <i class="bi bi-file-pdf"></i> Descargar PDF
+            
+            <a href="{% url 'generar_factura_pdf' venta.id %}?html=1" class="btn btn-secondary fw-semibold rounded-pill px-3" target="_blank">
+                <i class="bi bi-printer"></i> Imprimir Ticket
             </a>
-            <a href="{% url 'detalle_cliente' venta.cliente.id %}" class="btn btn-primary">
-                <i class="bi bi-person"></i> Ver Cliente
+            
+            <a href="{% url 'generar_factura_pdf' venta.id %}" class="btn fw-semibold rounded-pill px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);" target="_blank">
+                <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
             </a>
         </div>
     </div>
     
-    <div class="factura-container">
+    <div class="factura-card">
         <!-- Header -->
-        <div class="factura-header">
-            <h2 class="mb-2">
-                <i class="bi bi-receipt"></i> {{ venta.numero_factura }}
-            </h2>
-            <p class="text-muted mb-0">Detalle de la venta</p>
-        </div>
-        
-        <!-- Información General -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="info-section">
-                    <h6 class="mb-3">
-                        <i class="bi bi-calendar" style="color: #667eea;"></i> Información de la Venta
-                    </h6>
-                    <p class="mb-2">
-                        <strong>Fecha:</strong> {{ venta.fecha|date:"d/m/Y H:i" }}
-                    </p>
-                    <p class="mb-0">
-                        <strong>Creado:</strong> {{ venta.creado_en|date:"d/m/Y H:i" }}
-                    </p>
-                </div>
+        <div class="factura-header-premium d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <p class="mb-1 text-white-50 fw-semibold text-uppercase tracking-wide" style="letter-spacing: 1px; font-size: 0.85rem;">Comprobante de Venta</p>
+                <h2 class="mb-0 fw-bold display-6">
+                    <i class="bi bi-receipt-cutoff opacity-75 me-2"></i>{{ venta.numero_factura }}
+                </h2>
             </div>
-            
-            <div class="col-md-6">
-                <div class="info-section">
-                    <h6 class="mb-3">
-                        <i class="bi bi-person-circle" style="color: #667eea;"></i> Cliente
-                    </h6>
-                    <p class="mb-2">
-                        <strong>Nombre:</strong> {{ venta.cliente.nombre }}
-                    </p>
-                    <p class="mb-2">
-                        <strong>Teléfono:</strong> {{ venta.cliente.telefono|default:"N/A" }}
-                    </p>
-                    <p class="mb-0">
-                        <strong>Email:</strong> {{ venta.cliente.email|default:"N/A" }}
-                    </p>
-                </div>
+            <div class="text-end">
+                <span class="badge bg-white text-primary rounded-pill px-3 py-2 fw-bold shadow-sm" style="font-size: 0.9rem;">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> Pagada
+                </span>
             </div>
         </div>
         
-        <!-- Productos -->
-        <div class="mb-4">
-            <h5 class="mb-3">
-                <i class="bi bi-bag" style="color: #667eea;"></i> Productos
-            </h5>
+        <div class="p-4 p-md-5">
+            <!-- Información General (Tarjetas) -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="icon-box blue">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <h6 class="fw-bold mb-3 text-secondary text-uppercase" style="font-size: 0.85rem; letter-spacing: 0.5px;">Información de Emisión</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Fecha de compra:</span>
+                            <strong class="text-dark">{{ venta.fecha|date:"d/m/Y H:i" }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Origen:</span>
+                            <strong class="text-dark">{{ venta.get_origen_display|default:'Sistema' }}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="icon-box purple">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <h6 class="fw-bold mb-3 text-secondary text-uppercase" style="font-size: 0.85rem; letter-spacing: 0.5px;">Datos del Cliente</h6>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Nombre:</span>
+                            <strong class="text-dark">{{ venta.cliente.nombre }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Teléfono:</span>
+                            <strong class="text-dark">{{ venta.cliente.telefono|default:"N/A" }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Email:</span>
+                            <strong class="text-dark text-truncate" style="max-width: 150px;">{{ venta.cliente.email|default:"N/A" }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
-            {% for detalle in venta.detalles.all %}
-            <div class="producto-item">
-                <div class="row align-items-center">
-                    <div class="col-auto">
-                        {% if detalle.producto.imagen %}
-                        <img src="{{ detalle.producto.imagen.url }}" alt="{{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}"
-                             style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
-                        {% else %}
-                        <div class="bg-light rounded d-flex align-items-center justify-content-center"
-                             style="width: 80px; height: 80px;">
-                            <i class="bi bi-image text-muted"></i>
+            <!-- Productos -->
+            <div class="mb-5">
+                <h5 class="fw-bold mb-4" style="color: #1f2937;">
+                    <i class="bi bi-box-seam text-primary me-2"></i> Detalle de Productos
+                </h5>
+                
+                <div class="productos-header d-none d-md-flex row">
+                    <div class="col-md-7">Producto</div>
+                    <div class="col-md-3 text-center">Categoría</div>
+                    <div class="col-md-2 text-end">Total</div>
+                </div>
+                
+                <div class="productos-lista">
+                    {% for detalle in venta.detalles.all %}
+                    <div class="producto-row row align-items-center">
+                        <div class="col-12 col-md-7 d-flex align-items-center gap-3 mb-3 mb-md-0">
+                            <div class="producto-img-container">
+                                {% if detalle.producto.imagen %}
+                                <img src="{{ detalle.producto.imagen.url }}" alt="{{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}"
+                                     style="width: 100%; height: 100%; object-fit: cover;">
+                                {% else %}
+                                <i class="bi bi-image text-muted opacity-50" style="font-size: 1.5rem;"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark" style="font-size: 1.05rem;">{{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}</h6>
+                                <p class="mb-0 text-muted" style="font-size: 0.85rem;">
+                                    {% if detalle.producto.marca %}Marca: {{ detalle.producto.marca }} | {% endif %}
+                                    Variante: <span class="fw-semibold text-secondary">{{ detalle.producto.variante|default:"N/A" }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-6 col-md-3 text-md-center">
+                            <span class="badge bg-light text-dark border px-2 py-1">
+                                <i class="bi bi-tag-fill text-primary opacity-75"></i> {{ detalle.producto.categoria|default:"General" }}
+                            </span>
+                        </div>
+                        
+                        <div class="col-6 col-md-2 text-end">
+                            <h5 class="mb-0 fw-bold" style="color: #10b981; font-family: 'Courier New', monospace;">
+                                ${{ detalle.precio_unitario|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Totales Panel -->
+            <div class="row justify-content-end">
+                <div class="col-md-7 col-lg-6">
+                    <div class="totales-panel">
+                        <div class="total-row">
+                            <span class="text-muted fw-semibold">Subtotal ({{ venta.detalles.count }} prod):</span>
+                            <span class="fw-bold text-dark" style="font-family: 'Courier New', monospace;">${{ venta.subtotal|floatformat:2 }}</span>
+                        </div>
+                        
+                        {% if venta.descuento > 0 %}
+                        <div class="total-row">
+                            <span class="text-danger fw-semibold"><i class="bi bi-percent"></i> Descuento:</span>
+                            <span class="fw-bold text-danger" style="font-family: 'Courier New', monospace;">-${{ venta.descuento|floatformat:2 }}</span>
                         </div>
                         {% endif %}
-                    </div>
-                    <div class="col">
-                        <h6 class="mb-1">{{ detalle.producto.tipo_producto|default:detalle.producto.nombre }}</h6>
-                        <p class="mb-0 text-muted">
-                            <small>
-                                {{ detalle.producto.categoria|default:"General" }} | 
-                                Variante: {{ detalle.producto.variante|default:"N/A" }}
-                            </small>
-                        </p>
-                    </div>
-                    <div class="col-auto">
-                        <h5 class="mb-0" style="color: #10b981;">
-                            ${{ detalle.precio_unitario|floatformat:2 }}
-                        </h5>
+                        
+                        {% if venta.envio > 0 %}
+                        <div class="total-row">
+                            <span class="text-primary fw-semibold"><i class="bi bi-truck"></i> Envío:</span>
+                            <span class="fw-bold text-primary" style="font-family: 'Courier New', monospace;">+${{ venta.envio|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if venta.otros_gastos > 0 %}
+                        <div class="total-row">
+                            <span class="text-purple fw-semibold" style="color: #8b5cf6;"><i class="bi bi-plus-circle"></i> {{ venta.descripcion_otros|default:"Otros gastos" }}:</span>
+                            <span class="fw-bold" style="color: #8b5cf6; font-family: 'Courier New', monospace;">+${{ venta.otros_gastos|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="total-final-box">
+                            <span class="text-uppercase fw-bold" style="letter-spacing: 0.5px;">Total Pagado</span>
+                            <span class="display-6 fw-bold mb-0" style="font-family: 'Courier New', monospace;">${{ venta.total|floatformat:2 }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-        
-        <!-- Totales -->
-        <div class="totales-section">
-            <h5 class="mb-3">
-                <i class="bi bi-calculator" style="color: #667eea;"></i> Resumen de Pago
-            </h5>
             
-            <div class="row mb-3 pb-3" style="border-bottom: 2px dashed #e5e7eb;">
-                <div class="col text-end">
-                    <span style="font-size: 1.05rem; color: #6b7280; font-family: 'Segoe UI', system-ui, sans-serif;">Subtotal ({{ venta.detalles.count }} producto{{ venta.detalles.count|pluralize }}):</span>
-                </div>
-                <div class="col-auto" style="min-width: 140px; text-align: right;">
-                    <span style="font-size: 1.15rem; font-weight: 700; color: #374151; font-family: 'Courier New', monospace;">${{ venta.subtotal|floatformat:2 }}</span>
-                </div>
-            </div>
-            
-            {% if venta.descuento > 0 %}
-            <div class="row mb-3">
-                <div class="col text-end">
-                    <span style="font-size: 1rem; color: #dc2626; font-family: 'Segoe UI', system-ui, sans-serif;">
-                        <i class="bi bi-percent"></i> Descuento:
-                    </span>
-                </div>
-                <div class="col-auto" style="min-width: 140px; text-align: right;">
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #dc2626; font-family: 'Courier New', monospace;">-${{ venta.descuento|floatformat:2 }}</span>
-                </div>
+            <!-- Notas -->
+            {% if venta.notas %}
+            <div class="mt-5 nota-box">
+                <h6 class="fw-bold text-dark mb-2">
+                    <i class="bi bi-journal-text text-warning me-1"></i> Notas de la Venta
+                </h6>
+                <p class="mb-0 text-muted" style="font-size: 0.95rem;">{{ venta.notas }}</p>
             </div>
             {% endif %}
-            
-            {% if venta.envio > 0 %}
-            <div class="row mb-3">
-                <div class="col text-end">
-                    <span style="font-size: 1rem; color: #3b82f6; font-family: 'Segoe UI', system-ui, sans-serif;">
-                        <i class="bi bi-truck"></i> Envío:
-                    </span>
-                </div>
-                <div class="col-auto" style="min-width: 140px; text-align: right;">
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #3b82f6; font-family: 'Courier New', monospace;">+${{ venta.envio|floatformat:2 }}</span>
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if venta.otros_gastos > 0 %}
-            <div class="row mb-3">
-                <div class="col text-end">
-                    <span style="font-size: 1rem; color: #8b5cf6; font-family: 'Segoe UI', system-ui, sans-serif;">
-                        <i class="bi bi-plus-circle"></i> {{ venta.descripcion_otros|default:"Otros gastos" }}:
-                    </span>
-                </div>
-                <div class="col-auto" style="min-width: 140px; text-align: right;">
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #8b5cf6; font-family: 'Courier New', monospace;">+${{ venta.otros_gastos|floatformat:2 }}</span>
-                </div>
-            </div>
-            {% endif %}
-            
-            <div class="row mt-4 pt-4" style="border-top: 3px solid #667eea; background: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 100%); margin: 0 -1.5rem -1.5rem -1.5rem; padding: 1.5rem 1.5rem !important; border-radius: 0 0 8px 8px;">
-                <div class="col text-end">
-                    <span style="font-size: 1.3rem; font-weight: 700; color: #1e293b; font-family: 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.5px;">TOTAL A PAGAR:</span>
-                </div>
-                <div class="col-auto" style="min-width: 140px; text-align: right;">
-                    <span style="font-size: 1.8rem; font-weight: 900; color: #10b981; font-family: 'Courier New', monospace; text-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);">${{ venta.total|floatformat:2 }}</span>
-                </div>
-            </div>
         </div>
-        
-        <!-- Notas -->
-        {% if venta.notas %}
-        <div class="mt-4 p-3" style="background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-            <h6 class="mb-2">
-                <i class="bi bi-sticky"></i> Notas
-            </h6>
-            <p class="mb-0">{{ venta.notas }}</p>
-        </div>
-        {% endif %}
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Comprobar si venimos de crear una venta (parámetro auto_print=1)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auto_print') === '1') {
+        // Abrir la versión HTML del ticket térmico en una nueva pestaña para auto-impresión
+        const urlImpresion = "{% url 'generar_factura_pdf' venta.id %}?html=1";
+        window.open(urlImpresion, '_blank');
+    }
+});
+</script>
 {% endblock %}

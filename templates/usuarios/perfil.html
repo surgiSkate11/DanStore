@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Perfil - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 2.5rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3); color: white; margin-bottom: 2rem; position: relative; overflow: hidden; }
+    .page-header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; }
+    .section-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; height: 100%; }
+    .profile-avatar { width: 100px; height: 100px; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4338ca; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 800; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(67, 56, 202, 0.2); }
+    .role-badge { padding: 6px 16px; border-radius: 50px; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.5px; text-transform: uppercase; }
+    .role-dueno { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .role-empleado { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .form-label { font-weight: 600; color: #374151; font-size: 0.95rem; }
+    .form-control:focus, .form-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1000px;">
+    <div class="page-header">
+        <div class="position-relative z-1 d-flex align-items-center gap-4">
+            <div class="profile-avatar">
+                {{ usuario.username|make_list|first|upper }}
+            </div>
+            <div>
+                <h1 class="mb-1 fw-bold">Hola, {{ usuario.first_name|default:usuario.username }}!</h1>
+                <p class="mb-2 opacity-90"><i class="bi bi-envelope"></i> {{ usuario.email|default:"Sin correo registrado" }}</p>
+                <span class="role-badge {% if perfil.rol == 'DUEÑO' %}role-dueno{% else %}role-empleado{% endif %}">
+                    <i class="bi {% if perfil.rol == 'DUEÑO' %}bi-star-fill{% else %}bi-person-badge{% endif %} me-1"></i> {{ perfil.get_rol_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="row g-4">
+            <!-- Columna Izquierda: Datos Personales (Visible para todos) -->
+            <div class="col-lg-{% if perfil.rol == 'DUEÑO' or perfil.rol == 'SUPERADMIN' %}6{% else %}12{% endif %}">
+                <div class="section-card">
+                    <h4 class="fw-bold mb-4" style="color: #1f2937;"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos Personales</h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de Usuario (Login)</label>
+                        <input type="text" class="form-control bg-light" value="{{ usuario.username }}" disabled readonly>
+                        <small class="text-muted">El usuario no se puede cambiar.</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombres</label>
+                            <input type="text" name="first_name" class="form-control" value="{{ usuario.first_name }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Apellidos</label>
+                            <input type="text" name="last_name" class="form-control" value="{{ usuario.last_name }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Correo Electrónico</label>
+                        <input type="email" name="email" class="form-control" value="{{ usuario.email }}">
+                    </div>
+                    
+                    {% if perfil.rol != 'DUEÑO' %}
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm mt-3">Guardar Cambios</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Datos de la Empresa (SOLO PARA DUEÑOS) -->
+            {% if perfil.rol == 'DUEÑO' or perfil.rol == 'SUPERADMIN' %}
+            <div class="col-lg-6">
+                <!-- Tarjeta de Suscripción SaaS -->
+                <div class="section-card mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white; border: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-star-fill text-warning me-2"></i> Plan de Suscripción</h5>
+                        {% if empresa.activa %}
+                            <span class="badge bg-success px-3 py-2 rounded-pill" style="box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);">Activa</span>
+                        {% else %}
+                            <span class="badge bg-danger px-3 py-2 rounded-pill" style="box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);">Suspendida</span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex align-items-end gap-3 mb-3">
+                        <h2 class="display-6 fw-bold mb-0" style="background: linear-gradient(to right, #fcd34d, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ suscripcion.plan.nombre|default:"Plan Básico" }}</h2>
+                        <span class="badge bg-white text-dark mb-2 px-3 py-1 rounded-pill">{{ suscripcion.get_tipo_plan_display|default:"Mensual" }}</span>
+                    </div>
+                    
+                    {% if suscripcion %}
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between small mb-2 opacity-90 fw-semibold">
+                            <span>Progreso del plan</span>
+                            <span>{{ suscripcion.dias_restantes }} días restantes</span>
+                        </div>
+                        <div class="progress" style="height: 10px; background-color: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
+                            <div class="progress-bar bg-{{ suscripcion.estado_color }}" role="progressbar" style="width: {{ suscripcion.porcentaje_consumido }}%; transition: width 1s ease;" aria-valuenow="{{ suscripcion.porcentaje_consumido }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="text-end small mt-2 opacity-75">Vence: {{ suscripcion.fecha_vencimiento|date:"d M Y" }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="section-card">
+                    <h4 class="fw-bold mb-4" style="color: #1f2937;"><i class="bi bi-building text-success me-2"></i> Datos de la Empresa</h4>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la Empresa Comercial</label>
+                        <input type="text" name="nombre_empresa" class="form-control fw-bold text-primary" value="{{ empresa.nombre|default:perfil.nombre_negocio }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Negocio</label>
+                        <select name="negocio_tipo" class="form-select">
+                            {% for value, label in perfil.TIPO_NEGOCIO_CHOICES %}
+                            <option value="{{ value }}" {% if perfil.negocio_tipo == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Esto adapta las palabras del sistema (Ej: "Prendas" vs "Productos")</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Descripción o Lema del Negocio</label>
+                        <textarea name="descripcion_negocio" class="form-control" rows="3">{{ perfil.descripcion_negocio }}</textarea>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Botón Guardar Global (Para Dueños) -->
+        {% if perfil.rol == 'DUEÑO' or perfil.rol == 'SUPERADMIN' %}
+        <div class="text-end mt-4">
+            <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow-sm" style="border-radius: 12px;">
+                <i class="bi bi-check-circle-fill me-2"></i> Guardar Toda la Configuración
+            </button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

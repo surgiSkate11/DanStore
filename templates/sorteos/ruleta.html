@@ -10,21 +10,24 @@
         padding: 0 !important;
         margin: 0 !important;
         background: transparent !important;
-        height: auto !important;
+        height: calc(100vh - 56px) !important;
+        display: flex;
+        flex-direction: column;
     }
     footer, .footer, .mt-2 { display: none !important; }
-    html, body { overflow: hidden !important; height: 100% !important; }
+    html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; }
 
     .ruleta-page {
         background: radial-gradient(circle at 50% 0%, #4c1d95 0%, #1e1b4b 70%, #0f172a 100%);
-        height: calc(100vh - 56px);
-        padding: 20px 30px 0;
+        height: 100%;
+        width: 100%;
+        padding: 2vh 15px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        justify-content: center;
         align-items: center;
-        overflow: hidden;
         position: relative;
+        box-sizing: border-box;
     }
     
     .ruleta-page::before {
@@ -40,16 +43,18 @@
     .wrapper {
         max-width: 1200px;
         width: 100%;
+        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         z-index: 1;
     }
 
     .header {
         text-align: center;
-        margin-bottom: 25px;
-        margin-top: 0;
+        margin-bottom: 2vh;
+        margin-top: 40px;
         flex-shrink: 0;
         position: relative;
         display: flex;
@@ -60,8 +65,8 @@
     .header-title-wrapper {
         display: inline-flex;
         align-items: center;
-        gap: 15px;
-        padding: 8px 12px 8px 24px;
+        gap: 10px;
+        padding: 6px 12px 6px 20px;
         background: rgba(255, 255, 255, 0.1);
         border-radius: 50px;
         backdrop-filter: blur(12px);
@@ -72,7 +77,7 @@
 
     .header h1 {
         color: #fff;
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         font-weight: 700;
         margin: 0;
         display: inline-flex;
@@ -118,10 +123,38 @@
 
     .main-grid {
         display: grid;
-        grid-template-columns: 1fr 390px;
-        gap: 40px;
+        grid-template-columns: 1fr 340px;
+        gap: 20px;
         align-items: center;
         width: 100%;
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 0;
+        transition: all 0.8s cubic-bezier(0.25, 1, 0.3, 1);
+    }
+    
+    /* MODO INMERSIVO (Enfocar el sorteo y ocultar controles) */
+    .main-grid.is-spinning {
+        grid-template-columns: 1fr 0px;
+        gap: 0;
+    }
+    .main-grid.is-spinning .side-panel {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateX(100px) scale(0.9);
+        transition: all 0.4s ease;
+    }
+    .focus-area {
+        transition: transform 0.8s cubic-bezier(0.25, 1, 0.3, 1);
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        height: 100%;
+        align-items: center;
+    }
+    .main-grid.is-spinning .focus-area {
+        transform: scale(1.05) translateY(2vh);
+        z-index: 50;
     }
 
     .ruleta-box {
@@ -129,12 +162,14 @@
         justify-content: center;
         align-items: center;
         position: relative;
+        height: 100%;
+        width: 100%;
     }
 
     .wheel-wrap {
         position: relative;
         width: 100%;
-        max-width: 520px;
+        max-width: 460px;
     }
 
     .wheel-frame {
@@ -238,41 +273,33 @@
 
     .side-panel {
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 24px;
-        padding: 30px;
-        padding-top: 35px;
+        border-radius: 20px;
+        padding: 15px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 10px;
         backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        height: fit-content;
         max-height: 100%;
+        align-self: center;
+        height: fit-content;
         position: relative;
         overflow-y: auto;
-    }
-    
-    .side-panel::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .side-panel::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.2);
-        border-radius: 10px;
     }
 
     .stat-row {
         display: flex;
-        gap: 15px;
-        margin-top: 5px;
+        gap: 10px;
+        margin-top: 0;
+        flex-shrink: 0;
     }
 
     .stat-card {
         flex: 1;
         background: rgba(255,255,255,0.9);
         border-radius: 16px;
-        padding: 18px 12px;
+        padding: 8px;
         text-align: center;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         position: relative;
@@ -288,36 +315,37 @@
     .stat-card:first-child::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
     .stat-card:last-child::after { background: linear-gradient(90deg, #22c55e, #10b981); }
 
-    .stat-card i { font-size: 1.4rem; margin-bottom: 4px; }
+    .stat-card i { font-size: 1.25rem; margin-bottom: 2px; }
     .stat-card:first-child i { color: #f59e0b; }
     .stat-card:last-child i { color: #22c55e; }
 
     .stat-card .num {
-        font-size: 1.8rem;
+        font-size: 1.2rem;
         font-weight: 900;
         color: #1f2937;
         line-height: 1;
     }
 
     .stat-card .label {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         color: #6b7280;
         text-transform: uppercase;
         font-weight: 800;
         letter-spacing: 0.5px;
-        margin-top: 4px;
+        margin-top: 2px;
     }
 
     .premio-box {
         background: rgba(255,255,255,0.95);
         border-radius: 16px;
-        padding: 16px 20px;
+        padding: 12px 14px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        border-left: 5px solid #3b82f6;
+        text-align: center;
+        flex-shrink: 0;
     }
 
     .premio-box .label {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         color: #1d4ed8;
         text-transform: uppercase;
         font-weight: 800;
@@ -326,25 +354,25 @@
     }
 
     .premio-box .name {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 800;
         color: #1e40af;
-        display: flex;
+        display: flex; justify-content: center;
         align-items: center;
         gap: 6px;
     }
 
-    .premio-box .name i { color: #3b82f6; font-size: 1.1rem; }
+    .premio-box .name i { color: #3b82f6; font-size: 1.5rem; margin-right: 4px; }
 
     .btn-spin {
         width: 100%;
-        padding: 18px;
-        font-size: 1.1rem;
+        padding: 10px;
+        font-size: 0.95rem;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 1px;
         border: none;
-        border-radius: 16px;
+        border-radius: 12px;
         background: linear-gradient(135deg, #22c55e, #16a34a);
         color: #fff;
         cursor: pointer;
@@ -352,8 +380,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
         box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4), inset 0 2px 4px rgba(255,255,255,0.3);
+        flex-shrink: 0;
     }
 
     .btn-spin:hover:not(:disabled) {
@@ -385,7 +414,7 @@
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
         color: white;
-        padding: 14px 20px;
+        padding: 8px 12px;
         border-radius: 16px;
         display: flex;
         align-items: center;
@@ -393,9 +422,10 @@
         cursor: pointer;
         transition: all 0.3s ease;
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 0.8rem;
         width: 100%;
         backdrop-filter: blur(5px);
+        flex-shrink: 0;
     }
     
     .btn-config-toggle:hover {
@@ -440,14 +470,14 @@
     
     .config-wrapper {
         background: rgba(255, 255, 255, 0.95);
-        border-radius: 16px;
-        padding: 16px 20px;
+        border-radius: 12px;
+        padding: 8px 10px;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 6px;
         border: 1px solid rgba(255, 255, 255, 0.8);
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        margin-top: 10px;
+        margin-top: 6px;
     }
     
     .config-group {
@@ -457,22 +487,22 @@
     }
     
     .config-group label {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         font-weight: 700;
         color: #374151;
         margin: 0;
     }
     
     .config-group input {
-        width: 80px;
+        width: 55px;
         text-align: center;
         border: 2px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 6px;
+        border-radius: 8px;
+        padding: 1px 4px;
         font-weight: 800;
         color: #1f2937;
         transition: all 0.2s ease;
-    }
+     font-size: 0.85rem;}
     
     .config-group input:focus {
         border-color: #667eea;
@@ -480,16 +510,22 @@
         box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
     }
 
+    .participants-box {
+        display: flex;
+        flex-direction: column;
+    }
+
     .participants-box .title {
         font-size: 0.8rem;
         font-weight: 800;
         color: #e2e8f0;
-        margin-bottom: 6px;
+        margin-bottom: 2px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        flex-shrink: 0;
     }
 
     .participants-box .title-left {
@@ -500,31 +536,41 @@
     }
 
     .participants-list {
-        min-height: 50px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        min-height: 80px;
+        align-content: start;
+        overflow-x: hidden;
     }
 
     .p-item {
         background: rgba(255,255,255,0.9);
-        padding: 8px 10px;
+        padding: 8px 12px;
         border-radius: 10px;
-        margin-bottom: 6px;
         font-size: 0.85rem;
         color: #1f2937;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         animation: slideInRight 0.3s ease forwards;
         opacity: 0;
         transform: translateX(20px);
+        overflow: hidden;
     }
     
     @keyframes slideInRight {
         to { opacity: 1; transform: translateX(0); }
     }
 
-    .p-item i { color: #f59e0b; font-size: 0.85rem; }
+    .p-item .p-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+    }
 
     .pagination-controls {
         display: flex;
@@ -571,16 +617,17 @@
         align-items: center;
         justify-content: center;
         gap: 5px;
-        padding: 12px;
+        padding: 6px;
         color: rgba(255,255,255,0.8);
         text-decoration: none;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 700;
         border-radius: 12px;
         border: 1px solid rgba(255,255,255,0.2);
         background: rgba(255,255,255,0.05);
         transition: all 0.15s;
-        margin-top: auto;
+        margin-bottom: 5px;
+        flex-shrink: 0;
     }
 
     .back-link:hover {
@@ -609,13 +656,14 @@
         text-align: center;
         max-width: 380px;
         width: 90%;
+        transform: scale(1.1);
         animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         box-shadow: 0 25px 70px rgba(0,0,0,0.4), 0 0 0 4px rgba(255,255,255,0.2);
     }
 
     @keyframes pop-in {
-        from { transform: scale(0.85); opacity: 0; }
-        to { transform: scale(1); opacity: 1; }
+        from { transform: scale(0.7) translateY(40px); opacity: 0; }
+        to { transform: scale(1.1); opacity: 1; }
     }
 
     .trophy-icon {
@@ -730,9 +778,16 @@
 
     @media (max-width: 900px) {
         .main-grid { grid-template-columns: 1fr; gap: 20px; }
-        .wheel-wrap { max-width: 400px; }
+        .wheel-wrap { max-width: 320px; }
         .side-panel { max-width: 450px; margin: 0 auto; }
-        .ruleta-page { padding: 20px; justify-content: flex-start; height: auto; min-height: calc(100vh - 56px); }
+        .ruleta-page { padding: 20px 20px 40px; justify-content: flex-start; height: auto; min-height: calc(100vh - 56px); overflow-y: auto; }
+        
+        .main-grid.is-spinning { grid-template-columns: 1fr; }
+        .main-grid.is-spinning .side-panel { display: none; }
+        .main-grid.is-spinning .focus-area { 
+            transform: scale(1.05); 
+            margin-top: 5vh; 
+        }
     }
 
     @media (max-width: 500px) {
@@ -755,8 +810,8 @@
             </div>
         </div>
 
-        <div class="main-grid">
-            <div class="ruleta-box">
+        <div class="main-grid" id="mainGrid">
+            <div class="ruleta-box focus-area">
                 <div class="wheel-wrap">
                     <div class="wheel-frame"></div>
                     <div class="bulbs-container" id="bulbsContainer"></div>
@@ -769,6 +824,7 @@
             </div>
 
             <div class="side-panel">
+
                 <!-- Botón Ajustes Integrado -->
                 <button class="btn-config-toggle" onclick="toggleConfig()" title="Ajustes de Animación">
                     <span class="d-flex align-items-center gap-2">
@@ -851,6 +907,47 @@
 
 {% block extra_js %}
 <script>
+    // --- Utilidad de Sonido (Web Audio API) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSound(type) {
+        try {
+            initAudio();
+            const gainNode = audioCtx.createGain();
+            gainNode.connect(audioCtx.destination);
+            
+            if (type === 'tick') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.05);
+                gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            } else if (type === 'win') {
+                const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator(); const osc3 = audioCtx.createOscillator();
+                osc1.type = 'triangle'; osc2.type = 'triangle'; osc3.type = 'triangle';
+                osc1.connect(gainNode); osc2.connect(gainNode); osc3.connect(gainNode);
+                osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); osc3.frequency.setValueAtTime(783.99, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+                osc1.start(); osc2.start(); osc3.start();
+                osc1.stop(audioCtx.currentTime + 2); osc2.stop(audioCtx.currentTime + 2); osc3.stop(audioCtx.currentTime + 2);
+            } else if (type === 'drumroll') {
+                const bufferSize = audioCtx.sampleRate * 2; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+                const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+                const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 1000;
+                noise.connect(filter); filter.connect(gainNode);
+                gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 1.5); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
+                noise.start(); noise.stop(audioCtx.currentTime + 2);
+            }
+        } catch(e) {}
+    }
+    // ------------------------------------------
+
     const sorteoId = {{ sorteo.id }};
     const participantes = {{ participantes_json|safe }};
     const premiosData = {{ premios_json|safe }};
@@ -862,7 +959,7 @@
     let lastRotation = 0;
     let selectedWinner = null;
     let currentPage = 0;
-    const itemsPerPage = 5;
+    const itemsPerPage = 4;
     let bulbInterval = null;
 
     const canvas = document.getElementById('wheelCanvas');
@@ -954,7 +1051,7 @@
     function renderList() {
         const list = document.getElementById('partList');
         if (participantes.length === 0) {
-            list.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:10px;font-size:0.7rem;">Sin participantes</div>';
+            list.innerHTML = '<div style="grid-column: span 2; text-align:center;color:#9ca3af;padding:10px;font-size:0.7rem;">Sin participantes</div>';
             document.getElementById('pageInfo').textContent = '0/0';
             document.getElementById('prevPage').disabled = true;
             document.getElementById('nextPage').disabled = true;
@@ -967,7 +1064,10 @@
         const pageItems = participantes.slice(start, end);
         
         list.innerHTML = pageItems.map((p, index) => 
-            `<div class="p-item" style="animation-delay: ${index * 0.05}s"><i class="bi bi-person-fill"></i>${p.nombre}</div>`
+            `<div class="p-item" style="animation-delay: ${index * 0.05}s">
+                <i class="bi bi-person-fill" style="color: #f59e0b; flex-shrink: 0; font-size: 1.2rem;"></i>
+                <span class="p-name">${p.nombre}</span>
+            </div>`
         ).join('');
         
         document.getElementById('pageInfo').textContent = `${currentPage + 1}/${totalPages}`;
@@ -993,7 +1093,7 @@
     function setupCanvas() {
         const wrap = document.querySelector('.wheel-wrap');
         // Obtener tamaño dinámico, asegurando un mínimo para legibilidad
-        const size = Math.max(Math.min(wrap.offsetWidth, 520), 280);
+        const size = Math.max(Math.min(wrap.offsetWidth, 500), 280);
         canvas.width = size;
         canvas.height = size;
         draw();
@@ -1064,6 +1164,9 @@
         if (spinning || participantes.length === 0) return;
         if (premioIdx >= premios.length) return;
         
+        initAudio();
+        playSound('drumroll');
+        
         // Obtener configuración
         const duration = parseInt(document.getElementById('spinDuration').value) || 7;
         const extraSpins = parseInt(document.getElementById('spinCount').value) || 10;
@@ -1074,6 +1177,9 @@
         btn.disabled = true;
         btn.classList.add('spinning');
         btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> SORTEANDO...';
+        
+        // Iniciar Modo Inmersivo
+        document.getElementById('mainGrid').classList.add('is-spinning');
         
         // Microinteracción del puntero simulando el arranque
         pointer.classList.add('tick');
@@ -1112,8 +1218,9 @@
             
             lastRotation += rotation;
             
-            // Aplicar transición dinámica desde JS
-            canvas.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.15, 1)`;
+            // Aplicar transición extremadamente dramática (frena muy lento al final)
+            canvas.style.transition = `transform ${duration}s cubic-bezier(0.1, 0.9, 0, 1)`;
+            void canvas.offsetWidth; // Forzar reflow
             canvas.style.transform = `rotate(${lastRotation}deg)`;
 
             setTimeout(() => {
@@ -1128,6 +1235,7 @@
 
     function showWinner() {
         if (!selectedWinner) return;
+        playSound('win');
         const prize = premios[premioIdx];
         document.getElementById('winnerName').textContent = selectedWinner.nombre;
         document.getElementById('prizeName').textContent = prize.nombre;
@@ -1174,6 +1282,8 @@
 
         if (premioIdx < premios.length) {
             resetBtn();
+        } else {
+            document.getElementById('mainGrid').classList.remove('is-spinning');
         }
     }
 
@@ -1213,6 +1323,7 @@
         btn.disabled = false;
         btn.classList.remove('spinning');
         btn.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+        document.getElementById('mainGrid').classList.remove('is-spinning');
     }
 
     function getCookie(name) {

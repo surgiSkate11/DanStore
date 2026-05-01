@@ -1,0 +1,292 @@
+{% extends 'base.html' %}
+
+{% block title %}Cuenta Suspendida - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Contenedor principal para centrado perfecto */
+    .suspension-wrapper {
+        min-height: calc(100vh - 100px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 2rem 0;
+        background: radial-gradient(circle at top center, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Tarjetas de Precios Premium */
+    .pricing-card {
+        border-radius: 24px;
+        padding: 3rem 2rem;
+        background: linear-gradient(white, white) padding-box, linear-gradient(135deg, #e2e8f0, #f1f5f9) border-box;
+        border: 2px solid transparent;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.03);
+        transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        height: 100%;
+        position: relative;
+    }
+    
+    .pricing-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 30px 60px -12px rgba(59, 130, 246, 0.12);
+        background: linear-gradient(white, white) padding-box, linear-gradient(135deg, #93c5fd, #3b82f6) border-box;
+    }
+    
+    .pricing-card.popular {
+        background: linear-gradient(white, white) padding-box, linear-gradient(135deg, #3b82f6, #8b5cf6) border-box;
+        box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.2);
+        z-index: 2;
+    }
+    
+    @media (min-width: 992px) {
+        .pricing-card.popular {
+            transform: scale(1.05);
+        }
+        .pricing-card.popular:hover {
+            transform: scale(1.05) translateY(-8px);
+        }
+    }
+    
+    .popular-badge {
+        position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white;
+        padding: 6px 24px; border-radius: 0 0 12px 12px; font-weight: 800; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase;
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+    
+    .price-text {
+        font-size: 3rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -1px;
+    }
+    
+    .feature-list { list-style: none; padding: 0; margin-top: 2.5rem; margin-bottom: 2.5rem; }
+    .feature-list li { margin-bottom: 1.2rem; color: #475569; font-weight: 600; display: flex; align-items: center; font-size: 0.95rem; }
+    .feature-list li i { 
+        color: #10b981; 
+        background: #d1fae5; 
+        border-radius: 50%; 
+        padding: 4px; 
+        font-size: 0.8rem; 
+        margin-right: 12px; 
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+    
+    /* Botones de Pago Modernos */
+    .payment-btn { 
+        border-radius: 16px; 
+        padding: 16px; 
+        font-weight: 700; 
+        transition: all 0.3s ease; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        gap: 10px; 
+        font-size: 1rem; 
+    }
+    .btn-stripe { background: #635bff; color: white; border: none; }
+    .btn-stripe:hover { background: #544ada; color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(99, 91, 255, 0.3); }
+    
+    .btn-paypal { background: #ffc439; color: #003087; border: none; }
+    .btn-paypal:hover { background: #f4b829; color: #003087; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255, 196, 57, 0.3); }
+    
+    .btn-payphone { background: #ff7b00; color: white; border: none; }
+    .btn-payphone:hover { background: #e66d00; color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255, 123, 0, 0.3); }
+    
+    /* Icono de advertencia principal */
+    .alert-icon-wrapper {
+        width: 90px; height: 90px;
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        color: #ef4444;
+        border-radius: 28px;
+        display: inline-flex; align-items: center; justify-content: center;
+        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+        transform: rotate(-5deg);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="suspension-wrapper">
+{% if request.user.profile.rol == 'DUEÑO' and motivo == 'pago' %}
+<!-- 1. VISTA DE DUEÑO: BLOQUEO POR PAGO (MUESTRA PLANES) -->
+<div class="container">
+    <div class="text-center mb-5">
+        <div class="alert-icon-wrapper">
+            <i class="bi bi-lock-fill" style="font-size: 2.8rem; transform: rotate(5deg);"></i>
+        </div>
+        <h1 class="fw-black text-slate-900 mb-3" style="font-size: 2.5rem; letter-spacing: -1px; font-weight: 800; color: #0f172a;">Tu Suscripción ha Expirado</h1>
+        <p class="text-muted mx-auto fs-5" style="max-width: 650px; color: #475569;">El acceso a <strong>{{ request.user.profile.empresa.nombre }}</strong> está pausado. Renueva tu plan ahora mismo para reactivar tu tienda y recuperar tus herramientas de venta.</p>
+    </div>
+
+    <div class="row justify-content-center g-4 mb-5">
+        {% for plan in planes %}
+        <div class="col-md-6 col-lg-4">
+            <div class="pricing-card {% if forloop.counter == 2 %}popular{% endif %} d-flex flex-column">
+                {% if forloop.counter == 2 %}<div class="popular-badge">Más Elegido</div>{% endif %}
+                <h4 class="fw-bold mb-2 mt-2" style="color: #1e293b; font-size: 1.4rem;">{{ plan.nombre }}</h4>
+                <p class="text-muted small mb-4" style="line-height: 1.6;">{{ plan.descripcion }}</p>
+                <div class="mb-2">
+                    <span class="price-text">${{ plan.precio_mensual }}</span><span class="text-muted fw-bold ms-1">/mes</span>
+                </div>
+                <ul class="feature-list flex-grow-1">
+                    {% for modulo in plan.modulos.all %}
+                    <li><i class="bi bi-check-lg"></i> Módulo de {{ modulo.nombre }}</li>
+                    {% endfor %}
+                    <li><i class="bi bi-check-lg"></i> Soporte Prioritario</li>
+                </ul>
+                <button type="button" class="btn btn-primary btn-lg rounded-pill fw-bold w-100 shadow-sm" style="padding: 14px; font-size: 1rem;" data-bs-toggle="modal" data-bs-target="#paymentModal" onclick="prepararPago('{{ plan.id }}', '{{ plan.nombre|escapejs }}', '{{ plan.precio_mensual }}')">
+                    Elegir {{ plan.nombre }}
+                </button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center"><p class="text-muted">No hay planes disponibles. Contacta a soporte.</p></div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Multipasarela -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3);">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <h4 class="fw-bold text-dark mb-0" style="font-size: 1.3rem;">Renovar Suscripción</h4>
+                <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 pt-3">
+                <div class="rounded-4 p-3 mb-4 d-flex justify-content-between align-items-center" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <span class="fw-bold text-muted" id="selectedPlan">Plan</span>
+                    <span class="fw-bolder fs-4 text-primary" id="selectedPrice">$0.00</span>
+                </div>
+                <p class="text-muted fw-semibold mb-3 text-center small text-uppercase" style="letter-spacing: 0.5px;">Métodos de Pago Seguros</p>
+                
+                <div class="d-grid gap-3">
+                    <button class="payment-btn btn-stripe" onclick="procesarPago('stripe')">
+                        <i class="bi bi-credit-card-fill fs-5"></i><span>Tarjeta de Crédito / Débito</span>
+                    </button>
+                    <button class="payment-btn btn-paypal" onclick="procesarPago('paypal')">
+                        <i class="bi bi-paypal fs-5"></i><span>Pagar con PayPal</span>
+                    </button>
+                    <button class="payment-btn btn-payphone" onclick="procesarPago('payphone')">
+                        <span class="bg-white text-dark px-1 rounded text-center fw-bolder" style="font-size: 0.8rem; line-height:1;">P</span><span>Pagar con PayPhone</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% elif request.user.profile.rol == 'DUEÑO' and motivo == 'admin' %}
+<!-- 2. VISTA DE DUEÑO: BLOQUEO ADMINISTRATIVO (SIN PLANES) -->
+<div class="container">
+    <div class="card border-0 text-center mx-auto" style="max-width: 550px; border-radius: 32px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); overflow: hidden;">
+        <div class="p-5 pb-4" style="background: linear-gradient(135deg, #fffbeb, #fef3c7);">
+            <div class="d-inline-flex align-items-center justify-content-center bg-white rounded-circle mb-4 shadow-sm" style="width: 80px; height: 80px;">
+                <i class="bi bi-shield-lock-fill text-warning" style="font-size: 2.5rem;"></i>
+            </div>
+            <h2 class="fw-bolder mb-0" style="color: #92400e; letter-spacing: -0.5px;">Cuenta Suspendida</h2>
+        </div>
+        <div class="card-body px-5 py-5 bg-white">
+            <h5 class="text-dark fw-bold mb-3">La tienda "{{ request.user.profile.empresa.nombre }}" está en revisión</h5>
+            <p class="text-muted mb-4" style="line-height: 1.6;">Tu cuenta ha sido pausada temporalmente por el equipo de administración. Para recuperar tu acceso y conocer los detalles, ponte en contacto con nuestro equipo de soporte técnico.</p>
+            
+            <div class="mt-4">
+                <button type="button" class="btn btn-warning btn-lg rounded-pill fw-bold w-100 text-dark d-flex align-items-center justify-content-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#supportModal">
+                    <i class="bi bi-headset"></i><span>Contactar Soporte Técnico</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- 3. VISTA DE EMPLEADO O GENERAL (SOLO BLOQUEO GENÉRICO) -->
+<div class="container">
+    <div class="card border-0 text-center mx-auto" style="max-width: 500px; border-radius: 32px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); overflow: hidden;">
+        <div class="p-5 pb-4" style="background: linear-gradient(135deg, #f1f5f9, #e2e8f0);">
+            <div class="d-inline-flex align-items-center justify-content-center bg-white rounded-circle mb-4 shadow-sm" style="width: 80px; height: 80px;">
+                <i class="bi bi-lock-fill text-slate-700" style="font-size: 2.5rem; color: #334155;"></i>
+            </div>
+            <h2 class="fw-bolder mb-0 text-slate-800" style="letter-spacing: -0.5px; color: #1e293b;">Acceso Restringido</h2>
+        </div>
+        <div class="card-body px-5 py-5 bg-white">
+            <h5 class="text-dark fw-bold mb-3">La tienda "{{ request.user.profile.empresa.nombre }}" está en mantenimiento</h5>
+            <p class="text-muted mb-0" style="line-height: 1.6;">Por favor, comunícate con el administrador o dueño de la empresa para que resuelva el estado de la suscripción y recupere el acceso operativo.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Interno de Soporte Técnico -->
+<div class="modal fade" id="supportModal" tabindex="-1" aria-hidden="true" style="backdrop-filter: blur(5px);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3);">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <h4 class="fw-bold text-dark mb-0"><i class="bi bi-headset text-warning me-2"></i> Crear Ticket</h4>
+                <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 pt-3">
+                <p class="text-muted mb-4" style="font-size: 0.95rem;">Describe tu problema. Nuestro equipo de soporte lo revisará y se pondrá en contacto contigo a la brevedad.</p>
+                
+                <form method="POST" action="{% url 'crear_ticket' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Asunto</label>
+                        <input type="text" name="asunto" class="form-control form-control-lg bg-light border-0" placeholder="Ej: Revisión de mi cuenta" required style="border-radius: 14px; font-size: 1rem;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Categoría</label>
+                        <select name="categoria" class="form-select form-select-lg bg-light border-0" required style="border-radius: 14px; font-size: 1rem;">
+                            <option value="suspension" selected>Suspensión de Cuenta</option>
+                            <option value="facturacion">Problema de Facturación</option>
+                            <option value="tecnico">Problema Técnico</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Detalles del Problema</label>
+                        <textarea name="mensaje" class="form-control bg-light border-0" rows="4" placeholder="Por favor, cuéntanos qué sucedió..." required style="border-radius: 14px; resize: none;"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;"><i class="bi bi-paperclip"></i> Archivo Adjunto (Opcional)</label>
+                        <input type="file" name="adjunto" class="form-control bg-light border-0" style="border-radius: 14px;" accept="image/*,.pdf,.doc,.docx">
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Puedes adjuntar capturas de pantalla (JPG/PNG) o documentos (PDF).</small>
+                    </div>
+                    <div class="d-grid mt-2">
+                        <button type="submit" class="btn btn-warning py-2 rounded-pill fw-bold text-dark shadow-sm d-flex align-items-center justify-content-center gap-2 text-nowrap fs-6" onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm me-2\'></span>Enviando...';">
+                            <i class="bi bi-send-fill"></i><span>Enviar Ticket a Soporte</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+let planSeleccionadoId = null;
+let tipoPlanSeleccionado = 'mensual'; // Valor por defecto
+
+function prepararPago(id, nombre, precio, tipo = 'mensual') {
+    planSeleccionadoId = id;
+    tipoPlanSeleccionado = tipo;
+    document.getElementById('selectedPlan').innerText = nombre + (tipo === 'anual' ? ' (Anual)' : ' (Mensual)');
+    document.getElementById('selectedPrice').innerText = '$' + precio;
+}
+
+function procesarPago(metodo) {
+    if (!planSeleccionadoId) {
+        showDjangoToast('Error: No se ha seleccionado un plan válido.', 'error');
+        return;
+    }
+    showDjangoToast(`Conectando de forma segura con ${metodo.toUpperCase()}...`, 'info');
+    window.location.href = `/empresa/pagar/${metodo}/${planSeleccionadoId}/${tipoPlanSeleccionado}/`;
+}
+</script>
+{% endblock %}

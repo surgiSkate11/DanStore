@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Control {% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f1f5f9; }
+    
+    /* Premium SaaS Cards */
+    .saas-card { 
+        background: #ffffff; 
+        border-radius: 20px; 
+        padding: 1.75rem; 
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.02), 0 8px 10px -6px rgba(0,0,0,0.01); 
+        border: 1px solid rgba(226, 232, 240, 0.8); 
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+    }
+    .saas-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); }
+    
+    /* Elegant Icons */
+    .saas-icon { 
+        width: 56px; height: 56px; 
+        border-radius: 16px; 
+        display: flex; align-items: center; justify-content: center; 
+        font-size: 1.75rem; 
+    }
+    
+    /* Table Styling */
+    .table-saas th { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; color: #64748b; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem;}
+    .table-saas td { padding: 1rem 0.5rem; vertical-align: middle; color: #334155; font-weight: 500; border-bottom: 1px solid #f8fafc; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-xl-5">
+    <h2 class="fw-bold mb-4 text-dark"><i class="bi bi-rocket-takeoff-fill text-primary"></i> Centro de Mando Global</h2>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="saas-card position-relative overflow-hidden">
+                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #10b981, #34d399);"></div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted fw-bold mb-1 text-uppercase small">MRR Estimado</p>
+                        <h2 class="fw-bolder mb-0 text-dark" style="font-size: 2.2rem;">${{ mrr_estimado|floatformat:2 }}</h2>
+                    </div>
+                    <div class="saas-icon bg-success bg-opacity-10 text-success"><i class="bi bi-graph-up-arrow"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="saas-card position-relative overflow-hidden">
+                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted fw-bold mb-1 text-uppercase small">Empresas Totales</p>
+                        <h2 class="fw-bolder mb-0 text-dark" style="font-size: 2.2rem;">{{ total_empresas }}</h2>
+                    </div>
+                    <div class="saas-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-building"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="saas-card position-relative overflow-hidden">
+                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #6366f1, #818cf8);"></div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted fw-bold mb-1 text-uppercase small">Empresas Activas</p>
+                        <h2 class="fw-bolder mb-0 text-dark" style="font-size: 2.2rem;">{{ empresas_activas }}</h2>
+                    </div>
+                    <div class="saas-icon bg-indigo bg-opacity-10" style="color: #6366f1;"><i class="bi bi-check-circle-fill"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráficas ApexCharts -->
+    <div class="row g-4 mb-5">
+        <div class="col-lg-8">
+            <div class="saas-card">
+                <h6 class="fw-bold text-dark mb-4">Crecimiento de Ingresos (MRR)</h6>
+                <div id="mrrChart" style="min-height: 300px;"></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="saas-card">
+                <h6 class="fw-bold text-dark mb-4">Distribución de Planes</h6>
+                <div id="planesChart" class="d-flex justify-content-center align-items-center" style="min-height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Suscripciones Premium -->
+    <div class="saas-card p-0 overflow-hidden">
+        <div class="d-flex justify-content-between align-items-center pt-4 pb-3 px-4 border-bottom">
+            <h5 class="fw-bold mb-0 text-dark">Empresas y Suscripciones</h5>
+            <a href="{% url 'exportar_empresas_csv' %}" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 shadow-sm">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Empresas
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-saas align-middle mb-0 w-100">
+                <thead style="background-color: #f8fafc;">
+                    <tr>
+                        <th class="ps-4">Empresa / Inquilino</th>
+                        <th>Plan Contratado</th>
+                        <th>Facturación</th>
+                        <th>Vencimiento</th>
+                        <th>Progreso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in suscripciones %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center fw-bold me-3" style="width: 40px; height: 40px;">
+                                    {{ sub.empresa.nombre|make_list|first|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ sub.empresa.nombre }}</div>
+                                    <div class="small text-muted">ID: #{{ sub.empresa.id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-dark bg-opacity-10 text-dark border px-2 py-1 rounded-pill">{{ sub.plan.nombre|default:"Básico" }}</span></td>
+                        <td><span class="text-muted"><i class="bi bi-calendar-event"></i> {{ sub.get_tipo_plan_display }}</span></td>
+                        <td><span class="fw-semibold">{{ sub.fecha_vencimiento|date:"d M Y" }}</span></td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1 me-2" style="height: 6px; background-color: #e2e8f0;">
+                                    <div class="progress-bar bg-{{ sub.estado_color }}" role="progressbar" style="width: {{ sub.porcentaje_consumido }}%;"></div>
+                                </div>
+                                <span class="small fw-bold text-{{ sub.estado_color }}">{{ sub.porcentaje_consumido }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i> No hay suscripciones activas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ApexCharts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Gráfico de MRR (Simulado para demostración visual, requiere datos del backend)
+        var optionsMRR = {
+            series: [{ name: 'MRR ($)', data: [120, 250, 450, 600, 850, 1100, {{ mrr_estimado|floatformat:0 }}] }],
+            chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
+            colors: ['#10b981'],
+            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] } },
+            dataLabels: { enabled: false },
+            stroke: { curve: 'smooth', width: 3 },
+            xaxis: { categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Actual'], axisBorder: { show: false }, axisTicks: { show: false } },
+            yaxis: { labels: { formatter: function (value) { return "$" + value; } } },
+            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+        };
+        new ApexCharts(document.querySelector("#mrrChart"), optionsMRR).render();
+
+        // 2. Gráfico de Planes
+        var optionsPlanes = {
+            series: {{ planes_series|safe }},
+            chart: { type: 'donut', height: 300, fontFamily: 'Inter, sans-serif' },
+            labels: {{ planes_labels|safe }},
+            colors: ['#3b82f6', '#8b5cf6', '#10b981'],
+            plotOptions: { pie: { donut: { size: '75%', labels: { show: true, total: { show: true, label: 'Planes Activos', formatter: function (w) { return w.globals.seriesTotals.reduce((a, b) => { return a + b }, 0) } } } } } },
+            dataLabels: { enabled: false },
+            legend: { position: 'bottom' }
+        };
+        new ApexCharts(document.querySelector("#planesChart"), optionsPlanes).render();
+    });
+</script>
+{% endblock %}

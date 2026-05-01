@@ -1,5 +1,6 @@
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
+from functools import wraps
 
 class TenantMixin:
     """
@@ -47,3 +48,29 @@ def requiere_rol_dueño(view_func):
         raise PermissionDenied("No tienes permiso, sólo el DUEÑO puede acceder a esta área.")
         
     return _wrapped_view
+
+
+def requiere_modulo(modulo_codigo):
+    """
+    Decorador SaaS: Verifica si la empresa tiene el módulo activo en su plan,
+    y si el usuario (si es empleado) tiene permiso asignado para verlo.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if not hasattr(request, 'user') or not request.user.is_authenticated:
+                raise PermissionDenied("Debe iniciar sesión.")
+                
+            perfil = getattr(request.user, 'profile', None)
+            
+            if perfil and perfil.rol in ['SUPERADMIN', 'DUEÑO']:
+                return view_func(request, *args, **kwargs)
+                
+            if perfil and perfil.rol == 'EMPLEADO':
+                if perfil.rol_empresa and perfil.rol_empresa.modulos_permitidos.filter(codigo=modulo_codigo).exists():
+                    return view_func(request, *args, **kwargs)
+                raise PermissionDenied(f"Tu rol no tiene acceso al módulo: {modulo_codigo}")
+                
+            raise PermissionDenied("Acceso denegado.")
+        return _wrapped_view
+    return decorator

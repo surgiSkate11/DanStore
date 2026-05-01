@@ -8,7 +8,8 @@ from .models import Producto, TipoProducto
 import openpyxl
 import csv
 import io
-
+from empresas.mixins import requiere_modulo
+from tiendita_project.utils import form_errors_to_messages
 
 # ── UTILIDAD ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ def get_negocio_tipo(user):
 # ── VISTAS PRINCIPALES ────────────────────────────────────────────────────────
 
 @login_required
+@requiere_modulo('productos')
 def lista_productos(request):
     """Lista productos con filtros genéricos para cualquier negocio"""
     from django.core.paginator import Paginator
@@ -92,6 +94,7 @@ def lista_productos(request):
 
 
 @login_required
+@requiere_modulo('productos')
 def crear_producto(request):
     """Crea un nuevo producto — genérico para cualquier negocio"""
     from .forms import ProductoForm
@@ -102,6 +105,8 @@ def crear_producto(request):
             form.save()
             messages.success(request, '¡Producto creado exitosamente!')
             return redirect('lista_productos')
+        else:
+            form_errors_to_messages(request, form)
     else:
         form = ProductoForm(empresa=request.empresa)
 
@@ -131,6 +136,7 @@ def _crear_producto_directo(request):
 
 
 @login_required
+@requiere_modulo('productos')
 def editar_producto(request, pk):
     """Edita un producto existente"""
     from .forms import ProductoForm
@@ -142,6 +148,8 @@ def editar_producto(request, pk):
             form.save()
             messages.success(request, '¡Producto actualizado exitosamente!')
             return redirect('lista_productos')
+        else:
+            form_errors_to_messages(request, form)
     else:
         form = ProductoForm(instance=producto, empresa=request.empresa)
 
@@ -153,6 +161,7 @@ def editar_producto(request, pk):
 
 
 @login_required
+@requiere_modulo('productos')
 def eliminar_producto(request, pk):
     """Elimina un producto con confirmación"""
     producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
@@ -168,6 +177,7 @@ def eliminar_producto(request, pk):
 # ── VISTAS AJAX ───────────────────────────────────────────────────────────────
 
 @login_required
+@requiere_modulo('productos')
 def cambiar_estado_producto(request, pk):
     """AJAX — cambia el estado de un producto"""
     if request.method == 'POST':
@@ -186,6 +196,7 @@ def cambiar_estado_producto(request, pk):
 
 
 @login_required
+@requiere_modulo('productos')
 def cambiar_categoria_producto(request, pk):
     """AJAX — cambia la categoría de un producto (texto libre)"""
     if request.method == 'POST':
@@ -199,6 +210,7 @@ def cambiar_categoria_producto(request, pk):
 
 
 @login_required
+@requiere_modulo('productos')
 def api_crear_tipo_producto(request):
     """AJAX — crea un nuevo Tipo de Producto desde un modal"""
     if request.method == 'POST':
@@ -227,6 +239,7 @@ def api_crear_tipo_producto(request):
 
 
 @login_required
+@requiere_modulo('productos')
 def cambiar_variante_producto(request, pk):
     """
     AJAX — cambia la variante de un producto.
@@ -244,6 +257,7 @@ def cambiar_variante_producto(request, pk):
 
 
 @login_required
+@requiere_modulo('productos')
 def subir_foto_producto(request, pk):
     """AJAX — sube o reemplaza la foto de un producto"""
     if request.method == 'POST' and request.FILES.get('imagen'):
@@ -282,6 +296,7 @@ def get_categorias_sugeridas(request):
 # ── IMPORTACIÓN EXCEL / CSV ───────────────────────────────────────────────────
 
 @login_required
+@requiere_modulo('productos')
 def importar_excel(request):
     """
     Importa productos desde Excel (.xlsx) o CSV.
@@ -344,9 +359,19 @@ def importar_excel(request):
                     if not nombre_prod:
                         continue
 
-                    # Normalizar estado
-                    if estado not in ['disponible', 'separado', 'vendido']:
-                        estado = 'disponible'
+                    # Mapeo inteligente (Opción Flexible SaaS)
+                    mapeo_estados = {
+                        'disponible': 'disponible', 'stock': 'disponible', 'libre': 'disponible',
+                        'reservado': 'reservado', 'separado': 'reservado', 'apartado': 'reservado', 'pendiente': 'reservado',
+                        'vendido': 'vendido', 'vendida': 'vendido', 'pagado': 'vendido', 'entregado': 'vendido'
+                    }
+                    
+                    # Normalizar estado buscando coincidencias, default a 'disponible'
+                    estado_final = 'disponible'
+                    for clave, valor_oficial in mapeo_estados.items():
+                        if clave in estado:
+                            estado_final = valor_oficial
+                            break
 
                     # update_or_create por nombre — evita duplicados
                     producto, creado = Producto.objects.update_or_create(
@@ -355,14 +380,13 @@ def importar_excel(request):
                         defaults={
                             'categoria': categoria,
                             'precio': precio,
-                            'estado': estado,
+                            'estado': estado_final,
                             'descripcion': descripcion,
                             'variante': variante,
                             'marca': marca,
                             'color': color,
                             'stock': stock,
                             'origen': 'excel',
-                            'fecha_importacion': timezone.now(),
                         }
                     )
 
@@ -406,6 +430,7 @@ def _parsear_decimal(valor):
 
 
 @login_required
+@requiere_modulo('productos')
 def descargar_plantilla(request):
     """
     Descarga una plantilla Excel con las columnas correctas y una hoja de referencia.
@@ -430,7 +455,7 @@ def descargar_plantilla(request):
         # Alimentos
         ['Torta de chocolate', 'Postres', '15.00', 'disponible', 'Para 10 personas', '10 porciones', 'Casera', 1],
         # Servicios
-        ['Diseño de logo', 'Servicios', '80.00', 'disponible', 'Incluye 3 propuestas', 'Paquete básico', '', 1],
+        ['Diseño de logo', 'Servicios', '80.00', 'reservado', 'Seña pagada por cliente', 'Paquete básico', '', 1],
     ]
     for ejemplo in ejemplos:
         ws.append(ejemplo)
@@ -462,7 +487,7 @@ def descargar_plantilla(request):
         ['Nombre',      'Nombre del producto (obligatorio)',           'Vestido, iPhone 15, Torta de chocolate'],
         ['Categoría',   'Categoría libre — escribe la tuya',          'Mujer, Electrónica, Postres, Servicios'],
         ['Precio',      'Precio de venta en números',                  '25.00 / 999 / 15.50'],
-        ['Estado',      'Estado actual del producto',                  'disponible | separado | vendido'],
+        ['Estado',      'Estado actual del producto (flexible)',       'disponible | reservado (o separado/apartado) | vendido'],
         ['Descripción', 'Descripción adicional (opcional)',            'Talla M, color rojo / 128GB negro'],
         ['Variante',    'Talla, modelo, sabor, versión (opcional)',    'M / L / 128GB / Chocolate / Básico'],
         ['Marca',       'Marca o proveedor (opcional)',                'Zara / Apple / Casera'],

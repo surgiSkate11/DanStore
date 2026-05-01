@@ -304,55 +304,42 @@ document.getElementById('formSorteo').addEventListener('submit', function(e) {
     // 1. Validar tipo de sorteo
     if (!inputTipo.value) {
         hasError = true;
-        if (typeof showToast === 'function') {
-            showToast('Por favor selecciona un tipo de sorteo haciendo clic en una de las tarjetas.', 'warning', 'Atención');
-        }
+        showDjangoToast('Por favor selecciona un tipo de sorteo haciendo clic en una de las tarjetas.', 'warning');
     }
 
     // 2. Validar campos del formulario personalizados
     if (!this.checkValidity()) {
         hasError = true;
-        if (typeof showToast === 'function' && inputTipo.value) {
-            showToast('Por favor, revisa y completa los campos obligatorios resaltados en rojo.', 'error', 'Error de Validación');
+        if (inputTipo.value) {
+            showDjangoToast('Por favor, revisa y completa los campos resaltados en rojo.', 'warning');
         }
 
-        const elements = this.querySelectorAll('input, select, textarea');
-        elements.forEach(el => {
-            if (el.willValidate && !el.validity.valid) {
-                el.classList.add('is-invalid');
-                el.style.borderColor = '#ef4444';
-                el.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+        let primerError = null;
+        Array.from(this.elements).forEach(input => {
+            if (!input.checkValidity()) {
+                input.classList.add('is-invalid');
+                input.style.borderColor = '#ef4444';
+                input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
                 
-                // Agregar mensaje de error debajo si no existe
-                let errorDiv = el.nextElementSibling;
-                if (!errorDiv || !errorDiv.classList.contains('field-error')) {
-                    errorDiv = document.createElement('div');
-                    errorDiv.className = 'field-error text-danger small mt-1 fw-semibold';
-                    errorDiv.innerHTML = '<i class="bi bi-exclamation-circle"></i> Este campo es obligatorio.';
-                    el.parentNode.insertBefore(errorDiv, el.nextSibling);
-                }
+                if (!primerError) primerError = input;
+                
+                input.addEventListener('input', function() {
+                    if (this.checkValidity()) {
+                        this.classList.remove('is-invalid');
+                        this.style.borderColor = '';
+                        this.style.boxShadow = '';
+                    }
+                }, { once: true });
             }
         });
+        
+        if (primerError) primerError.focus();
     }
 
     if (hasError) {
         e.preventDefault();
+        e.stopPropagation();
     }
-});
-
-// Limpiar error visual cuando el usuario escribe
-document.querySelectorAll('#formSorteo input, #formSorteo select, #formSorteo textarea').forEach(el => {
-    el.addEventListener('input', function() {
-        if (this.validity.valid) {
-            this.classList.remove('is-invalid');
-            this.style.borderColor = '';
-            this.style.boxShadow = '';
-            const errorDiv = this.nextElementSibling;
-            if (errorDiv && errorDiv.classList.contains('field-error')) {
-                errorDiv.remove();
-            }
-        }
-    });
 });
 </script>
 {% endblock %}

@@ -1,6 +1,39 @@
 from django.db import models
 from django.contrib.auth.models import User
 from empresas.models import Empresa
+from django.utils import timezone
+
+
+class ModuloSaaS(models.Model):
+    """Módulos globales del sistema que el SuperAdmin puede habilitar/deshabilitar por plan"""
+    codigo = models.CharField(max_length=50, unique=True, help_text="Ej: ventas, sorteos, catalogos")
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True)
+    icono = models.CharField(max_length=50, default="bi-box", help_text="Clase de Bootstrap Icon")
+    requiere_plan_premium = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.nombre
+
+
+class RolEmpresa(models.Model):
+    """Roles personalizados creados por el Dueño para SU empresa (Tenant RBAC)"""
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='roles_personalizados')
+    nombre = models.CharField(max_length=100, help_text="Ej: Cajero, Gerente de Ventas")
+    
+    # Módulos enteros a los que este rol tiene acceso
+    modulos_permitidos = models.ManyToManyField(ModuloSaaS, blank=True)
+    
+    # Permisos granulares (JSON) ej: {"ventas": {"crear": true, "eliminar": false}}
+    permisos_detallados = models.JSONField(default=dict, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['empresa', 'nombre'] # No pueden haber dos "Cajeros" en la misma empresa
+
+    def __str__(self):
+        return f"{self.nombre} - {self.empresa.nombre}"
+
 
 class UserProfile(models.Model):
     """Perfil extendido del usuario con información del negocio"""
@@ -15,21 +48,19 @@ class UserProfile(models.Model):
 
     ROLES = (
         ('SUPERADMIN', 'Dueño del Software'),
-        ('DUEÑO', 'Dueño de Empresa'),
+        ('DUEÑO', 'Dueño de Empresa (Tenant Owner)'),
         ('EMPLEADO', 'Empleado de Empresa'),
         ('CLIENTE', 'Cliente Final'),
     )
-    
-    TIPO_ENTIDAD_CHOICES = [
-        ('negocio', 'Negocio'),
-        ('empresa', 'Empresa'),
-    ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
     # Sistema Multi-tenant
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='empleados')
     rol = models.CharField(max_length=20, choices=ROLES, default='DUEÑO')
+    
+    # Si el usuario es EMPLEADO, aquí se asigna qué rol tiene dentro de la empresa
+    rol_empresa = models.ForeignKey(RolEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
     
     # Tipo de negocio (define vocabulario dinámico)
     negocio_tipo = models.CharField(
@@ -39,13 +70,6 @@ class UserProfile(models.Model):
         verbose_name="Tipo de negocio"
     )
 
-    # Tipo de entidad (Empresa o Negocio)
-    tipo_entidad = models.CharField(
-        max_length=20,
-        choices=TIPO_ENTIDAD_CHOICES,
-        default='negocio',
-        verbose_name="Tipo de entidad"
-    )
     
     # Nombre del negocio
     nombre_negocio = models.CharField(

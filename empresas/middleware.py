@@ -20,7 +20,7 @@ class TenantMiddleware(MiddlewareMixin):
         if not request.user.is_authenticated:
             return
 
-        # El superusuario (dueño del software) y las rutas del admin nativo 
+        # El superusuario y las rutas del admin nativo 
         # pueden funcionar de manera global sin estar atados a una empresa.
         if request.user.is_superuser and request.path.startswith('/admin/'):
             return
@@ -30,13 +30,28 @@ class TenantMiddleware(MiddlewareMixin):
             perfil = getattr(request.user, 'profile', None)
             
             if perfil and perfil.empresa:
-                # Evitar acceso si la cuenta de la empresa fue suspendida (desactivada)
-                if not perfil.empresa.activa:
-                    # Idealmente aquí redirigirías a una vista customizada de "Cuenta Suspendida"
-                    raise PermissionDenied("La cuenta de esta empresa se encuentra suspendida.")
+                empresa = perfil.empresa
+                
+                # Evaluar motivos de suspensión
+                suspendida_admin = not empresa.activa
+                suspendida_pago = False
+                
+                if hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0:
+                    suspendida_pago = True
+                    
+                if suspendida_admin or suspendida_pago:
+                    # Permitir solo "Cerrar sesión", "Pantalla de Suspensión" y "Crear Tickets"
+                    try:
+                        rutas_permitidas = [reverse('logout'), reverse('cuenta_suspendida'), reverse('crear_ticket')]
+                    except Exception:
+                        rutas_permitidas = ['/logout/', '/empresa/suspendida/', '/empresa/soporte/crear/']
+                        
+                    if request.path not in rutas_permitidas and not request.path.startswith('/admin/'):
+                        request.empresa = empresa # Inyectar para la vista de suspensión
+                        return redirect('cuenta_suspendida')
                 
                 # Inyectar la empresa en el request
-                request.empresa = perfil.empresa
+                request.empresa = empresa
                 request.rol = perfil.rol
             else:
                 # Autenticado pero sin empresa y no es ruta del admin

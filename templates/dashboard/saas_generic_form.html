@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} | SaaS Control Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f8fafc; }
+    .form-card {
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(226,232,240,0.8);
+        overflow: hidden;
+    }
+    .form-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        padding: 2.5rem;
+        color: white;
+    }
+    .dynamic-field label { letter-spacing: 0.5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            
+            <!-- Botón de regreso -->
+            <a href="{% url 'saas_control_panel' %}" class="btn btn-link text-decoration-none text-muted fw-bold mb-3 ps-0 d-inline-flex align-items-center">
+                <i class="bi bi-arrow-left-short fs-4 me-1"></i> Volver al Directorio
+            </a>
+
+            <div class="form-card">
+                <div class="form-header">
+                    <h2 class="fw-bolder mb-1" style="letter-spacing: -0.5px;">{{ titulo }}</h2>
+                    <p class="mb-0 opacity-75">Completa los datos requeridos para registrar la información en el sistema.</p>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data" class="p-4 p-md-5">
+                    {% csrf_token %}
+                    <div class="row g-4">
+                        {% for field in form %}
+                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' %}12{% else %}6{% endif %} dynamic-field">
+                                <label class="form-label fw-bold text-muted small text-uppercase mb-2">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+                                {{ field }}
+                                {% if field.help_text %}<small class="text-muted d-block mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>{{ field.help_text }}</small>{% endif %}
+                                {% if field.errors %}<div class="text-danger small mt-1 fw-bold"><i class="bi bi-exclamation-circle me-1"></i>{{ field.errors|striptags }}</div>{% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr class="my-5 opacity-10">
+                    
+                    <div class="d-flex justify-content-end gap-3">
+                        <a href="{% url 'saas_control_panel' %}" class="btn btn-light px-4 py-2 rounded-pill fw-bold border">Cancelar</a>
+                        <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm"><i class="bi bi-check2-circle me-2"></i>Guardar Registro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,8 +2,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('perfil/', views.perfil, name='perfil'),
     path('onboarding/', views.onboarding, name='onboarding'),
-    path('cambiar-negocio/', views.cambiar_tipo_negocio, name='cambiar_negocio'),
-    path('cargar-demo/', views.cargar_demo_data, name='cargar_demo'),
-    path('limpiar-demo/', views.limpiar_demo_data, name='limpiar_demo'),
+    path('limpiar-demo/', views.limpiar_demo, name='limpiar_demo'),
+    path('cargar-demo/', views.cargar_demo, name='cargar_demo'),
+    
+    # Flujo de Recuperación de Usuario
+    path('recuperar-usuario/', views.username_reset_request_view, name='username_reset'),
+    path('recuperar-usuario/confirmar/', views.username_reset_masked_view, name='username_reset_masked'),
+    path('recuperar-usuario/enviado/', views.recuperar_usuario_done, name='username_reset_done'),
 ]

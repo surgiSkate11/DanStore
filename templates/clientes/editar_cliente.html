@@ -106,11 +106,7 @@
                     <div class="col-md-6">
                         <label for="{{ form.nombre.id_for_label }}" class="form-label fw-semibold">{{ form.nombre.label }} <span class="text-danger">*</span></label>
                         {{ form.nombre }}
-                        {% if form.nombre.errors %}
-                            {% for error in form.nombre.errors %}
-                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
+                        
                     </div>
                     <div class="col-md-6">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -125,47 +121,27 @@
                             </div>
                         </div>
                         {{ form.ruc_cedula }}
-                        {% if form.ruc_cedula.errors %}
-                            {% for error in form.ruc_cedula.errors %}
-                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
+                        
                     </div>
                     <div class="col-md-6">
                         <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">{{ form.email.label }}</label>
                         {{ form.email }}
-                        {% if form.email.errors %}
-                            {% for error in form.email.errors %}
-                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
+                        
                     </div>
                     <div class="col-md-6">
                         <label for="{{ form.telefono.id_for_label }}" class="form-label fw-semibold">{{ form.telefono.label }}</label>
                         {{ form.telefono }}
-                        {% if form.telefono.errors %}
-                            {% for error in form.telefono.errors %}
-                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
+                        
                     </div>
                     <div class="col-12">
                         <label for="{{ form.direccion.id_for_label }}" class="form-label fw-semibold">{{ form.direccion.label }}</label>
                         {{ form.direccion }}
-                        {% if form.direccion.errors %}
-                            {% for error in form.direccion.errors %}
-                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
+                        
                     </div>
                     <div class="col-12">
                         <label for="{{ form.notas.id_for_label }}" class="form-label fw-semibold">{{ form.notas.label }}</label>
                         {{ form.notas }}
-                        {% if form.notas.errors %}
-                            {% for error in form.notas.errors %}
-                                <div class="field-error text-danger small mt-1 fw-semibold"><i class="bi bi-exclamation-circle"></i> {{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
+                        
                     </div>
                 </div>
 
@@ -213,38 +189,51 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         actualizarValidacionDocumento();
-    });
-</script>
-
-{% if form.errors %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // 1. Mostrar Errores Globales (non_field_errors)
-        {% for error in form.non_field_errors %}
-            showDjangoToast('{{ error|escapejs }}', 'error');
-        {% endfor %}
         
-        // 2. Comprobar si hay errores específicos de campo y lanzar UN solo Toast de advertencia
-        let hayErroresDeCampo = false;
-        {% for field in form %}
-            {% if field.errors %}hayErroresDeCampo = true;{% endif %}
-        {% endfor %}
-        
-        if (hayErroresDeCampo) {
-            showDjangoToast('Por favor, revisa y corrige los errores resaltados en rojo.', 'warning');
+        // 1. Validación del lado del cliente sin alertas de navegador
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    let primerError = null;
+                    Array.from(form.elements).forEach(input => {
+                        if (!input.checkValidity()) {
+                            input.classList.add('is-invalid');
+                            input.style.borderColor = '#ef4444';
+                            input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                            
+                            if (!primerError) primerError = input;
+                            input.addEventListener('input', function() {
+                                if (this.checkValidity()) {
+                                    this.classList.remove('is-invalid');
+                                    this.style.borderColor = '';
+                                    this.style.boxShadow = '';
+                                }
+                            }, { once: true });
+                        }
+                    });
+                    showDjangoToast('Por favor, completa todos los campos obligatorios correctamente.', 'warning');
+                    if (primerError) primerError.focus();
+                }
+            });
         }
-
-        // 3. Resaltar visualmente los campos con error
-        document.querySelectorAll('.field-error').forEach(errorDiv => {
-            const container = errorDiv.parentElement;
-            const input = container.querySelector('.form-control');
-            if (input) {
-                input.classList.add('is-invalid');
-                input.style.borderColor = '#ef4444';
-                input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
-            }
-        });
+        
+        // 2. Resaltado de errores enviados desde el backend (Server-side)
+        {% if form.errors %}
+            {% for field in form %}
+                {% if field.errors %}
+                    const input_{{ field.name }} = document.getElementById('{{ field.id_for_label }}');
+                    if (input_{{ field.name }}) {
+                        input_{{ field.name }}.classList.add('is-invalid');
+                        input_{{ field.name }}.style.borderColor = '#ef4444';
+                        input_{{ field.name }}.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                    }
+                {% endif %}
+            {% endfor %}
+        {% endif %}
     });
 </script>
-{% endif %}
 {% endblock %}

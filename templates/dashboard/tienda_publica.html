@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ empresa.landing_titulo }} | {{ empresa.nombre }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary-color: {{ empresa.color_primario|default:'#0d6efd' }}; }
+        body { background-color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Banner Promocional */
+        .promo-banner { background-color: var(--primary-color); color: white; text-align: center; padding: 12px; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;}
+        
+        /* Hero Section Personalizado */
+        .hero-section {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)), var(--primary-color);
+            color: white; padding: 6rem 0; text-align: center; border-radius: 0 0 40px 40px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.15);
+        }
+        
+        /* Redes Sociales */
+        .social-icons a { 
+            color: white; font-size: 1.5rem; margin: 0 12px; transition: all 0.3s;
+            background: rgba(255,255,255,0.1); width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%;
+            backdrop-filter: blur(5px);
+        }
+        .social-icons a:hover { background: var(--primary-color); transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        
+        /* Tarjetas de Producto */
+        .product-card { border: 1px solid rgba(226,232,240,0.8); border-radius: 20px; overflow: hidden; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.02); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); height: 100%; background: #fff;}
+        .product-card:hover { transform: translateY(-8px); box-shadow: 0 20px 30px -10px rgba(0,0,0,0.1); }
+        .price-tag { color: var(--primary-color); font-weight: 800; font-size: 1.4rem; }
+        .btn-comprar { background-color: var(--primary-color); border: none; border-radius: 12px; padding: 10px; transition: all 0.2s; }
+        .btn-comprar:hover { filter: brightness(1.1); transform: scale(1.02); }
+        
+        /* SaaS Footer */
+        .powered-by { text-align: center; padding: 3rem 0 2rem 0; margin-top: 3rem; border-top: 1px solid #e2e8f0; }
+        .powered-by span { font-size: 0.85rem; color: #64748b; font-weight: 600; }
+        .powered-by a { color: #0f172a; text-decoration: none; font-weight: 800; letter-spacing: -0.5px; }
+    </style>
+</head>
+<body>
+
+    {% if suspendida %}
+    <!-- Pantalla de Tienda Suspendida / En Mantenimiento -->
+    <div class="hero-section" style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; border-radius: 0;">
+        <div class="container text-center">
+            <div class="mb-4">
+                <i class="bi bi-shop-window text-white opacity-50" style="font-size: 6rem;"></i>
+            </div>
+            <h1 class="display-4 fw-bolder mb-3 text-white" style="letter-spacing: -1px;">Tienda en Mantenimiento</h1>
+            <p class="lead opacity-75 mb-5 mx-auto text-white" style="max-width: 600px; font-weight: 500;">
+                El catálogo de <strong>{{ empresa.nombre }}</strong> no se encuentra disponible en este momento. Por favor, regresa más tarde.
+            </p>
+            <div class="powered-by mt-5 border-top-0">
+                <span class="text-white opacity-50">Impulsado por</span>
+                <a href="/" class="text-white opacity-75"> <i class="bi bi-layers-fill"></i> Tiendita SaaS</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    
+    {% if empresa.mensaje_promocional %}
+    <div class="promo-banner">
+        <i class="bi bi-star-fill text-warning me-2"></i> {{ empresa.mensaje_promocional }}
+    </div>
+    {% endif %}
+
+    <div class="hero-section mb-5">
+        <div class="container">
+            <h1 class="display-4 fw-bolder mb-3" style="letter-spacing: -1px;">{{ empresa.landing_titulo|default:empresa.nombre }}</h1>
+            <p class="lead opacity-75 mb-4 mx-auto" style="max-width: 600px; font-weight: 500;">{{ empresa.landing_descripcion }}</p>
+            
+            <div class="social-icons mt-5">
+                {% if empresa.telefono_whatsapp %}
+                    <a href="https://wa.me/{{ empresa.telefono_whatsapp }}" target="_blank"><i class="bi bi-whatsapp"></i></a>
+                {% endif %}
+                {% if empresa.instagram_url %}
+                    <a href="{{ empresa.instagram_url }}" target="_blank"><i class="bi bi-instagram"></i></a>
+                {% endif %}
+                {% if empresa.facebook_url %}
+                    <a href="{{ empresa.facebook_url }}" target="_blank"><i class="bi bi-facebook"></i></a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="container pb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bolder mb-0 text-dark">Nuestros Productos</h3>
+            <span class="badge bg-white text-dark shadow-sm px-3 py-2 rounded-pill border"><i class="bi bi-box-seam text-primary me-1"></i> {{ productos|length }} Disponibles</span>
+        </div>
+        
+        <div class="row g-4">
+            {% for producto in productos %}
+            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="card product-card">
+                    {% if producto.imagen %}
+                        <img src="{{ producto.imagen.url }}" class="card-img-top" style="height: 240px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-light d-flex align-items-center justify-content-center" style="height: 240px;">
+                            <i class="bi bi-image text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body p-4 d-flex flex-column">
+                        <h6 class="fw-bold mb-1 text-dark text-truncate">{{ producto.nombre }}</h6>
+                        <p class="small text-muted mb-3">{{ producto.tipo_producto.nombre|default:"General" }}</p>
+                        <div class="mt-auto">
+                            <p class="price-tag mb-3">${{ producto.precio }}</p>
+                            <a href="https://wa.me/{{ empresa.telefono_whatsapp }}?text=Hola, me interesa el producto: {{ producto.nombre }}" target="_blank" class="btn w-100 fw-bold text-white btn-comprar">
+                                <i class="bi bi-whatsapp me-1"></i> Lo Quiero
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5"><p class="text-muted fs-5">Pronto añadiremos productos a nuestro catálogo.</p></div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="powered-by container">
+        <span>Gestión e Inventario impulsado por</span>
+        <a href="/"> <i class="bi bi-layers-fill text-primary"></i> Tiendita SaaS</a>
+    </div>
+    
+    {% endif %}
+</body>
+</html>

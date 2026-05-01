@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.template.loader import render_to_string
 from weasyprint import HTML
+from django.urls import reverse
 import json
 import re
 from productos.models import Producto
@@ -14,11 +15,13 @@ from clientes.models import Cliente
 from decimal import Decimal
 import io
 import os
+from empresas.mixins import requiere_modulo
 
 
 # ── VISTAS DE VENTAS ──────────────────────────────────────────────────────────
 
 @login_required
+@requiere_modulo('ventas')
 def lista_ventas(request):
     """Lista todas las ventas/facturas con estadísticas"""
 
@@ -36,7 +39,7 @@ def lista_ventas(request):
     ).distinct().count()
 
     clientes_con_deuda = Producto.objects.filter(
-        estado='separado',
+        estado='reservado',
         vendido_a__isnull=False
     ).exclude(vendido_a='').values('vendido_a').distinct().count()
 
@@ -51,12 +54,13 @@ def lista_ventas(request):
 
 
 @login_required
+@requiere_modulo('ventas')
 def lista_deudas(request):
     """Muestra todos los productos separados agrupados por cliente"""
     from collections import defaultdict
 
     productos_separados = Producto.objects.filter(
-        estado='separado',
+        estado='reservado',
         vendido_a__isnull=False
     ).exclude(vendido_a='').select_related('tipo_producto').order_by('vendido_a', '-creado_en')
 
@@ -89,6 +93,7 @@ def lista_deudas(request):
 
 
 @login_required
+@requiere_modulo('ventas')
 def crear_venta(request):
     """Crea una nueva venta/factura"""
 
@@ -201,7 +206,7 @@ def crear_venta(request):
 
         # CORRECTO: numero_factura es campo, sin paréntesis
         messages.success(request, f'Venta {venta.numero_factura} creada exitosamente')
-        return redirect('detalle_venta', venta_id=venta.id)
+        return redirect(f"{reverse('detalle_venta', args=[venta.id])}?auto_print=1")
 
     # GET
     cliente_nombre_param = request.GET.get('cliente')
@@ -267,9 +272,15 @@ def crear_venta(request):
 
 
 @login_required
+@requiere_modulo('ventas')
 def editar_venta(request, venta_id):
     """Edita una venta existente"""
     venta = get_object_or_404(Venta, pk=venta_id)
+    
+    # Filosofía SaaS: Permitimos la edición para máxima flexibilidad, 
+    # solo informamos al usuario si la factura es externa para que sea consciente.
+    if getattr(venta, 'origen', '') == 'sheets' and request.method == 'GET':
+        messages.info(request, 'Esta factura se sincronizó desde Google Sheets. Puedes ajustarla libremente, pero los cambios solo se reflejarán en este sistema.')
 
     if request.method == 'POST':
         venta.descuento = Decimal(request.POST.get('descuento', 0))
@@ -279,34 +290,8 @@ def editar_venta(request, venta_id):
         venta.notas = request.POST.get('notas', '')
         venta.metodo_pago = request.POST.get('metodo_pago', venta.metodo_pago)
 
-        productos_actuales = set(venta.detalles.values_list('producto_id', flat=True))
-        productos_nuevos = set(int(pid) for pid in request.POST.getlist('productos'))
-
-        # Quitar productos eliminados
-        for producto_id in productos_actuales - productos_nuevos:
-            DetalleVenta.objects.filter(venta=venta, producto_id=producto_id).delete()
-            try:
-                producto = Producto.objects.get(pk=producto_id)
-                producto.estado = 'disponible'
-                producto.vendido_a = ''
-                producto.save()
-            except Producto.DoesNotExist:
-                pass
-
-        # Agregar productos nuevos
-        for producto_id in productos_nuevos - productos_actuales:
-            try:
-                producto = Producto.objects.get(pk=producto_id)
-                DetalleVenta.objects.create(
-                    venta=venta,
-                    producto=producto,
-                    precio_unitario=producto.precio or 0
-                )
-                producto.estado = 'vendido'
-                producto.vendido_a = venta.cliente.nombre
-                producto.save()
-            except Producto.DoesNotExist:
-                continue
+        # La edición de facturas ahora solo permite ajustar gastos adicionales y descuentos.
+        # El listado de productos de la factura se mantiene intacto.
 
         venta.calcular_total()
         venta.save()
@@ -316,23 +301,9 @@ def editar_venta(request, venta_id):
         return redirect('detalle_venta', venta_id=venta.id)
 
     # GET
-    productos_venta = venta.detalles.all().select_related('producto')
-    productos_venta_ids = [d.producto.id for d in productos_venta]
-
-    productos_disponibles = list(
-        Producto.objects.filter(estado='disponible').select_related('tipo_producto').order_by('-creado_en')[:200]
-    )
-
-    productos_opciones = productos_disponibles[:]
-    for detalle in productos_venta:
-        if detalle.producto not in productos_opciones:
-            productos_opciones.insert(0, detalle.producto)
-
     context = {
         'venta': venta,
         'cliente': venta.cliente,
-        'productos': productos_opciones,
-        'productos_seleccionados': productos_venta_ids,
         'modo_edicion': True,
     }
 
@@ -340,6 +311,7 @@ def editar_venta(request, venta_id):
 
 
 @login_required
+@requiere_modulo('ventas')
 def detalle_venta(request, venta_id):
     """Detalle de una venta"""
     venta = get_object_or_404(
@@ -354,6 +326,7 @@ def detalle_venta(request, venta_id):
 # ── PDF CON WEASYPRINT (vía template HTML) ────────────────────────────────────
 
 @login_required
+@requiere_modulo('ventas')
 def factura_pdf(request, venta_id):
     """
     Genera PDF de factura usando WeasyPrint + template HTML.
@@ -371,17 +344,22 @@ def factura_pdf(request, venta_id):
         'config': config,
     })
 
+    # Si la petición incluye ?html=1, devolvemos el HTML crudo para que el navegador ejecute window.print()
+    if request.GET.get('html') == '1':
+        return HttpResponse(html_string)
+
     pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
 
     response = HttpResponse(pdf, content_type='application/pdf')
     # CORRECTO: numero_factura es campo, sin paréntesis
-    response['Content-Disposition'] = f'inline; filename="factura-{venta.numero_factura}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="factura-{venta.numero_factura}.pdf"'
     return response
 
 
 # ── PDF CON REPORTLAB (comprobante de deuda) ──────────────────────────────────
 
 @login_required
+@requiere_modulo('ventas')
 def generar_factura_pdf(request, venta_id):
     """
     Genera PDF de ticket térmico usando pdfkit (formato de 80mm) y template HTML.
@@ -400,6 +378,10 @@ def generar_factura_pdf(request, venta_id):
         'config': config,
     }, request=request)
 
+    # Si la petición incluye ?html=1, devolvemos el HTML crudo para que el navegador ejecute window.print()
+    if request.GET.get('html') == '1':
+        return HttpResponse(html_string)
+
     # Usar WeasyPrint: nativo de Python, sin errores de Windows ni archivos vacíos
     pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
 
@@ -409,12 +391,13 @@ def generar_factura_pdf(request, venta_id):
 
 
 @login_required
+@requiere_modulo('ventas')
 def generar_comprobante_deuda_pdf(request, cliente_nombre):
     """Genera PDF de comprobante de deuda para un cliente usando pdfkit (A4)"""
     from datetime import datetime
 
     productos = Producto.objects.filter(
-        estado='separado',
+        estado='reservado',
         vendido_a=cliente_nombre
     ).select_related('tipo_producto').order_by('-creado_en')
 
@@ -455,6 +438,7 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 
 @login_required
+@requiere_modulo('ventas')
 def configuracion_facturas(request):
     """Configura logo, colores y datos de la empresa para las facturas"""
     # Obtención segura de la empresa (fallback a id=1 si el middleware no la inyectó)
@@ -485,9 +469,6 @@ def configuracion_facturas(request):
         config.color_principal = request.POST.get('color_principal', '#667eea')
         config.color_borde = request.POST.get('color_borde', '#667eea')
         config.color_texto = request.POST.get('color_texto', '#333333')
-
-        if 'logo' in request.FILES:
-            config.logo = request.FILES['logo']
 
         config.save()
         messages.success(request, 'Configuración actualizada correctamente')

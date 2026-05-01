@@ -1,0 +1,117 @@
+{% extends 'security/auth_base.html' %}
+
+{% block title %}Iniciar Sesión - Tiendita{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Ajustes para hacer la tarjeta más compacta y profesional */
+    .auth-header {
+        margin-bottom: 1.5rem !important;
+    }
+    .auth-header .logo-icon {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 2rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .password-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .password-wrapper .form-control {
+        padding-right: 2.8rem;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        height: 100%;
+        cursor: pointer;
+        color: #94a3b8;
+        border: none;
+        background: transparent;
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s;
+        z-index: 10;
+    }
+
+    .password-toggle:hover {
+        color: #4f46e5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-header">
+    <div class="logo-icon">
+        <i class="bi bi-shop"></i>
+    </div>
+    <h2 class="fw-bold mb-1" style="color: #1e293b;">Bienvenido</h2>
+    <p class="text-muted small">Ingresa tus credenciales para acceder</p>
+</div>
+                    
+<form method="post">
+    {% csrf_token %}
+    
+    
+    
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <label for="id_username" class="form-label mb-0">Usuario o Correo</label>
+            <a href="{% url 'username_reset' %}" class="auth-link">¿Olvidaste tu usuario?</a>
+        </div>
+        <input type="text" name="username" class="form-control" id="id_username" placeholder="ej: juan@empresa.com" required autofocus>
+    </div>
+    
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <label for="id_password" class="form-label mb-0">Contraseña</label>
+            <a href="{% url 'password_reset' %}" class="auth-link">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="password-wrapper">
+            <input type="password" name="password" class="form-control" id="id_password" placeholder="••••••••" required>
+            <button type="button" class="password-toggle" id="btnTogglePassword" tabindex="-1" title="Mostrar contraseña">
+                <i class="bi bi-eye-slash" id="eyeIcon"></i>
+            </button>
+        </div>
+    </div>
+    
+    <button type="submit" class="btn-auth mt-3">
+        Ingresar a mi cuenta <i class="bi bi-arrow-right ms-1"></i>
+    </button>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnTogglePassword = document.getElementById('btnTogglePassword');
+        const passwordInput = document.getElementById('id_password');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        btnTogglePassword.addEventListener('click', function (e) {
+            e.preventDefault();
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            if (type === 'password') {
+                eyeIcon.classList.remove('bi-eye');
+                eyeIcon.classList.add('bi-eye-slash');
+                btnTogglePassword.setAttribute('title', 'Mostrar contraseña');
+            } else {
+                eyeIcon.classList.remove('bi-eye-slash');
+                eyeIcon.classList.add('bi-eye');
+                btnTogglePassword.setAttribute('title', 'Ocultar contraseña');
+            }
+        });
+    });
+</script>
+{% endblock %}

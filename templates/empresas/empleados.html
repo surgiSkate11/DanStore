@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Empleados - Empresa{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3); color: white; margin-bottom: 2rem; }
+    .section-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; height: 100%; }
+    .empleado-card { background: #f8fafc; border-left: 4px solid #10b981; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .rol-tag { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header">
+        <h1 class="mb-2 fw-bold"><i class="bi bi-people-fill"></i> Equipo de Trabajo</h1>
+        <p class="mb-0 opacity-75"><i class="bi bi-info-circle"></i> Administra las cuentas y accesos de tus empleados a la plataforma.</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Lista de Empleados -->
+        <div class="col-lg-7">
+            <div class="section-card">
+                <h4 class="fw-bold mb-4">Personal Activo</h4>
+                {% if empleados %}
+                    {% for emp in empleados %}
+                    <div class="empleado-card">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-person-circle text-secondary me-2"></i> {{ emp.user.username }}</h5>
+                            <p class="text-muted small mb-2">{{ emp.user.email }}</p>
+                            <span class="rol-tag"><i class="bi bi-shield-check"></i> {{ emp.rol_empresa.nombre }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-person-x fs-1 opacity-50 mb-3 d-block"></i>
+                        <h5>No tienes empleados registrados</h5>
+                        <p>Invita a tu equipo desde el panel derecho.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Crear Nuevo Empleado -->
+        <div class="col-lg-5">
+            <div class="section-card">
+                <h4 class="fw-bold mb-4 text-success"><i class="bi bi-person-plus-fill"></i> Registrar Empleado</h4>
+                
+                {% if not roles %}
+                <div class="alert alert-warning shadow-sm">
+                    <i class="bi bi-exclamation-triangle-fill"></i> <strong>Atención:</strong> Necesitas crear al menos un <a href="{% url 'lista_roles' %}" class="alert-link">Rol de Empresa</a> antes de poder registrar empleados.
+                </div>
+                {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Usuario (Login)</label>
+                        <input type="text" name="username" class="form-control" placeholder="Ej: cajero_maria" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Correo Electrónico</label>
+                        <input type="email" name="email" class="form-control" placeholder="maria@empresa.com" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Contraseña Temporal</label>
+                        <input type="password" name="password" class="form-control" placeholder="********" required>
+                        <small class="text-muted">El empleado usará esta contraseña para entrar.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Asignar Rol</label>
+                        <select name="rol_id" class="form-select form-select-lg" required>
+                            <option value="">Selecciona un rol...</option>
+                            {% for rol in roles %}
+                            <option value="{{ rol.id }}">{{ rol.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">Crear Cuenta de Empleado</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

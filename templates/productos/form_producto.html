@@ -161,16 +161,7 @@
                     <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger shadow-sm border-0 rounded-3 mb-4" role="alert">
-                                <h5 class="alert-heading fw-bold"><i class="bi bi-exclamation-octagon"></i> Revisa los siguientes errores:</h5>
-                                <ul class="mb-0">
-                                {% for error in form.non_field_errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
+                        
 
                         <div class="row g-4">
                             {% for field in form %}

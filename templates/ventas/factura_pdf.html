@@ -43,12 +43,6 @@
             margin-bottom: 10px;
         }
         
-        .header img {
-            max-width: 60%;
-            margin-bottom: 5px;
-            filter: grayscale(100%);
-        }
-        
         .header h2 {
             font-size: 16px;
             margin-bottom: 2px;
@@ -96,9 +90,6 @@
 <body>
     <div class="divider-solid"></div>
     <div class="header">
-        {% if config.logo %}
-        <img src="{{ base_url }}{{ config.logo.url }}" alt="Logo">
-        {% endif %}
         <h2>{{ config.nombre_empresa|upper }}</h2>
         {% if config.ruc_empresa %}<p>RUC: {{ config.ruc_empresa }}</p>{% endif %}
         {% if config.direccion_empresa %}<p>{{ config.direccion_empresa }}</p>{% endif %}
@@ -197,5 +188,16 @@
     </div>
     
     <div class="divider-solid"></div>
+
+    <script>
+        // Auto-ejecutar el diálogo de impresión web tan pronto como cargue el ticket
+        window.onload = function() {
+            window.print();
+            // Opcional: Cerrar la ventana o pestaña automáticamente después de imprimir
+            window.onafterprint = function() {
+                window.close();
+            };
+        };
+    </script>
 </body>
 </html>

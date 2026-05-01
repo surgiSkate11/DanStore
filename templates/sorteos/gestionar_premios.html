@@ -340,7 +340,7 @@
 
                 <!-- Crear Nuevo Premio -->
                 <div id="seccionNuevo" style="display: none;">
-                    <form id="formAgregarPremio" onsubmit="agregarPremio(event)">
+                    <form id="formAgregarPremio" onsubmit="agregarPremio(event)" novalidate>
                         {% csrf_token %}
                         <input type="hidden" id="premioExistenteId" name="premio_id">
                         
@@ -366,7 +366,7 @@
 
                         <div class="row">
                             <div class="col-12 mb-3" id="campoValorDescuento" style="display: none;">
-                                <label class="form-label fw-bold">Valor del Descuento</label>
+                                <label class="form-label fw-bold">Valor del Descuento *</label>
                                 <input type="number" class="form-control" id="premioValor" name="valor_descuento" step="0.01" min="0" placeholder="Ej: 10">
                             </div>
                         </div>
@@ -421,7 +421,7 @@
                     <div class="alert alert-info">
                         <i class="bi bi-info-circle"></i> Configurando premio: <strong id="nombrePremioSeleccionado"></strong>
                     </div>
-                    <form id="formUsarExistente" onsubmit="agregarPremioExistente(event)">
+                    <form id="formUsarExistente" onsubmit="agregarPremioExistente(event)" novalidate>
                         {% csrf_token %}
                         <input type="hidden" id="premioExistenteIdForm" name="premio_id">
                         
@@ -516,8 +516,37 @@ function cancelarSeleccion() {
     document.getElementById('seccionConfigurarExistente').style.display = 'none';
 }
 
+// Función genérica de validación premium (Client-side) sin alertas nativas
+function validarFormularioPersonalizado(form) {
+    if (!form.checkValidity()) {
+        let primerError = null;
+        Array.from(form.elements).forEach(input => {
+            if (!input.checkValidity()) {
+                input.classList.add('is-invalid');
+                input.style.borderColor = '#ef4444';
+                input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                
+                if (!primerError) primerError = input;
+                
+                input.addEventListener('input', function() {
+                    if (this.checkValidity()) {
+                        this.classList.remove('is-invalid');
+                        this.style.borderColor = '';
+                        this.style.boxShadow = '';
+                    }
+                }, { once: true });
+            }
+        });
+        mostrarMensaje('Por favor, revisa y completa los campos resaltados en rojo.', 'warning');
+        if (primerError) primerError.focus();
+        return false;
+    }
+    return true;
+}
+
 function agregarPremio(event) {
     event.preventDefault();
+    if (!validarFormularioPersonalizado(event.target)) return;
     
     const formData = new FormData(event.target);
     
@@ -545,6 +574,7 @@ function agregarPremio(event) {
 
 function agregarPremioExistente(event) {
     event.preventDefault();
+    if (!validarFormularioPersonalizado(event.target)) return;
     
     const formData = new FormData(event.target);
     
@@ -606,11 +636,15 @@ function confirmarEliminarPremio() {
 function actualizarCamposPremio() {
     const tipo = document.getElementById('premioTipo').value;
     const campoValor = document.getElementById('campoValorDescuento');
+    const inputValor = document.getElementById('premioValor');
     
     if (tipo === 'descuento_porcentaje' || tipo === 'descuento_fijo') {
         campoValor.style.display = 'block';
+        inputValor.required = true;
     } else {
         campoValor.style.display = 'none';
+        inputValor.required = false;
+        inputValor.value = ''; // Limpiar el valor si cambian de opinión
     }
 }
 

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Control Panel | Base de Datos SaaS{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f1f5f9; }
+    
+    .db-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 24px;
+        padding: 3rem 2rem;
+        color: white;
+        box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.3);
+        margin-bottom: 2.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .db-header::after {
+        content: ''; position: absolute; top: -50%; right: -10%; width: 400px; height: 400px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;
+    }
+    
+    .db-card {
+        background: #ffffff; border-radius: 20px; padding: 1.75rem; height: 100%;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.02); border: 1px solid rgba(226,232,240,0.8);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column;
+    }
+    .db-card:hover { transform: translateY(-5px); box-shadow: 0 20px 30px -10px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+    
+    .db-icon { width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem; }
+    .section-title { font-size: 0.9rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e2e8f0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-xl-5">
+    
+    <!-- Hero Header -->
+    <div class="db-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-4">
+        <div class="position-relative z-1">
+            <span class="badge bg-white text-dark mb-3 px-3 py-2 rounded-pill fw-bold shadow-sm" style="font-size: 0.75rem; letter-spacing: 0.5px;">ADMINISTRADOR GLOBAL</span>
+            <h1 class="fw-bolder mb-2" style="letter-spacing: -1px;">Directorio de Base de Datos</h1>
+            <p class="mb-0 opacity-75 fs-5">Control total (CRUD) sobre todos los modelos y registros del sistema.</p>
+        </div>
+        <div class="d-flex gap-3 position-relative z-1">
+            <div class="bg-white bg-opacity-10 rounded-4 p-3 text-center" style="backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); min-width: 120px;">
+                <div class="fs-3 fw-bolder">{{ total_usuarios }}</div>
+                <div class="small fw-semibold opacity-75 text-uppercase" style="letter-spacing: 0.5px;">Usuarios</div>
+            </div>
+            <div class="bg-white bg-opacity-10 rounded-4 p-3 text-center" style="backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); min-width: 120px;">
+                <div class="fs-3 fw-bolder">{{ total_empresas }}</div>
+                <div class="small fw-semibold opacity-75 text-uppercase" style="letter-spacing: 0.5px;">Inquilinos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Infraestructura SaaS -->
+    <h4 class="section-title mt-5">📦 Arquitectura SaaS & Monetización</h4>
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-box-fill"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Módulos del Sistema</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Aplicaciones base que se pueden activar en los planes.</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/usuarios/modulosaas/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_crear_registro' 'usuarios' 'modulosaas' %}" class="btn btn-primary fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon bg-success bg-opacity-10 text-success"><i class="bi bi-tags-fill"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Planes de Venta</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Configuración de precios y características a vender.</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/empresas/plan/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_crear_registro' 'empresas' 'plan' %}" class="btn btn-success fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon bg-info bg-opacity-10 text-info"><i class="bi bi-card-checklist"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Suscripciones</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Planes vinculados a los inquilinos (Tenants) y vigencias.</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/empresas/suscripcionempresa/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todas</a>
+                    <a href="{% url 'saas_crear_registro' 'empresas' 'suscripcionempresa' %}" class="btn btn-info text-white fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Entidades Multi-Tenant -->
+    <h4 class="section-title mt-5">🏢 Entidades Multi-Tenant</h4>
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon bg-indigo bg-opacity-10 text-indigo" style="color: #6366f1; background: rgba(99,102,241,0.1);"><i class="bi bi-buildings-fill"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Empresas (Bruto)</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Gestión técnica de la tabla Empresas (Landing, redes, slugs).</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/empresas/empresa/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Explorar BD</a>
+                    <a href="{% url 'saas_crear_registro' 'empresas' 'empresa' %}" class="btn btn-indigo text-white fw-bold px-3 shadow-sm" style="border-radius: 10px; background-color: #6366f1;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-shield-lock-fill"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Roles de Inquilinos</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Roles personalizados creados internamente por las empresas.</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/usuarios/rolempresa/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Explorar BD</a>
+                    <a href="{% url 'saas_crear_registro' 'usuarios' 'rolempresa' %}" class="btn btn-warning fw-bold px-3 shadow-sm text-dark" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Gestión de Cuentas -->
+    <h4 class="section-title mt-5">👥 Usuarios y Autenticación</h4>
+    <div class="row g-4 mb-5">
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon bg-dark bg-opacity-10 text-dark"><i class="bi bi-person-badge-fill"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Cuentas Nativas</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Tabla Auth nativa de Django (Logins, contraseñas, correos).</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/auth/user/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_crear_registro' 'auth' 'user' %}" class="btn btn-dark fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="db-card">
+                <div class="db-icon text-danger" style="background: rgba(239, 68, 68, 0.1);"><i class="bi bi-person-vcard-fill"></i></div>
+                <h5 class="fw-bolder text-dark mb-1">Perfiles SaaS (Profiles)</h5>
+                <p class="text-muted small fw-medium mb-4 flex-grow-1">Extensión de los usuarios vinculados a un Tenant y Rol.</p>
+                <div class="d-flex gap-2">
+                    <a href="/admin/usuarios/userprofile/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_crear_registro' 'usuarios' 'userprofile' %}" class="btn btn-danger fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

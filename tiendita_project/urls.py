@@ -19,18 +19,33 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
+from usuarios import views as usuarios_views
 
 urlpatterns = [
     path('', include('dashboard.urls')),  # Ruta para el dashboard
     path('admin/', admin.site.urls),
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('login/', usuarios_views.CustomLoginView.as_view(template_name='security/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    
+    # Flujo Profesional de Recuperación de Contraseña SaaS
+    path('recuperar-password/', usuarios_views.password_reset_request_view, name='password_reset'),
+    path('recuperar-password/confirmar/', usuarios_views.password_reset_masked_view, name='password_reset_masked'),
+    path('recuperar-password/enviado/', auth_views.PasswordResetDoneView.as_view(template_name='security/password_reset_done.html'), name='password_reset_done'),
+    path('recuperar-password/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='security/password_reset_confirm.html'), name='password_reset_confirm'),
+    path('recuperar-password/completado/', auth_views.PasswordResetCompleteView.as_view(template_name='security/password_reset_complete.html'), name='password_reset_complete'),
+    
+    # Flujo de Recuperación de Usuario
+    path('recuperar-usuario/', usuarios_views.username_reset_request_view, name='username_reset'),
+    path('recuperar-usuario/confirmar/', usuarios_views.username_reset_masked_view, name='username_reset_masked'),
+    path('recuperar-usuario/enviado/', usuarios_views.recuperar_usuario_done, name='username_reset_done'),
+    
     path('usuarios/', include('usuarios.urls')),
     path('productos/', include('productos.urls')),
     path('catalogos/', include('catalogos.urls')),
     path('clientes/', include('clientes.urls')),
     path('ventas/', include('ventas.urls')),
     path('sorteos/', include('sorteos.urls')),
+    path('empresa/', include('empresas.urls')),
 ]
 
 # Servir archivos media en desarrollo

@@ -34,7 +34,7 @@ class Command(BaseCommand):
 
         # Si está el flag --clear, eliminar demo data
         if options['clear']:
-            Producto.objects.filter(sincronizado_sheets=False).delete()
+            Producto.objects.exclude(origen='sheets').delete()
             Cliente.objects.all().delete()
             user.profile.usa_demo_data = False
             user.profile.save()
@@ -68,10 +68,10 @@ class Command(BaseCommand):
                 'origen': 'manual',
             },
             {
-                'nombre': 'Producto separado demo',
+                'nombre': 'Producto reservado demo',
                 'categoria': 'General',
                 'precio': 30.00,
-                'estado': 'separado',
+                'estado': 'reservado',
                 'descripcion': 'Producto reservado de ejemplo',
                 'variante': 'S',
                 'vendido_a': 'Cliente Demo',

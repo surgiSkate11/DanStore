@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración Global | SaaS{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f1f5f9; }
+    .saas-card { 
+        background: #ffffff; border-radius: 20px; padding: 2rem; 
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.02), 0 8px 10px -6px rgba(0,0,0,0.01); 
+        border: 1px solid rgba(226, 232, 240, 0.8); 
+    }
+    .settings-menu { border-right: 1px solid #e2e8f0; padding-right: 1rem; }
+    .settings-link { display: block; padding: 0.8rem 1rem; color: #475569; font-weight: 600; border-radius: 10px; margin-bottom: 0.5rem; transition: all 0.2s; text-decoration: none; }
+    .settings-link:hover { background-color: #f8fafc; color: #3b82f6; }
+    .settings-link.active { background-color: #eff6ff; color: #3b82f6; }
+    
+    .fade-in { animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .custom-switch .form-check-input { width: 3em; height: 1.5em; margin-top: 0; cursor: pointer; }
+    .custom-switch .form-check-input:checked { background-color: #10b981; border-color: #10b981; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-xl-5">
+    <h2 class="fw-bolder mb-4 text-dark" style="letter-spacing: -0.5px;">
+        <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-3 me-2" style="width: 45px; height: 45px;">
+            <i class="bi bi-sliders"></i>
+        </div>
+        Ajustes Globales <span class="text-muted fw-semibold fs-4">(Settings)</span>
+    </h2>
+
+    <div class="saas-card">
+        <div class="row min-vh-50">
+            <!-- Menú Lateral Interno -->
+            <div class="col-md-3 settings-menu">
+                <a href="#" class="settings-link active" data-tab="branding"><i class="bi bi-brush me-2"></i> Marca Blanca</a>
+                <a href="#" class="settings-link" data-tab="smtp"><i class="bi bi-envelope-paper me-2"></i> Servidor SMTP</a>
+                <a href="#" class="settings-link" data-tab="pagos"><i class="bi bi-credit-card-2-front me-2"></i> Pasarelas de Pago</a>
+                <a href="#" class="settings-link" data-tab="seguridad"><i class="bi bi-shield-check me-2"></i> Seguridad</a>
+            </div>
+            
+            <!-- Contenido de Configuración -->
+            <div class="col-md-9 ps-md-4">
+                
+                <form method="POST" action="{% url 'saas_configuracion' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="active_tab" id="activeTabInput" value="branding">
+
+                    <!-- TAB: BRANDING -->
+                    <div id="tab-branding" class="tab-content fade-in">
+                        <h4 class="fw-bold text-dark border-bottom pb-3 mb-4">Personalización (Marca Blanca)</h4>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Nombre de la Plataforma</label>
+                                <input type="text" name="app_name" class="form-control form-control-lg bg-light border-0" value="Tiendita SaaS" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Correo de Soporte Global</label>
+                                <input type="email" name="support_email" class="form-control form-control-lg bg-light border-0" value="soporte@tiendita.com" style="border-radius: 12px;">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Logotipo Principal</label>
+                            <div class="border rounded-4 p-4 text-center bg-light" style="border-style: dashed !important; border-width: 2px !important; cursor: pointer; transition: all 0.2s;" onmouseover="this.classList.add('bg-white')" onmouseout="this.classList.remove('bg-white')">
+                                <i class="bi bi-cloud-arrow-up text-primary fs-1"></i>
+                                <p class="text-muted fw-semibold mb-0 mt-2">Haz clic o arrastra tu logo en PNG (max 2MB)</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-4 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Color de Acento (SaaS)</label>
+                                <div class="d-flex align-items-center bg-light p-2 rounded-3">
+                                    <input type="color" name="theme_color" class="form-control form-control-color border-0 p-0 me-3 bg-transparent shadow-none" value="#3b82f6" title="Elige tu color" style="width: 35px; height: 35px; border-radius: 8px; cursor: pointer;">
+                                    <span class="fw-bold text-dark font-monospace">#3b82f6</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: SMTP -->
+                    <div id="tab-smtp" class="tab-content d-none fade-in">
+                        <h4 class="fw-bold text-dark border-bottom pb-3 mb-4">Servidor de Correos (SMTP)</h4>
+                        <p class="text-muted mb-4">Configura las credenciales para enviar correos de facturas y contraseñas.</p>
+                        
+                        <div class="row g-4 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Servidor (Host)</label>
+                                <input type="text" name="smtp_host" class="form-control form-control-lg bg-light border-0" value="smtp.mailgun.org" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Puerto</label>
+                                <input type="number" name="smtp_port" class="form-control form-control-lg bg-light border-0" value="587" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Usuario</label>
+                                <input type="text" name="smtp_user" class="form-control form-control-lg bg-light border-0" value="postmaster@tiendita.com" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Contraseña</label>
+                                <input type="password" name="smtp_pass" class="form-control form-control-lg bg-light border-0" value="********" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-12 mt-4">
+                                <div class="form-check custom-switch d-flex align-items-center ps-0">
+                                    <input class="form-check-input ms-0 me-3" type="checkbox" id="useTls" name="smtp_tls" checked>
+                                    <label class="form-check-label fw-bold text-dark mb-0" for="useTls">Usar cifrado seguro (TLS/SSL)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: PAGOS -->
+                    <div id="tab-pagos" class="tab-content d-none fade-in">
+                        <h4 class="fw-bold text-dark border-bottom pb-3 mb-4">Pasarelas de Pago</h4>
+                        <p class="text-muted mb-4">Activa las pasarelas para cobrar planes automáticamente a tus inquilinos.</p>
+                        
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-stripe text-primary fs-3 me-2 align-middle"></i> Stripe</h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="stripeActive" name="stripe_active" checked>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Clave Pública (Publishable Key)</label>
+                                        <input type="text" name="stripe_public" class="form-control form-control-lg bg-white border-0 shadow-sm" value="pk_test_51Nx..." style="border-radius: 10px;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Clave Secreta (Secret Key)</label>
+                                        <input type="password" name="stripe_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="sk_test_51Nx..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-paypal text-primary fs-3 me-2 align-middle" style="color: #003087 !important;"></i> PayPal</h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="paypalActive" name="paypal_active">
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Client ID</label>
+                                        <input type="text" name="paypal_client_id" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Ad_D9k..." style="border-radius: 10px;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Secret Key</label>
+                                        <input type="password" name="paypal_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="E_J3k..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0">
+                                        <span class="bg-warning text-dark px-2 py-1 rounded-3 fw-bolder fs-5 me-2 align-middle">P</span> PayPhone
+                                    </h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="payphoneActive" name="payphone_active">
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Token de Autenticación (Bearer)</label>
+                                        <input type="password" name="payphone_token" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="eyJhbGciOiJIUzI1NiIs..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: SEGURIDAD -->
+                    <div id="tab-seguridad" class="tab-content d-none fade-in">
+                        <h4 class="fw-bold text-dark border-bottom pb-3 mb-4">Políticas de Seguridad</h4>
+                        <div class="row g-4 mb-3">
+                            <div class="col-12">
+                                <div class="card border-0 shadow-sm" style="border-radius: 16px; border-left: 4px solid #3b82f6 !important;">
+                                    <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-1">Forzar 2FA para Inquilinos</h6>
+                                            <p class="text-muted small mb-0">Obliga a los Dueños a configurar Autenticación de Dos Pasos.</p>
+                                        </div>
+                                        <div class="form-check custom-switch ps-0">
+                                            <input class="form-check-input ms-0" type="checkbox" id="force2fa" name="force_2fa">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mt-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Expiración de Sesión</label>
+                                <select class="form-select form-select-lg bg-light border-0" name="session_timeout" style="border-radius: 12px; font-weight: 500;">
+                                    <option value="30">30 minutos inactivo</option>
+                                    <option value="60">1 hora inactivo</option>
+                                    <option value="120" selected>2 horas inactivo</option>
+                                    <option value="1440">No expirar (24 hrs)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción Globales -->
+                    <div class="text-end mt-5 pt-4 border-top">
+                        <button type="submit" class="btn btn-primary px-5 py-2 fw-bold rounded-pill shadow-sm d-inline-flex align-items-center">
+                            <i class="bi bi-save me-2"></i> Guardar Ajustes
+                        </button>
+                    </div>
+                </form>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const links = document.querySelectorAll('.settings-link');
+        const tabs = document.querySelectorAll('.tab-content');
+        const hiddenInput = document.getElementById('activeTabInput');
+        
+        // 1. Leer de la URL si el usuario acaba de guardar o entrar
+        const currentHash = window.location.hash.replace('#', '') || 'branding';
+        activateTab(currentHash);
+
+        // 2. Escuchar clics en el menú
+        links.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tabId = this.getAttribute('data-tab');
+                activateTab(tabId);
+                
+                // Actualizar URL sin recargar la página (para UX y recargas)
+                history.pushState(null, null, '#' + tabId);
+            });
+        });
+
+        function activateTab(tabId) {
+            // Ocultar todo
+            links.forEach(l => l.classList.remove('active'));
+            tabs.forEach(t => t.classList.add('d-none'));
+
+            // Mostrar el target seleccionado
+            const activeLink = document.querySelector(`.settings-link[data-tab="${tabId}"]`);
+            const targetTab = document.getElementById(`tab-${tabId}`);
+            
+            if(activeLink && targetTab) {
+                activeLink.classList.add('active');
+                targetTab.classList.remove('d-none');
+                hiddenInput.value = tabId; // Guardar en el form para el backend
+            } else {
+                // Fallback de seguridad
+                document.querySelector('.settings-link[data-tab="branding"]').classList.add('active');
+                document.getElementById('tab-branding').classList.remove('d-none');
+            }
+        }
+    });
+</script>
+{% endblock %}
