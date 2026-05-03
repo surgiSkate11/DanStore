@@ -3,6 +3,42 @@
 
 {% block title %}Personalizar Catálogo{% endblock %}
 
+{% block extra_css %}
+<style>
+    .bg-gradient-primary { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); }
+    .bg-gradient-success { background: linear-gradient(135deg, #198754 0%, #146c43 100%); }
+    .bg-gradient-info { background: linear-gradient(135deg, #0dcaf0 0%, #087990 100%); }
+    
+    .card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    .card:hover { transform: translateY(-5px); }
+    
+    .btn { transition: all 0.3s ease; font-weight: 500; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+    
+    .upload-area { transition: all 0.3s ease; }
+    .upload-area:hover { background: #e9ecef !important; transform: scale(1.02); }
+    
+    .preview-container img:hover,
+    .pdf-preview-box:hover {
+        transform: scale(1.02);
+        transition: transform 0.3s ease;
+    }
+    
+    .tool-card { background: #f8f9fa; transition: all 0.3s ease; }
+    .tool-card:hover {
+        background: #e9ecef;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .preview-upload { text-align: center; }
+    .preview-upload img,
+    .preview-upload embed { margin: 0 auto; }
+    
+    .empty-state { opacity: 0.7; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4 py-4">
     <!-- Header mejorado -->
@@ -758,9 +794,6 @@
                 <a href="{% url 'generar_catalogo' %}" class="btn btn-primary btn-lg shadow">
                     <i class="bi bi-file-earmark-pdf-fill"></i> Generar Catálogo Completo
                 </a>
-                <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-lg">
-                    <i class="bi bi-house-door"></i> Volver al Inicio
-                </a>
             </div>
         </div>
     </div>
@@ -936,77 +969,6 @@
     </div>
 </div>
 
-<style>
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-    }
-    
-    .bg-gradient-success {
-        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
-    }
-    
-    .bg-gradient-info {
-        background: linear-gradient(135deg, #0dcaf0 0%, #087990 100%);
-    }
-    
-    .card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .btn {
-        transition: all 0.3s ease;
-        font-weight: 500;
-    }
-    
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-    }
-    
-    .upload-area {
-        transition: all 0.3s ease;
-    }
-    
-    .upload-area:hover {
-        background: #e9ecef !important;
-        transform: scale(1.02);
-    }
-    
-    .preview-container img:hover,
-    .pdf-preview-box:hover {
-        transform: scale(1.02);
-        transition: transform 0.3s ease;
-    }
-    
-    .tool-card {
-        background: #f8f9fa;
-        transition: all 0.3s ease;
-    }
-    
-    .tool-card:hover {
-        background: #e9ecef;
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .preview-upload {
-        text-align: center;
-    }
-    
-    .preview-upload img,
-    .preview-upload embed {
-        margin: 0 auto;
-    }
-    
-    .empty-state {
-        opacity: 0.7;
-    }
-</style>
-
 <!-- Modal confirmación eliminar fondo precio -->
 <div class="modal fade" id="deleteFondoPrecioModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -1066,30 +1028,27 @@ function previewFile(input, previewId) {
 }
 
 function actualizarVistaPrevia() {
-    // Obtener valores de colores
-    const colorPrincipal = document.querySelector('input[name="color_principal"]')?.value || '{{ config_diseno.color_principal|default:"#e94560" }}';
-    const colorPrecio = document.querySelector('input[name="color_precio"]')?.value || '{{ config_diseno.color_precio|default:"#27ae60" }}';
-    const colorTexto = document.querySelector('input[name="color_texto"]')?.value || '{{ config_diseno.color_texto|default:"#555555" }}';
-    const colorTitulo = document.querySelector('input[name="color_titulo"]')?.value || '{{ config_diseno.color_titulo|default:"#1a1a2e" }}';
-    const colorBorde = document.querySelector('input[name="color_borde"]')?.value || '{{ config_diseno.color_borde|default:"#e94560" }}';
-    const grosorBorde = document.querySelector('select[name="grosor_borde"]')?.value || '{{ config_diseno.grosor_borde|default:2 }}';
+    const getValue = (name, def) => document.querySelector(`[name="${name}"]`)?.value || def;
     
-    // Obtener alineación
-    const alineacion = document.querySelector('select[name="alineacion_imagen"]')?.value || '{{ config_diseno.alineacion_imagen|default:"alternada" }}';
+    const colores = {
+        categoria: getValue('color_principal', '{{ config_diseno.color_principal|default:"#e94560" }}'),
+        precio: getValue('color_precio', '{{ config_diseno.color_precio|default:"#27ae60" }}'),
+        detalles: getValue('color_texto', '{{ config_diseno.color_texto|default:"#555555" }}'),
+        titulo: getValue('color_titulo', '{{ config_diseno.color_titulo|default:"#1a1a2e" }}'),
+        borde: getValue('color_borde', '{{ config_diseno.color_borde|default:"#e94560" }}')
+    };
     
-    // Aplicar colores a la vista previa
-    const previewCategoria = document.getElementById('preview-categoria');
-    const previewTitulo = document.getElementById('preview-titulo');
-    const previewDetalles = document.getElementById('preview-detalles');
-    const previewPrecio = document.getElementById('preview-precio');
+    const grosorBorde = getValue('grosor_borde', '{{ config_diseno.grosor_borde|default:2 }}');
+    const alineacion = getValue('alineacion_imagen', '{{ config_diseno.alineacion_imagen|default:"alternada" }}');
     const vistaPrevia = document.getElementById('vistaPrevia');
     
-    if (previewCategoria) previewCategoria.style.color = colorPrincipal;
-    if (previewTitulo) previewTitulo.style.color = colorTitulo;
-    if (previewDetalles) previewDetalles.style.color = colorTexto;
-    if (previewPrecio) previewPrecio.style.color = colorPrecio;
+    ['categoria', 'titulo', 'detalles', 'precio'].forEach(id => {
+        const el = document.getElementById('preview-' + id);
+        if (el) el.style.color = colores[id];
+    });
+    
     if (vistaPrevia) {
-        vistaPrevia.style.borderColor = colorBorde;
+        vistaPrevia.style.borderColor = colores.borde;
         vistaPrevia.style.borderWidth = grosorBorde + 'px';
         vistaPrevia.style.borderStyle = 'solid';
     }

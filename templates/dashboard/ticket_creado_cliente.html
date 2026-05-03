@@ -1,0 +1,19 @@
+<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 40px 20px; border-radius: 12px;">
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h2 style="color: #3b82f6; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">{{ app_name }}</h2>
+    </div>
+    <div style="background-color: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <h3 style="color: #1f2937; margin-top: 0; font-size: 20px;">¡Ticket Recibido Exitosamente!</h3>
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">Hola <strong>{{ usuario }}</strong>,</p>
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">Hemos registrado tu solicitud de soporte. Nuestro equipo técnico ya la tiene en bandeja de entrada y te contactaremos muy pronto.</p>
+        
+        <div style="background-color: #f1f5f9; border-left: 4px solid #3b82f6; padding: 20px; margin: 30px 0; border-radius: 4px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Detalles del Ticket #{{ ticket_id }}</p>
+            <p style="margin: 0 0 8px 0; color: #1f2937; font-size: 15px;"><strong>Asunto:</strong> {{ asunto }}</p>
+            <p style="margin: 0 0 15px 0; color: #1f2937; font-size: 15px;"><strong>Categoría:</strong> {{ categoria }}</p>
+            <p style="margin: 0; color: #4b5563; font-style: italic; font-size: 15px;">"{{ mensaje }}"</p>
+        </div>
+        
+        <p style="color: #4b5563; line-height: 1.6; margin-bottom: 0; font-size: 16px;">Gracias por confiar en nosotros,<br><br><strong>El equipo de {{ app_name }}</strong></p>
+    </div>
+</div>

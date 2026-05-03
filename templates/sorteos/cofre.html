@@ -16,11 +16,9 @@
     footer, .footer, .mt-2 { display: none !important; }
     html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; }
 
-    body {
-        background: radial-gradient(circle at 50% 0%, #451a03 0%, #78350f 40%, #1e293b 100%) !important;
-    }
 
     .cofre-page {
+        background: radial-gradient(circle at 50% 0%, #4c1d95 0%, #1e1b4b 70%, #0f172a 100%);
         height: 100%;
         width: 100%;
         padding: 2vh 15px;
@@ -37,7 +35,7 @@
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
         background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+') repeat;
-        opacity: 0.2;
+        opacity: 0.3;
         pointer-events: none;
         z-index: 0;
     }
@@ -54,8 +52,10 @@
     
     .header {
         text-align: center;
-        margin-bottom: 5px;
+        margin-bottom: 2vh;
+        margin-top: 40px;
         flex-shrink: 0;
+        position: relative;
         display: flex;
         justify-content: center;
         width: 100%;
@@ -71,6 +71,7 @@
         backdrop-filter: blur(12px);
         border: 1px solid rgba(255,255,255,0.2);
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        max-width: 100%;
     }
 
     .header h1 {
@@ -81,6 +82,9 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .header h1 i { color: #fcd34d; }
@@ -116,6 +120,17 @@
         100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
+    .banners-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        z-index: 60;
+        margin-bottom: 35px;
+    }
+
     .main-grid {
         display: grid;
         grid-template-columns: 1fr 340px;
@@ -123,8 +138,7 @@
         width: 100%;
         flex: 1;
         min-height: 0;
-        margin-bottom: 4vh;
-        margin-bottom: 10px;
+        margin-bottom: 0;
         align-items: center;
         transition: all 0.8s cubic-bezier(0.25, 1, 0.3, 1);
     }
@@ -148,9 +162,10 @@
         align-items: center;
         height: 100%;
         justify-content: center;
+        margin-top: -4vh;
     }
     .main-grid.is-spinning .focus-area {
-        transform: scale(1.2) translateY(5vh);
+        transform: scale(1.15) translateY(2vh);
         z-index: 50;
     }
 
@@ -187,7 +202,6 @@
         color: white;
         font-size: 1rem;
         font-weight: 800;
-        margin-bottom: 20px;
         text-transform: uppercase;
         letter-spacing: 1px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.2);
@@ -215,7 +229,7 @@
     .cofres-grid {
         display: grid;
         grid-template-columns: repeat(3, auto);
-        gap: 20px;
+        gap: 30px;
         justify-content: center;
         align-items: center;
         width: 100%;
@@ -223,54 +237,38 @@
     }
     
     .cofre-item {
-        width: 145px; 
-        height: 145px;
+        width: 210px; 
+        height: 210px;
         background: linear-gradient(135deg, #b45309 0%, #78350f 100%);
-        border-radius: 15px;
-        border: 3px solid #fcd34d;
-        box-shadow: 0 10px 25px rgba(180, 83, 9, 0.5), inset 0 4px 15px rgba(255,255,255,0.2);
+        border-radius: 24px;
+        border: 4px solid #fcd34d;
+        box-shadow: 0 15px 35px rgba(180, 83, 9, 0.5), inset 0 6px 20px rgba(255,255,255,0.2);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         cursor: not-allowed;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
-        opacity: 0.9;
     }
     
     .cofre-item::before {
         content: '🎁';
-        font-size: 4.5rem;
-        filter: drop-shadow(0 4px 5px rgba(0,0,0,0.4));
-        margin-top: -10px;
+        font-size: 7rem;
+        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+        margin-top: -15px;
     }
     
     .cofre-item .numero {
-        position: absolute;
-        bottom: 10px;
-        background: rgba(0,0,0,0.5);
-        color: #fcd34d;
-        font-weight: 800;
-        font-size: 1.2rem;
-        padding: 2px 15px;
-        border-radius: 10px;
-        border: 1px solid rgba(252, 211, 77, 0.5);
+        display: none; /* Oculto para mantener el misterio por completo */
     }
     
     .cofre-item.highlight {
         transform: translateY(-15px) scale(1.1);
         border-color: #fef08a;
-        box-shadow: 0 15px 40px rgba(252, 211, 77, 0.8), 0 0 20px rgba(255,255,255,0.5);
+        background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+        box-shadow: 0 20px 50px rgba(252, 211, 77, 0.6), inset 0 0 30px rgba(255,255,255,0.3);
         z-index: 10;
-        opacity: 1;
-        animation: pulse-cofre-fast 0.5s infinite;
-    }
-    
-    @keyframes pulse-cofre-fast {
-        0% { box-shadow: 0 15px 30px rgba(245, 158, 11, 0.6); }
-        50% { box-shadow: 0 15px 50px rgba(252, 211, 77, 1); }
-        100% { box-shadow: 0 15px 30px rgba(245, 158, 11, 0.6); }
     }
 
     /* Config Panel Integrado */
@@ -324,11 +322,33 @@
     
     .cofre-item.opened::before {
         content: '🔓';
-        font-size: 3.5rem;
-        filter: grayscale(1);
-        margin-top: 0;
+        font-size: 6rem;
+        filter: drop-shadow(0 0 20px rgba(252, 211, 77, 0.6));
+        animation: pop-in-emoji 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        margin-top: -10px;
+    }
+
+    @keyframes pop-in-emoji {
+        0% { transform: scale(0); opacity: 0; }
+        80% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
     }
     
+    .cofre-item.empty {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        border-color: #4b5563;
+        cursor: not-allowed;
+        box-shadow: inset 0 6px 20px rgba(0,0,0,0.5);
+        animation: none;
+    }
+    .cofre-item.empty::before {
+        content: '🕸️';
+        font-size: 6rem;
+        filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        animation: pop-in-emoji 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        margin-top: -10px;
+    }
+
     .cofre-item.opened .numero {
         color: #9ca3af;
         border-color: #4b5563;
@@ -424,6 +444,9 @@
         display: grid; 
         grid-template-columns: repeat(2, 1fr); 
         gap: 6px; 
+        min-height: 80px;
+        align-content: start;
+        overflow-x: hidden;
     }
     .p-item { 
         background: rgba(255,255,255,0.9); 
@@ -473,6 +496,26 @@
     .btn-continue.final { background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35); }
     .btn-continue.final:hover { box-shadow: 0 6px 15px rgba(99, 102, 241, 0.45); }
 
+    .winner-banner {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border: 2px solid #fcd34d;
+        border-radius: 100px;
+        padding: 10px 30px;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5);
+        animation: slideDownWinner 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+    }
+    @keyframes slideDownWinner {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
     /* Confetti */
     .confetti { position: fixed; z-index: 10001; animation: fall 3s linear forwards; }
     @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
@@ -484,7 +527,7 @@
         .main-grid.is-spinning { grid-template-columns: 1fr; }
         .main-grid.is-spinning .side-panel { display: none; }
         .main-grid.is-spinning .focus-area { 
-            transform: scale(1.05); margin-top: 5vh; 
+            transform: scale(1.05); margin-top: -1vh; 
         }
     }
     @media (max-width: 500px) {
@@ -507,8 +550,12 @@
 
         <div class="main-grid" id="mainGrid">
             <div class="cofres-area focus-area">
-                <div id="instructionBanner" class="instruction-banner">
-                    <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                
+                <div class="banners-container">
+                    <div id="winnerBanner" class="winner-banner" style="display: none;"></div>
+                    <div id="instructionBanner" class="instruction-banner">
+                        <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                    </div>
                 </div>
 
                 <div class="cofres-grid" id="cofresGrid"></div>
@@ -596,17 +643,17 @@
     const sorteoId = {{ sorteo.id }};
     const participantes = {{ participantes_json|safe }};
     const premios = {{ premios_json|safe }};
-    const cantidadCofres = {{ sorteo.cantidad_cofres }};
 
     let premiosDisponibles = premios.filter(p => !p.asignado);
     let ganadorActual = null;
     let premioActual = null;
+    let intentosPremioActual = 0;
     
     let btnSpin = document.getElementById('btnSpin');
     let instructionBanner = document.getElementById('instructionBanner');
     
     let currentPage = 0;
-    const itemsPerPage = 6;
+    const itemsPerPage = 4;
 
     function init() {
         document.getElementById('numPart').textContent = participantes.length;
@@ -621,16 +668,7 @@
     }
 
     function checkValidation() {
-        if (premios.length !== cantidadCofres) {
-            btnSpin.disabled = true;
-            btnSpin.innerHTML = '<i class="bi bi-lock-fill"></i> FALTAN PREMIOS';
-            
-            setTimeout(() => {
-                if (typeof showToast === 'function') {
-                    showToast(`Sorteo bloqueado: Hay ${cantidadCofres} cofres, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
-                }
-            }, 500);
-        } else if (premiosDisponibles.length === 0) {
+        if (premiosDisponibles.length === 0) {
             btnSpin.disabled = false;
             btnSpin.classList.add('completed');
             btnSpin.innerHTML = '<i class="bi bi-list-stars"></i> VER RESULTADOS';
@@ -647,28 +685,20 @@
         const grid = document.getElementById('cofresGrid');
         grid.innerHTML = '';
         
-        // Identificar qué cofres ya fueron abiertos por su numero_cofre
-        const cofresAbiertos = premios.filter(p => p.asignado).map(p => p.numero_cofre);
-        let genericosAbiertos = premios.filter(p => p.asignado && !p.numero_cofre).length;
-        
-        for (let i = 1; i <= cantidadCofres; i++) {
+        for(let i=1; i<=3; i++) {
             const box = document.createElement('div');
             box.id = `cofre-${i}`;
-            
-            let isOpened = cofresAbiertos.includes(i);
-            if (!isOpened && genericosAbiertos > 0) {
-                isOpened = true;
-                genericosAbiertos--;
-            }
-            
-            if (isOpened) {
-                box.className = 'cofre-item opened';
-                box.innerHTML = `<span class="numero">${i}</span>`;
-            } else {
-                box.className = 'cofre-item';
-                box.innerHTML = `<span class="numero">${i}</span>`;
-            }
+            box.className = 'cofre-item';
             grid.appendChild(box);
+        }
+        
+        document.getElementById('numPremios').textContent = premiosDisponibles.length;
+        if (premiosDisponibles.length > 0) {
+            if (!premioActual || intentosPremioActual === 0) {
+                premioActual = premiosDisponibles[Math.floor(Math.random() * premiosDisponibles.length)];
+            }
+            instructionBanner.innerHTML = `<i class="bi bi-gift"></i> JUGANDO POR: ${premioActual.nombre.toUpperCase()}`;
+            instructionBanner.className = 'instruction-banner active';
         }
     }
 
@@ -688,12 +718,6 @@
     }
 
     function spin() {
-        if (premios.length !== cantidadCofres) {
-            if (typeof showToast === 'function') {
-                showToast(`Sorteo bloqueado: Hay ${cantidadCofres} cofres, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
-            }
-            return;
-        }
         if (participantes.length === 0) {
             if (typeof showToast === 'function') showToast('No hay participantes elegibles para este sorteo', 'warning');
             return;
@@ -731,10 +755,18 @@
             // Detener la ruleta de nombres después de su duración
             setTimeout(() => {
                 clearInterval(cycleInterval);
-                instructionBanner.innerHTML = `<i class="bi bi-person-check-fill"></i> ¡GANADOR: ${ganadorActual.nombre.toUpperCase()}!`;
+                const winnerBanner = document.getElementById('winnerBanner');
+                if (winnerBanner) {
+                    winnerBanner.innerHTML = `<i class="bi bi-trophy-fill"></i> TURNO DE: ${ganadorActual.nombre.toUpperCase()}`;
+                    winnerBanner.style.display = 'inline-flex';
+                }
+                instructionBanner.style.display = 'none';
                 
                 // Esperar 1.5s para apreciar el ganador y comenzar animación de caja
                 setTimeout(() => {
+                    const winnerBanner = document.getElementById('winnerBanner');
+                    if (winnerBanner) winnerBanner.style.display = 'none';
+                    instructionBanner.style.display = 'inline-flex';
                     autoSelectBox(durationCofre);
                 }, 1500);
                 
@@ -743,65 +775,88 @@
         .catch(err => {
             clearInterval(cycleInterval);
             if (typeof showToast === 'function') showToast('Error al sortear ganador. Intente de nuevo.', 'error');
-            resetUI();
+            
+            const winnerBanner = document.getElementById('winnerBanner');
+            if (winnerBanner) winnerBanner.style.display = 'none';
+            const ib = document.getElementById('instructionBanner');
+            if (ib) ib.style.display = 'inline-flex';
+            btnSpin.disabled = false;
+            btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+            instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+            instructionBanner.classList.remove('active');
+            document.getElementById('mainGrid').classList.remove('is-spinning');
         });
     }
 
     function autoSelectBox(durationCofre) {
         instructionBanner.innerHTML = `<i class="bi bi-box-seam"></i> ELIGIENDO COFRE AL AZAR...`;
         
-        const availableBoxes = document.querySelectorAll('.cofre-item:not(.opened)');
+        const availableBoxes = Array.from(document.querySelectorAll('.cofre-item:not(.opened)'));
         if (availableBoxes.length === 0) return;
         
-        let delay = 50;
+        let delay = 40 + Math.random() * 30; // Variación aleatoria
         let elapsed = 0;
+        let currentIndex = Math.floor(Math.random() * 100); // Inicio aleatorio
         
-        // Suspenso algorítmico progresivo
         function tick() {
             availableBoxes.forEach(b => b.classList.remove('highlight'));
-            const randomBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
-            randomBox.classList.add('highlight');
+            
+            // Recorrido secuencial dinámico tipo ruleta
+            const currentBox = availableBoxes[currentIndex % availableBoxes.length];
+            currentBox.classList.add('highlight');
+            if (typeof playSound === 'function') playSound('tick');
             
             elapsed += delay;
             
             if (elapsed < durationCofre) {
                 if (elapsed > durationCofre * 0.6) {
-                    delay *= 1.25; // Frena bruscamente al final para más suspenso
-                } else {
-                    delay *= 1.05; // Desaceleración suave inicial
+                    delay *= (1.1 + Math.random() * 0.1); // Desaceleración progresiva y aleatoria
                 }
+                currentIndex++;
                 setTimeout(tick, delay);
             } else {
                 availableBoxes.forEach(b => b.classList.remove('highlight'));
+                // Garantizar selección visual 100% aleatoria al final
                 const finalBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
                 finalBox.classList.add('highlight');
                 const boxId = finalBox.id.split('-')[1];
                 
                 setTimeout(() => {
                     selectCofre(boxId);
-                }, 1000); 
+                }, 800); 
             }
         }
         tick();
     }
 
-    function selectCofre(boxIndex) {
+    function selectCofre(boxId) {
         
-        const box = document.getElementById(`cofre-${boxIndex}`);
+        const box = document.getElementById(`cofre-${boxId}`);
         box.classList.add('shaking');
-        
-        // Buscar si hay un premio específico asignado a este número de cofre
-        premioActual = premiosDisponibles.find(p => p.numero_cofre == boxIndex);
-        if (!premioActual) {
-            // Fallback: Si no le asignaron número, tomar uno al azar de los disponibles
-            premioActual = premiosDisponibles[Math.floor(Math.random() * premiosDisponibles.length)];
-        }
         
         instructionBanner.innerHTML = '<i class="bi bi-stars"></i> ABRIENDO EL COFRE SORPRESA...';
         
         setTimeout(() => {
-            registrarResultado(box);
-        }, 1500); // 1.5s delay dramático
+            intentosPremioActual++;
+            
+            // Probabilidad constante de 1/3 (33.3%) sin importar el número de intentos,
+            // para que puedan haber 1, 2, 5 o más intentos sin garantizar el premio jamás,
+            // construyendo una verdadera y orgánica tensión.
+            const isWin = Math.random() <= 0.333;
+            
+            if (isWin) {
+                registrarResultado(box);
+            } else {
+                box.classList.remove('shaking');
+                box.className = 'cofre-item empty';
+                instructionBanner.innerHTML = '<i class="bi bi-x-circle"></i> ¡COFRE VACÍO! SE REPITE EL PREMIO';
+                if (typeof playSound === 'function') playSound('lose');
+                
+                setTimeout(() => {
+                    resetRound();
+                }, 3000);
+            }
+        }, 1500);
     }
 
     function registrarResultado(boxElement) {
@@ -817,12 +872,29 @@
         .then(r => r.json())
         .then(data => {
             if(data.success) {
+                intentosPremioActual = 0;
                 premiosDisponibles = premiosDisponibles.filter(p => p.id !== premioActual.id);
+                
+                boxElement.classList.remove('shaking');
                 boxElement.className = 'cofre-item opened';
-                showWinnerModal();
+                instructionBanner.innerHTML = `<i class="bi bi-gift-fill"></i> ¡PREMIO REVELADO!`;
+                instructionBanner.classList.add('active');
+                
+                setTimeout(() => {
+                    showWinnerModal();
+                }, 1200);
             } else {
                 if (typeof showToast === 'function') showToast(data.error, 'error');
-                resetUI();
+                
+                const winnerBanner = document.getElementById('winnerBanner');
+                if (winnerBanner) winnerBanner.style.display = 'none';
+                const ib = document.getElementById('instructionBanner');
+                if (ib) ib.style.display = 'inline-flex';
+                btnSpin.disabled = false;
+                btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+                instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+                instructionBanner.classList.remove('active');
+                document.getElementById('mainGrid').classList.remove('is-spinning');
             }
         })
         .catch(() => {
@@ -844,6 +916,7 @@
             btnContinue.className = 'btn-continue';
         }
         
+        if (typeof playSound === 'function') playSound('win');
         document.getElementById('modal').classList.add('show');
         confetti();
     }
@@ -851,18 +924,23 @@
     function closeModal() {
         document.getElementById('modal').classList.remove('show');
         checkValidation();
-        document.getElementById('mainGrid').classList.remove('is-spinning');
         if (premiosDisponibles.length > 0) {
-            resetUI();
+            resetRound();
+        } else {
+            document.getElementById('mainGrid').classList.remove('is-spinning');
+            const winnerBanner = document.getElementById('winnerBanner');
+            if (winnerBanner) winnerBanner.style.display = 'none';
         }
     }
 
-    function resetUI() {
+    function resetRound() {
+        renderCofres();
         btnSpin.disabled = false;
         btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
-        instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
-        instructionBanner.classList.remove('active');
         document.getElementById('mainGrid').classList.remove('is-spinning');
+        
+        const winnerBanner = document.getElementById('winnerBanner');
+        if (winnerBanner) winnerBanner.style.display = 'none';
     }
 
     function renderList() {

@@ -1,0 +1,17 @@
+<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 40px 20px; border-radius: 12px;">
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h2 style="color: #3b82f6; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">{{ app_name }}</h2>
+    </div>
+    <div style="background-color: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <h3 style="color: #1f2937; margin-top: 0; font-size: 20px;">Nueva respuesta en tu Ticket #{{ ticket_id }}</h3>
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">Hola <strong>{{ usuario }}</strong>,</p>
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">El equipo de soporte ha respondido a tu caso: <strong>"{{ asunto }}"</strong>.</p>
+        
+        <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 25px; margin: 30px 0; border-radius: 8px;">
+            <p style="margin: 0; color: #1e3a8a; line-height: 1.6; font-size: 16px; white-space: pre-wrap;">{{ respuesta }}</p>
+        </div>
+        
+        <p style="color: #4b5563; line-height: 1.6; font-size: 15px; text-align: center;">Puedes responder a este ticket ingresando a tu Panel de Control.</p>
+        <p style="color: #4b5563; line-height: 1.6; margin-top: 25px; margin-bottom: 0; font-size: 16px;">Saludos,<br><br><strong>El equipo de soporte de {{ app_name }}</strong></p>
+    </div>
+</div>

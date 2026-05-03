@@ -16,11 +16,9 @@
     footer, .footer, .mt-2 { display: none !important; }
     html, body { height: 100vh; margin: 0; padding: 0; overflow: hidden; }
 
-    body {
-        background: radial-gradient(circle at 50% 0%, #4c1d95 0%, #1e1b4b 70%, #0f172a 100%) !important;
-    }
 
     .caja-page {
+        background: radial-gradient(circle at 50% 0%, #4c1d95 0%, #1e1b4b 70%, #0f172a 100%);
         height: 100%;
         width: 100%;
         padding: 2vh 15px;
@@ -54,8 +52,10 @@
     
     .header {
         text-align: center;
-        margin-bottom: 5px;
+        margin-bottom: 2vh;
+        margin-top: 40px;
         flex-shrink: 0;
+        position: relative;
         display: flex;
         justify-content: center;
         width: 100%;
@@ -71,6 +71,7 @@
         backdrop-filter: blur(12px);
         border: 1px solid rgba(255,255,255,0.2);
         box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        max-width: 100%;
     }
 
     .header h1 {
@@ -81,6 +82,9 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .header h1 i { color: #fcd34d; }
@@ -116,6 +120,17 @@
         100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
+    .banners-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        z-index: 60;
+        margin-bottom: 35px;
+    }
+
     .main-grid {
         display: grid;
         grid-template-columns: 1fr 340px;
@@ -147,9 +162,10 @@
         align-items: center;
         height: 100%;
         justify-content: center;
+        margin-top: -4vh;
     }
     .main-grid.is-spinning .focus-area {
-        transform: scale(1.2) translateY(5vh);
+        transform: scale(1.15) translateY(2vh);
         z-index: 50;
     }
 
@@ -185,7 +201,6 @@
         color: white;
         font-size: 1rem;
         font-weight: 800;
-        margin-bottom: 20px;
         text-transform: uppercase;
         letter-spacing: 1px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.2);
@@ -213,7 +228,7 @@
     .cajas-grid {
         display: grid;
         grid-template-columns: repeat(3, auto);
-        gap: 20px;
+        gap: 30px;
         justify-content: center;
         align-items: center;
         width: 100%;
@@ -221,26 +236,28 @@
     }
 
     .caja-item {
-        width: 145px; 
-        height: 145px;
-        background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-        border-radius: 20px;
-        border: 3px solid #818cf8;
-        box-shadow: 0 10px 25px rgba(67, 56, 202, 0.4), inset 0 4px 15px rgba(255,255,255,0.3);
+        width: 210px; 
+        height: 210px;
+        background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%);
+        border-radius: 24px;
+        border: 4px solid #8b5cf6;
+        box-shadow: 0 15px 35px rgba(76, 29, 149, 0.5), inset 0 6px 20px rgba(255,255,255,0.15);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: not-allowed;
-        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         position: relative;
-        opacity: 0.9;
     }
     
     .caja-item::before {
         content: '?';
         position: absolute;
-        color: rgba(255,255,255,0.9);
-        text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        font-size: 6rem;
+        font-weight: 900;
+        color: rgba(255,255,255,0.95);
+        text-shadow: 0 4px 15px rgba(0,0,0,0.4), 0 0 20px rgba(139, 92, 246, 0.8);
+        font-family: 'Nunito', 'Segoe UI', sans-serif;
     }
 
     .caja-item.selectable {
@@ -250,9 +267,9 @@
     }
     
     .caja-item.selectable:hover {
-        transform: translateY(-10px) scale(1.05);
-        border-color: #fcd34d;
-        box-shadow: 0 15px 35px rgba(252, 211, 77, 0.5);
+        transform: translateY(-12px) scale(1.05);
+        border-color: #fde047;
+        box-shadow: 0 20px 45px rgba(252, 211, 77, 0.4), inset 0 6px 20px rgba(255,255,255,0.3);
     }
 
     .caja-item.opened {
@@ -265,24 +282,38 @@
     }
     
     .caja-item.opened::before {
-        content: '📦';
-        font-size: 3.5rem;
-        filter: grayscale(1);
+        content: '✨';
+        font-size: 6rem;
+        filter: drop-shadow(0 0 20px rgba(252, 211, 77, 0.6));
+        animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .caja-item.empty {
+        background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+        border-color: #4b5563;
+        cursor: not-allowed;
+        box-shadow: inset 0 6px 20px rgba(0,0,0,0.5);
+        animation: none;
+    }
+    .caja-item.empty::before {
+        content: '💨';
+        font-size: 6rem;
+        filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+        animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .caja-item.highlight {
         transform: translateY(-15px) scale(1.1);
-        border-color: #fcd34d;
-        box-shadow: 0 15px 40px rgba(252, 211, 77, 0.8), 0 0 20px rgba(255,255,255,0.5);
+        border-color: #fde047;
+        background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%);
+        box-shadow: 0 20px 50px rgba(253, 224, 71, 0.6), inset 0 0 30px rgba(255,255,255,0.3);
         z-index: 10;
-        opacity: 1;
-        animation: pulse-caja-fast 0.5s infinite;
     }
     
-    @keyframes pulse-caja-fast {
-        0% { box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6); }
-        50% { box-shadow: 0 15px 50px rgba(129, 140, 248, 1); }
-        100% { box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6); }
+    @keyframes pop-in {
+        0% { transform: scale(0); opacity: 0; }
+        80% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
     }
 
     .caja-item.shaking {
@@ -412,6 +443,9 @@
         display: grid; 
         grid-template-columns: repeat(2, 1fr); 
         gap: 6px; 
+        min-height: 80px;
+        align-content: start;
+        overflow-x: hidden;
     }
     .p-item { 
         background: rgba(255,255,255,0.9); 
@@ -461,6 +495,26 @@
     .btn-continue.final { background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.35); }
     .btn-continue.final:hover { box-shadow: 0 6px 15px rgba(99, 102, 241, 0.45); }
 
+    .winner-banner {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border: 2px solid #fcd34d;
+        border-radius: 100px;
+        padding: 10px 30px;
+        color: white;
+        font-size: 1.2rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5);
+        animation: slideDownWinner 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+    }
+    @keyframes slideDownWinner {
+        from { transform: translateY(-20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
     /* Confetti */
     .confetti { position: fixed; z-index: 10001; animation: fall 3s linear forwards; }
     @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
@@ -472,7 +526,7 @@
         .main-grid.is-spinning { grid-template-columns: 1fr; }
         .main-grid.is-spinning .side-panel { display: none; }
         .main-grid.is-spinning .focus-area { 
-            transform: scale(1.05); margin-top: 5vh; 
+            transform: scale(1.05); margin-top: -1vh; 
         }
     }
     @media (max-width: 500px) {
@@ -495,8 +549,12 @@
 
         <div class="main-grid" id="mainGrid">
             <div class="cajas-area focus-area">
-                <div id="instructionBanner" class="instruction-banner">
-                    <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                
+                <div class="banners-container">
+                    <div id="winnerBanner" class="winner-banner" style="display: none;"></div>
+                    <div id="instructionBanner" class="instruction-banner">
+                        <i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO
+                    </div>
                 </div>
 
                 <div class="cajas-grid" id="cajasGrid"></div>
@@ -617,6 +675,11 @@
                 noise.connect(filter); filter.connect(gainNode);
                 gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 1.5); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2);
                 noise.start(); noise.stop(audioCtx.currentTime + 2);
+            } else if (type === 'lose') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.5);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.5);
             }
         } catch(e) {}
     }
@@ -625,17 +688,17 @@
     const sorteoId = {{ sorteo.id }};
     const participantes = {{ participantes_json|safe }};
     const premios = {{ premios_json|safe }};
-    const cantidadCajas = {{ sorteo.cantidad_cofres }};
 
     let premiosDisponibles = premios.filter(p => !p.asignado);
     let ganadorActual = null;
     let premioActual = null;
+    let intentosPremioActual = 0;
     
     let btnSpin = document.getElementById('btnSpin');
     let instructionBanner = document.getElementById('instructionBanner');
     
     let currentPage = 0;
-    const itemsPerPage = 6;
+    const itemsPerPage = 4;
 
     function init() {
         document.getElementById('numPart').textContent = participantes.length;
@@ -650,16 +713,7 @@
     }
 
     function checkValidation() {
-        if (premios.length !== cantidadCajas) {
-            btnSpin.disabled = true;
-            btnSpin.innerHTML = '<i class="bi bi-lock-fill"></i> FALTAN PREMIOS';
-            
-            setTimeout(() => {
-                if (typeof showToast === 'function') {
-                    showToast(`Sorteo bloqueado: Hay ${cantidadCajas} cajas, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
-                }
-            }, 500);
-        } else if (premiosDisponibles.length === 0) {
+        if (premiosDisponibles.length === 0) {
             btnSpin.disabled = false;
             btnSpin.classList.add('completed');
             btnSpin.innerHTML = '<i class="bi bi-list-stars"></i> VER RESULTADOS';
@@ -676,17 +730,20 @@
         const grid = document.getElementById('cajasGrid');
         grid.innerHTML = '';
         
-        const cajasAbiertasCount = cantidadCajas - premiosDisponibles.length;
-        
-        for (let i = 1; i <= cantidadCajas; i++) {
+        for(let i=1; i<=3; i++) {
             const box = document.createElement('div');
             box.id = `caja-${i}`;
-            if (i <= cajasAbiertasCount) {
-                box.className = 'caja-item opened';
-            } else {
-                box.className = 'caja-item';
-            }
+            box.className = 'caja-item';
             grid.appendChild(box);
+        }
+        
+        document.getElementById('numPremios').textContent = premiosDisponibles.length;
+        if (premiosDisponibles.length > 0) {
+            if (!premioActual || intentosPremioActual === 0) {
+                premioActual = premiosDisponibles[Math.floor(Math.random() * premiosDisponibles.length)];
+            }
+            instructionBanner.innerHTML = `<i class="bi bi-gift"></i> JUGANDO POR: ${premioActual.nombre.toUpperCase()}`;
+            instructionBanner.className = 'instruction-banner active';
         }
     }
 
@@ -706,19 +763,13 @@
     }
 
     function spin() {
-        if (premios.length !== cantidadCajas) {
-            if (typeof showToast === 'function') {
-                showToast(`Sorteo bloqueado: Hay ${cantidadCajas} cajas, pero se asignaron ${premios.length} premios. Deben coincidir exactamente.`, 'warning', 'Acción Requerida');
-            }
-            return;
-        }
         if (participantes.length === 0) {
             if (typeof showToast === 'function') showToast('No hay participantes elegibles para este sorteo', 'warning');
             return;
         }
         
-        initAudio();
-        playSound('drumroll');
+        if (typeof initAudio === 'function') initAudio();
+        if (typeof playSound === 'function') playSound('drumroll');
         
         btnSpin.disabled = true;
         btnSpin.innerHTML = '<i class="bi bi-arrow-repeat spin-icon"></i> SORTEANDO...';
@@ -750,9 +801,15 @@
             
             setTimeout(() => {
                 clearInterval(cycleInterval);
-                instructionBanner.innerHTML = `<i class="bi bi-person-check-fill"></i> ¡GANADOR: ${ganadorActual.nombre.toUpperCase()}!`;
+                const winnerBanner = document.getElementById('winnerBanner');
+                if (winnerBanner) {
+                    winnerBanner.innerHTML = `<i class="bi bi-person-fill"></i> TURNO DE: ${ganadorActual.nombre.toUpperCase()}`;
+                    winnerBanner.style.display = 'inline-flex';
+                }
+                instructionBanner.style.display = 'none';
                 
                 setTimeout(() => {
+                    instructionBanner.style.display = 'inline-flex';
                     autoSelectBox(durationCaja);
                 }, 1500);
                 
@@ -761,62 +818,87 @@
         .catch(err => {
             clearInterval(cycleInterval);
             if (typeof showToast === 'function') showToast('Error al sortear ganador. Intente de nuevo.', 'error');
-            resetUI();
+            const winnerBanner = document.getElementById('winnerBanner');
+            if (winnerBanner) winnerBanner.style.display = 'none';
+            const ib = document.getElementById('instructionBanner');
+            if (ib) ib.style.display = 'inline-flex';
+            btnSpin.disabled = false;
+            btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+            instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+            instructionBanner.classList.remove('active');
+            document.getElementById('mainGrid').classList.remove('is-spinning');
         });
     }
 
     function autoSelectBox(durationCaja) {
         instructionBanner.innerHTML = `<i class="bi bi-box-seam"></i> ELIGIENDO CAJA AL AZAR...`;
         
-        const availableBoxes = document.querySelectorAll('.caja-item:not(.opened)');
+        const availableBoxes = Array.from(document.querySelectorAll('.caja-item:not(.opened)'));
         if (availableBoxes.length === 0) return;
         
-        let delay = 50;
+        let delay = 40 + Math.random() * 30; // Variación aleatoria
         let elapsed = 0;
+        let currentIndex = Math.floor(Math.random() * 100); // Inicio aleatorio
         
-        // Suspenso algorítmico progresivo
         function tick() {
             availableBoxes.forEach(b => b.classList.remove('highlight'));
-            const randomBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
-            randomBox.classList.add('highlight');
-            playSound('tick');
+            
+            // Recorrido secuencial dinámico tipo ruleta
+            const currentBox = availableBoxes[currentIndex % availableBoxes.length];
+            currentBox.classList.add('highlight');
+            if (typeof playSound === 'function') playSound('tick');
             
             elapsed += delay;
             
             if (elapsed < durationCaja) {
                 if (elapsed > durationCaja * 0.6) {
-                    delay *= 1.25; // Frena bruscamente al final para más suspenso
-                } else {
-                    delay *= 1.05; // Desaceleración suave inicial
+                    delay *= (1.1 + Math.random() * 0.1); // Desaceleración progresiva y aleatoria
                 }
+                currentIndex++;
                 setTimeout(tick, delay);
             } else {
                 availableBoxes.forEach(b => b.classList.remove('highlight'));
+                // Garantizar selección visual 100% aleatoria al final
                 const finalBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)];
                 finalBox.classList.add('highlight');
                 const boxId = finalBox.id.split('-')[1];
                 
                 setTimeout(() => {
                     selectBox(boxId);
-                }, 1000); 
+                }, 800); 
             }
         }
         tick();
     }
 
-    function selectBox(boxIndex) {
+    function selectBox(boxId) {
         
-        const box = document.getElementById(`caja-${boxIndex}`);
+        const box = document.getElementById(`caja-${boxId}`);
         box.classList.add('shaking'); // Animación de apertura
-        
-        // Seleccionar premio aleatorio disponible
-        premioActual = premiosDisponibles[Math.floor(Math.random() * premiosDisponibles.length)];
         
         instructionBanner.innerHTML = '<i class="bi bi-stars"></i> ABRIENDO LA CAJA MISTERIOSA...';
         
         setTimeout(() => {
-            registrarResultado(box);
-        }, 1500); // 1.5s delay dramático
+            intentosPremioActual++;
+            
+            // Probabilidad constante de 1/3 (33.3%) sin importar el número de intentos,
+            // para que puedan haber 1, 2, 5 o más intentos sin garantizar el premio jamás,
+            // construyendo una verdadera y orgánica tensión.
+            const isWin = Math.random() <= 0.333;
+            
+            if (isWin) {
+                registrarResultado(box);
+            } else {
+                box.classList.remove('shaking');
+                box.className = 'caja-item empty';
+                instructionBanner.innerHTML = '<i class="bi bi-wind"></i> ¡CAJA VACÍA! SE REPITE EL PREMIO';
+                if (typeof playSound === 'function') playSound('lose');
+                
+                setTimeout(() => {
+                    resetRound();
+                }, 3000);
+            }
+        }, 1500); 
     }
 
     function registrarResultado(boxElement) {
@@ -832,22 +914,38 @@
         .then(r => r.json())
         .then(data => {
             if(data.success) {
-                // Quitar premio del pool
+                intentosPremioActual = 0;
                 premiosDisponibles = premiosDisponibles.filter(p => p.id !== premioActual.id);
                 
-                // Marcar caja abierta
+                boxElement.classList.remove('shaking');
                 boxElement.className = 'caja-item opened';
                 
                 // Mostrar Modal
                 showWinnerModal();
             } else {
                 if (typeof showToast === 'function') showToast(data.error, 'error');
-                resetUI();
+                const winnerBanner = document.getElementById('winnerBanner');
+                if (winnerBanner) winnerBanner.style.display = 'none';
+                const ib = document.getElementById('instructionBanner');
+                if (ib) ib.style.display = 'inline-flex';
+                btnSpin.disabled = false;
+                btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+                instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+                instructionBanner.classList.remove('active');
+                document.getElementById('mainGrid').classList.remove('is-spinning');
             }
         })
         .catch(() => {
             if (typeof showToast === 'function') showToast('Error de red al registrar premio', 'error');
-            resetUI();
+            const winnerBanner = document.getElementById('winnerBanner');
+            if (winnerBanner) winnerBanner.style.display = 'none';
+            const ib = document.getElementById('instructionBanner');
+            if (ib) ib.style.display = 'inline-flex';
+            btnSpin.disabled = false;
+            btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
+            instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
+            instructionBanner.classList.remove('active');
+            document.getElementById('mainGrid').classList.remove('is-spinning');
         });
     }
 
@@ -864,26 +962,31 @@
             btnContinue.className = 'btn-continue';
         }
         
-        playSound('win');
+        if (typeof playSound === 'function') playSound('win');
         document.getElementById('modal').classList.add('show');
         confetti();
     }
 
     function closeModal() {
         document.getElementById('modal').classList.remove('show');
-        checkValidation(); // Actualiza estados de botones e interface
-        document.getElementById('mainGrid').classList.remove('is-spinning');
+        checkValidation();
         if (premiosDisponibles.length > 0) {
-            resetUI();
+            resetRound();
+        } else {
+            document.getElementById('mainGrid').classList.remove('is-spinning');
+            const winnerBanner = document.getElementById('winnerBanner');
+            if (winnerBanner) winnerBanner.style.display = 'none';
         }
     }
 
-    function resetUI() {
+    function resetRound() {
+        renderCajas();
         btnSpin.disabled = false;
         btnSpin.innerHTML = '<i class="bi bi-play-circle-fill"></i> INICIAR SORTEO';
-        instructionBanner.innerHTML = '<i class="bi bi-info-circle-fill"></i> ESPERANDO INICIAR SORTEO';
-        instructionBanner.classList.remove('active');
         document.getElementById('mainGrid').classList.remove('is-spinning');
+        
+        const winnerBanner = document.getElementById('winnerBanner');
+        if (winnerBanner) winnerBanner.style.display = 'none';
     }
 
     function renderList() {

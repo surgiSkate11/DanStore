@@ -2,56 +2,78 @@
 
 {% block title %}Generar Catálogo - Tiendita{% endblock %}
 
+{% block extra_css %}
+<style>
+    body { background-color: #f8fafc; }
+    .saas-header { background: #ffffff; border: 1px solid #e2e8f0; padding: 1.5rem 2rem; margin-bottom: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .saas-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }
+    .saas-card-body { padding: 2rem; }
+    .form-control, .form-select { border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.75rem 1rem; transition: all 0.2s; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+    .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+    .btn-saas-primary { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: white; border: none; border-radius: 10px; padding: 0.8rem 1.5rem; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); transition: all 0.2s; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;}
+    .btn-saas-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); color: white; }
+    .btn-saas-outline { border: 2px solid #e2e8f0; color: #475569; background: white; border-radius: 10px; padding: 0.75rem 1.5rem; font-weight: 600; transition: all 0.2s; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;}
+    .btn-saas-outline:hover { border-color: #cbd5e1; background: #f8fafc; color: #1e293b; }
+    .feature-list li { margin-bottom: 12px; color: #475569; display: flex; align-items: center; gap: 10px; }
+    .feature-list i { color: #10b981; font-size: 1.2rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col">
-            <h1><i class="bi bi-file-earmark-pdf"></i> Generar Catálogo PDF</h1>
-            <p class="lead text-muted">Selecciona los filtros para personalizar tu catálogo</p>
+<div class="container-fluid px-4 pb-5">
+    <!-- Header de Página -->
+    <div class="saas-header d-flex flex-wrap justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-pdf text-indigo"></i> Generar Catálogo PDF</h2>
+            <p class="text-muted mb-0">Configura los filtros para exportar tu catálogo de productos</p>
+        </div>
+        <div class="mt-3 mt-md-0">
+            <a href="{% url 'personalizar_catalogo' %}" class="btn btn-outline-secondary rounded-pill fw-semibold">
+                <i class="bi bi-palette"></i> Personalizar Diseño
+            </a>
         </div>
     </div>
     
     <div class="row">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-body">
+        <div class="col-lg-8">
+            <div class="saas-card">
+                <div class="saas-card-body">
                     <form method="get" action="{% url 'descargar_catalogo' %}" id="catalogoForm">
-                        <h5 class="mb-3">Filtros del Catálogo</h5>
+                        <h4 class="fw-bold mb-4 text-dark"><i class="bi bi-funnel text-primary"></i> Filtros de Exportación</h4>
                         
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">
-                                    <i class="bi bi-tag"></i> Categoría
-                                </label>
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary">Categoría</label>
                                 {{ filtro_form.categoria }}
-                                <small class="text-muted">Deja en blanco para incluir todas</small>
+                                <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle"></i> Deja en blanco para incluir todas</small>
                             </div>
                             
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">
-                                    <i class="bi bi-tags"></i> Tipo de Producto
-                                </label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-secondary">Tipo de Producto</label>
                                 {{ filtro_form.tipo_producto }}
-                                <small class="text-muted">Opcional</small>
+                                <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle"></i> Opcional</small>
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label class="form-label">
-                                <i class="bi bi-search"></i> Búsqueda en Descripción
-                            </label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-secondary">Búsqueda en Descripción</label>
                             {{ filtro_form.busqueda }}
                         </div>
                         
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Categorías Personalizadas</strong> 
-                            <small>Los productos marcados como "Vendidos" o "Separados" no aparecerán en el catálogo.</small>
+                        <div class="alert bg-light border text-secondary rounded-3 d-flex gap-3 align-items-center mb-4">
+                            <i class="bi bi-shield-check fs-2 text-success"></i>
+                            <div>
+                                <strong class="d-block text-dark">Privacidad de Inventario</strong> 
+                                <small>Los productos en estado "Vendido" o "Reservado" se excluyen automáticamente del catálogo público.</small>
+                            </div>
                         </div>
                         
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-download"></i> Descargar Catálogo PDF
+                        <div class="d-flex flex-column flex-sm-row gap-3 mt-5">
+                            <button type="submit" class="btn-saas-primary flex-grow-1">
+                                <i class="bi bi-file-earmark-pdf-fill"></i> Generar y Descargar PDF
+                            </button>
+                            <button type="submit" formaction="{% url 'preview_catalogo' %}" class="btn-saas-outline flex-grow-1">
+                                <i class="bi bi-eye"></i> Ver Vista Previa Web
                             </button>
                         </div>
                     </form>
@@ -59,48 +81,24 @@
             </div>
         </div>
         
-        <div class="col-md-4">
-            <div class="card shadow">
-                <div class="card-body">
-                    <h5 class="mb-3">
-                        <i class="bi bi-bar-chart"></i> Resumen
-                    </h5>
+        <div class="col-lg-4">
+            <div class="saas-card bg-primary text-white" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: none;">
+                <div class="saas-card-body text-center py-5">
+                    <div class="display-4 fw-bold mb-2">{{ total_productos }}</div>
+                    <p class="text-white-50 text-uppercase tracking-wider fw-semibold mb-0">Productos Disponibles</p>
+                </div>
+            </div>
+            
+            <div class="saas-card">
+                <div class="saas-card-body">
+                    <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-stars text-warning"></i> Características</h5>
                     
-                    <div class="mb-3">
-                        <p class="mb-1 text-muted">Total de productos</p>
-                        <h3 class="mb-0">{{ total_productos }}</h3>
-                    </div>
-                    <a href="{% url 'preview_catalogo' %}?{{ request.GET.urlencode }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-eye"></i> Vista Previa
-                    </a>
-                    <hr>
-                    
-                    <h6 class="mb-3">Características del Catálogo</h6>
-                    <ul class="list-unstyled">
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i>
-                            Portada personalizable
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i>
-                            Productos con imagen
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i>
-                            Información completa (precio, marca, etc.)
-                        </li>
-                        <li class="mb-2">
-                            <i class="bi bi-check-circle text-success"></i>
-                            Filtrado por categoría
-                        </li>
+                    <ul class="list-unstyled feature-list mb-0">
+                        <li><i class="bi bi-check-circle-fill"></i> Portada 100% personalizable</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Layout adaptativo (2, 3 o 4 imgs)</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Renderizado de alta calidad (300 DPI)</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Sin pérdida de resolución</li>
                     </ul>
-                    
-                    <div class="alert alert-light">
-                        <small>
-                            <i class="bi bi-lightbulb"></i>
-                            <strong>Tip:</strong> Usa los filtros para crear catálogos específicos por categoría o tipo de producto.
-                        </small>
-                    </div>
                 </div>
             </div>
             

@@ -57,7 +57,7 @@
     /* Búsqueda de cliente personalizada profesional */
     .search-cliente-wrapper {
         position: relative;
-        z-index: 1050;
+        z-index: 100;
     }
     
     #searchClienteInput {
@@ -307,6 +307,7 @@
         background: rgba(255, 255, 255, 0.1);
         border-radius: 50%;
         animation: float 6s ease-in-out infinite;
+        pointer-events: none;
     }
     
     @keyframes float {
@@ -348,7 +349,7 @@
     /* Z-index fix for Client Search */
     .form-section-cliente {
         position: relative;
-        z-index: 1050;
+        z-index: 100;
     }
     
     /* Badge Contador Profesional */
@@ -969,7 +970,7 @@
 <div class="container-fluid px-4">
     <!-- Header Profesional con Gradiente -->
     <div class="page-header mb-4">
-        <div class="row align-items-center">
+        <div class="row align-items-center position-relative z-1">
             <div class="col-md-8">
                 <h1 class="mb-2">
                     <i class="bi {% if modo_edicion %}bi-pencil-fill{% else %}bi-plus-circle-fill{% endif %}"></i> 
@@ -1029,7 +1030,7 @@
                         <input type="hidden" name="cliente_id" id="selectCliente" value="{{ cliente_seleccionado }}">
                         {% else %}
                         <div class="mb-3">
-                            <div class="d-flex gap-2 align-items-stretch" style="position: relative; z-index: 1050;">
+                            <div class="d-flex gap-2 align-items-stretch" style="position: relative; z-index: 100;">
                                 <div class="search-cliente-wrapper flex-grow-1" style="position: relative;">
                                     <div class="input-group input-group-lg" style="border-radius: 10px; border: 2px solid #e5e7eb; overflow: visible; background: white; height: 100%;">
                                         <span class="input-group-text bg-white border-0 text-primary">
@@ -1739,13 +1740,19 @@ document.querySelectorAll('.producto-seleccionable').forEach(card => {
 });
 
 function calcularTotales() {
-    // Calcular subtotal de productos seleccionados
     let subtotal = 0;
-    productosSeleccionados.forEach(productoId => {
-        subtotal += preciosProductos[productoId] || 0;
-    });
+    const isModoEdicion = "{{ modo_edicion|yesno:'true,false' }}" === "true";
     
-    // Obtener valores de gastos
+    if (isModoEdicion) {
+        document.querySelectorAll('.precio-producto-edicion').forEach(elem => {
+            subtotal += parseFloat(elem.dataset.precio) || 0;
+        });
+    } else {
+        productosSeleccionados.forEach(productoId => {
+            subtotal += preciosProductos[productoId] || 0;
+        });
+    }
+    
     const descuentoPorcentaje = parseFloat(inputDescuento.value) || 0;
     const envio = parseFloat(inputEnvio.value) || 0;
     const otrosGastos = parseFloat(inputOtrosGastos.value) || 0;

@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.db import transaction
 from productos.models import Producto
 from empresas.models import Empresa
 from clientes.models import Cliente
@@ -55,6 +56,14 @@ class Venta(models.Model):
         max_length=20, choices=ORIGEN_CHOICES, default='sistema', verbose_name="Origen"
     )
     
+    ESTADO_CHOICES = [
+        ('completada', 'Completada'),
+        ('anulada', 'Anulada'),
+    ]
+    estado = models.CharField(
+        max_length=20, choices=ESTADO_CHOICES, default='completada', verbose_name="Estado"
+    )
+    
     creado_en = models.DateTimeField(auto_now_add=True, verbose_name="Creado")
     actualizado_en = models.DateTimeField(auto_now=True, verbose_name="Actualizado")
     
@@ -62,6 +71,7 @@ class Venta(models.Model):
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
         ordering = ['-fecha', '-creado_en']
+        unique_together = ('empresa', 'numero_factura')
     
     def __str__(self):
         return f"Factura {self.numero_factura} - {self.cliente.nombre} - ${self.total}"
@@ -72,9 +82,7 @@ class Venta(models.Model):
             self.numero_factura = self._generar_numero()
         super().save(*args, **kwargs)
     
-# ventas/models.py — reemplaza _generar_numero():
     def _generar_numero(self):
-        from django.db import transaction
         with transaction.atomic():
             # Ordenar por numero_factura es más confiable que por fecha
             ultima = (
@@ -103,11 +111,6 @@ class Venta(models.Model):
     def cantidad_productos(self):
         """Cuenta la cantidad de productos en la venta"""
         return self.detalles.count()
-
-    class Meta:
-        verbose_name = "Venta"
-        verbose_name_plural = "Ventas"
-        unique_together = ('empresa', 'numero_factura')
 
 
 class DetalleVenta(models.Model):

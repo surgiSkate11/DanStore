@@ -13,5 +13,5 @@ openpyxl==3.1.2
 weasyprint==68.1
 pdfkit==1.0.0
 stripe==8.4.0
-paypal-checkout-serversdk==1.0.2
+paypal-checkout-serversdk==1.0.3
 requests==2.31.0

@@ -1,4 +1,12 @@
 import gspread
+import os
+import json
+import re
+import uuid
+import tempfile
+from decimal import Decimal
+from collections import defaultdict
+
 from google.oauth2.credentials import Credentials as OAuthCredentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
@@ -8,11 +16,12 @@ from django.contrib import messages
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.db.models import Sum
+from django.core.cache import cache
+
 from productos.models import Producto, TipoProducto
 from clientes.models import Cliente
-import os
-import json
-import re
+from ventas.models import Venta, DetalleVenta
 from empresas.mixins import requiere_modulo
 
 
@@ -333,9 +342,6 @@ def sincronizar_sheets(request):
                             # IMPORTANTE: Si el producto cambió de 'vendido' a otro estado,
                             # eliminar las ventas/facturas asociadas
                             if producto_existente.estado == 'vendido' and estado != 'vendido':
-                                # Importar modelos de ventas
-                                from ventas.models import DetalleVenta, Venta
-                                
                                 # Buscar detalles de venta asociados a este producto
                                 detalles = DetalleVenta.objects.filter(producto=producto_existente)
                                 
@@ -443,7 +449,6 @@ def sincronizar_sheets(request):
             # ========================================
             # IMPORTANTE: Primero limpiar facturas inconsistentes ANTES de crear nuevas
             # Esto evita que se vuelvan a facturar productos que cambiaron de estado (ej: cancelaron compra)
-            from ventas.models import DetalleVenta, Venta
             
             # Buscar productos en estado 'reservado' o 'disponible' que tengan facturas
             productos_no_vendidos = Producto.objects.filter(
@@ -516,8 +521,6 @@ def sincronizar_sheets(request):
     
     # GET: Mostrar formulario
     total_productos = Producto.objects.filter(empresa=request.empresa, origen='sheets').count()
-    
-    from django.db.models import Sum
     
     # Filtramos solo los clientes que provienen de la sincronización de Google Sheets
     total_clientes = Cliente.objects.filter(
@@ -660,7 +663,6 @@ def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None, empresa=None):
         # Obtener la URL del sheet (puedes guardarla en settings o pasarla como parámetro)
         if not sheet_url:
             # Intentar obtener de la última sincronización o usar una configuración
-            from django.core.cache import cache
             sheet_url = cache.get('last_sheet_url')
             if not sheet_url:
                 return False, "No se ha configurado la URL del Google Sheet"
@@ -705,7 +707,6 @@ def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None, empresa=None):
 
 def guardar_sheet_url(sheet_url):
     """Guarda la URL del sheet en cache para uso posterior"""
-    from django.core.cache import cache
     cache.set('last_sheet_url', sheet_url, timeout=None)  # Sin expiración
 
 
@@ -718,11 +719,6 @@ def sincronizar_ventas_desde_sheets(empresa):
     Returns:
         dict: Estadísticas de sincronización (ventas_creadas, productos_nuevos, errores)
     """
-    from ventas.models import Venta, DetalleVenta
-    from clientes.models import Cliente
-    from decimal import Decimal
-    from collections import defaultdict
-    
     estadisticas = {
         'ventas_creadas': 0,
         'productos_nuevos': 0,
@@ -777,7 +773,6 @@ def sincronizar_ventas_desde_sheets(empresa):
             clientes_cache[cliente.nombre] = cliente
         
         # Crear clientes nuevos en batch
-        import uuid
         clientes_nuevos = []
         for nombre in nombres_clientes:
             if nombre not in clientes_cache:

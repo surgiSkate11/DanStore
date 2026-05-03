@@ -1,0 +1,18 @@
+# Este es un template HTML para notificar a los administradores sobre la creación de un nuevo ticket de soporte por parte de un inquilino. El diseño es limpio y profesional, utilizando colores suaves y una estructura clara para resaltar la información importante del ticket. Se incluyen detalles como el número de ticket, el asunto, el usuario remitente y el mensaje del ticket, todo presentado de manera organizada para facilitar la lectura y acción por parte del administrador.
+<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 40px 20px; border-radius: 12px;">
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h2 style="color: #ef4444; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">⚠️ Nuevo Ticket de Soporte</h2>
+    </div>
+    <div style="background-color: #ffffff; padding: 40px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">El inquilino <strong>{{ empresa }}</strong> acaba de abrir un nuevo ticket.</p>
+        
+        <div style="background-color: #f1f5f9; border-left: 4px solid #ef4444; padding: 20px; margin: 30px 0; border-radius: 4px;">
+            <p style="margin: 0 0 10px 0; color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Ticket #{{ ticket_id }}</p>
+            <p style="margin: 0 0 8px 0; color: #1f2937; font-size: 15px;"><strong>Asunto:</strong> {{ asunto }}</p>
+            <p style="margin: 0 0 15px 0; color: #1f2937; font-size: 15px;"><strong>Usuario Remitente:</strong> {{ usuario }}</p>
+            <p style="margin: 0; color: #4b5563; font-size: 15px; white-space: pre-wrap;">{{ mensaje }}</p>
+        </div>
+        
+        <p style="color: #4b5563; line-height: 1.6; margin-bottom: 0; font-size: 15px;">Ingresa a tu bandeja SaaS para gestionar este caso lo antes posible.</p>
+    </div>
+</div>

@@ -12,6 +12,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.views import LoginView
+from django.core.cache import cache
 from tiendita_project.utils import form_errors_to_messages
 
 @login_required
@@ -46,7 +47,7 @@ def perfil(request):
                 usuario.save()
 
                 # 2. Si es DUEÑO, actualizamos los datos de la Empresa y Negocio
-                if perfil.rol in ['DUEÑO', 'SUPERADMIN']:
+                if perfil.rol in ['owner', 'superadmin']:
                     perfil.nombre_negocio = request.POST.get('nombre_negocio', '').strip()
                     perfil.descripcion_negocio = request.POST.get('descripcion_negocio', '').strip()
                     perfil.negocio_tipo = request.POST.get('negocio_tipo', 'otro')
@@ -72,7 +73,7 @@ def onboarding(request):
     perfil, _ = UserProfile.objects.get_or_create(user=usuario)
 
     # REGLA: El onboarding SOLO aplica para Dueños de Empresa
-    if perfil.rol != 'DUEÑO':
+    if perfil.rol != 'owner':
         return redirect('dashboard_router')
 
     if request.method == 'POST':
@@ -232,11 +233,14 @@ def password_reset_masked_view(request):
     if request.method == 'POST':
         form = PasswordResetForm({'email': user.email})
         if form.is_valid():
+            # Obtener el nombre del SaaS desde el caché (configurado por el SuperAdmin)
+            app_name = cache.get('saas_app_name', 'Tiendita SaaS')
             form.save(
                 request=request,
                 use_https=request.is_secure(),
                 email_template_name='security/password_reset_email.html',
                 subject_template_name='security/password_reset_subject.txt',
+                extra_email_context={'app_name': app_name},
             )
             del request.session['reset_uid'] # Limpiar sesión por seguridad
             return redirect('password_reset_done')

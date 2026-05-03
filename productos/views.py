@@ -1,13 +1,18 @@
+import openpyxl
+import csv
+import io
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
+from django.core.paginator import Paginator
+from openpyxl.styles import Font, PatternFill, Alignment
+
 from .models import Producto, TipoProducto
-import openpyxl
-import csv
-import io
+from .forms import ProductoForm
 from empresas.mixins import requiere_modulo
 from tiendita_project.utils import form_errors_to_messages
 
@@ -24,10 +29,9 @@ def get_negocio_tipo(user):
 # ── VISTAS PRINCIPALES ────────────────────────────────────────────────────────
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='ver')
 def lista_productos(request):
     """Lista productos con filtros genéricos para cualquier negocio"""
-    from django.core.paginator import Paginator
 
     # select_related evita N+1 queries
     # CRÍTICO: Filtrar siempre por la empresa del request actual
@@ -94,11 +98,9 @@ def lista_productos(request):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='crear')
 def crear_producto(request):
     """Crea un nuevo producto — genérico para cualquier negocio"""
-    from .forms import ProductoForm
-    
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES, empresa=request.empresa)
         if form.is_valid():
@@ -116,30 +118,10 @@ def crear_producto(request):
     })
 
 
-def _crear_producto_directo(request):
-    """Fallback para crear producto sin depender del form"""
-    Producto.objects.create(
-        empresa=request.empresa,
-        nombre=request.POST.get('nombre', ''),
-        descripcion=request.POST.get('descripcion', ''),
-        categoria=request.POST.get('categoria', ''),
-        variante=request.POST.get('variante', ''),
-        precio=request.POST.get('precio') or None,
-        precio_costo=request.POST.get('precio_costo') or None,
-        estado=request.POST.get('estado', 'disponible'),
-        marca=request.POST.get('marca', ''),
-        color=request.POST.get('color', ''),
-        stock=int(request.POST.get('stock', 1)),
-        origen='manual',
-    )
-    messages.success(request, '¡Producto creado exitosamente!')
-
-
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='editar')
 def editar_producto(request, pk):
     """Edita un producto existente"""
-    from .forms import ProductoForm
     producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
 
     if request.method == 'POST':
@@ -161,7 +143,7 @@ def editar_producto(request, pk):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='eliminar')
 def eliminar_producto(request, pk):
     """Elimina un producto con confirmación"""
     producto = get_object_or_404(Producto, pk=pk, empresa=request.empresa)
@@ -177,7 +159,7 @@ def eliminar_producto(request, pk):
 # ── VISTAS AJAX ───────────────────────────────────────────────────────────────
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='editar')
 def cambiar_estado_producto(request, pk):
     """AJAX — cambia el estado de un producto"""
     if request.method == 'POST':
@@ -196,7 +178,7 @@ def cambiar_estado_producto(request, pk):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='editar')
 def cambiar_categoria_producto(request, pk):
     """AJAX — cambia la categoría de un producto (texto libre)"""
     if request.method == 'POST':
@@ -210,11 +192,10 @@ def cambiar_categoria_producto(request, pk):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='crear')
 def api_crear_tipo_producto(request):
     """AJAX — crea un nuevo Tipo de Producto desde un modal"""
     if request.method == 'POST':
-        import json
         try:
             data = json.loads(request.body)
             nombre = data.get('nombre', '').strip()
@@ -239,7 +220,7 @@ def api_crear_tipo_producto(request):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='editar')
 def cambiar_variante_producto(request, pk):
     """
     AJAX — cambia la variante de un producto.
@@ -257,7 +238,7 @@ def cambiar_variante_producto(request, pk):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='editar')
 def subir_foto_producto(request, pk):
     """AJAX — sube o reemplaza la foto de un producto"""
     if request.method == 'POST' and request.FILES.get('imagen'):
@@ -277,6 +258,7 @@ def subir_foto_producto(request, pk):
 
 
 @login_required
+@requiere_modulo('productos', accion='ver')
 def get_categorias_sugeridas(request):
     """
     AJAX — devuelve las categorías existentes para autocompletar.
@@ -296,7 +278,7 @@ def get_categorias_sugeridas(request):
 # ── IMPORTACIÓN EXCEL / CSV ───────────────────────────────────────────────────
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='crear')
 def importar_excel(request):
     """
     Importa productos desde Excel (.xlsx) o CSV.
@@ -430,7 +412,7 @@ def _parsear_decimal(valor):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='crear')
 def descargar_plantilla(request):
     """
     Descarga una plantilla Excel con las columnas correctas y una hoja de referencia.
@@ -439,8 +421,6 @@ def descargar_plantilla(request):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Productos"
-
-    from openpyxl.styles import Font, PatternFill, Alignment
 
     # ── CABECERAS ─────────────────────────────────────────────────────────────
     cabeceras = ['Nombre', 'Categoría', 'Precio', 'Estado', 'Descripción', 'Variante', 'Marca', 'Stock']

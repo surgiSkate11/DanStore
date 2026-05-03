@@ -34,7 +34,7 @@ def lista_sorteos(request):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='crear')
 def crear_sorteo(request):
     """Vista para crear un nuevo sorteo"""
     if request.method == 'POST':
@@ -109,7 +109,7 @@ def detalle_sorteo(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='editar')
 def ejecutar_sorteo(request, sorteo_id):
     """Vista para ejecutar el sorteo en vivo"""
     import json
@@ -228,7 +228,7 @@ def ejecutar_sorteo(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='editar')
 def sortear_ganador(request, sorteo_id):
     """API para sortear un ganador aleatorio"""
     if request.method != 'POST':
@@ -254,7 +254,7 @@ def sortear_ganador(request, sorteo_id):
 
 @transaction.atomic
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='editar')
 def registrar_resultado(request, sorteo_id):
     """Registra el resultado del sorteo"""
     if request.method != 'POST':
@@ -345,7 +345,7 @@ def registrar_resultado(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='editar')
 def finalizar_sorteo(request, sorteo_id):
     """Marca el sorteo como completado"""
     sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
@@ -371,7 +371,7 @@ def generar_codigo_cupon():
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='editar')
 def gestionar_participantes(request, sorteo_id):
     """Vista para gestionar participantes manualmente"""
     sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
@@ -395,7 +395,7 @@ def gestionar_participantes(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='crear')
 def agregar_participante(request, sorteo_id):
     """Agregar un participante al sorteo"""
     if request.method != 'POST':
@@ -427,7 +427,7 @@ def agregar_participante(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='eliminar')
 def eliminar_participante(request, sorteo_id, participante_id):
     """Eliminar un participante del sorteo"""
     if request.method != 'POST':
@@ -446,7 +446,7 @@ def eliminar_participante(request, sorteo_id, participante_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='editar')
 def gestionar_premios(request, sorteo_id):
     """Vista para gestionar premios del sorteo"""
     sorteo = get_object_or_404(Sorteo, id=sorteo_id, empresa=request.empresa)
@@ -468,7 +468,7 @@ def gestionar_premios(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='crear')
 def agregar_premio(request, sorteo_id):
     """Agregar un premio al sorteo (crear nuevo o vincular existente)"""
     if request.method != 'POST':
@@ -580,7 +580,7 @@ def agregar_premio(request, sorteo_id):
 
 
 @login_required
-@requiere_modulo('sorteos')
+@requiere_modulo('sorteos', accion='eliminar')
 def eliminar_premio(request, sorteo_id, premio_id):
     """Eliminar un premio de un sorteo específico"""
     if request.method != 'POST':

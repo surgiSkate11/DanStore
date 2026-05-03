@@ -8,7 +8,8 @@ def vocabulario(request):
     
     contexto = {
         'vocab': {},
-        'modulos_permitidos': set()
+        'modulos_permitidos': set(),
+        'permisos': {}
     }
     
     # Si el usuario está autenticado, obtener su perfil
@@ -25,17 +26,29 @@ def vocabulario(request):
             # Lógica dinámica de Módulos (SaaS)
             from usuarios.models import ModuloSaaS
             
-            if profile.rol == 'SUPERADMIN':
+            if profile.rol == 'superadmin':
                 # El SuperAdmin NO debe tener acceso a módulos operativos de las tiendas
                 contexto['modulos_permitidos'] = set()
-            elif profile.rol == 'DUEÑO':
+                contexto['permisos'] = {}
+            elif profile.rol == 'owner':
                 modulos = set(ModuloSaaS.objects.values_list('codigo', flat=True))
                 # Fallback: Si aún no has creado módulos en la BD, inyectamos los básicos
                 if not modulos:
                     modulos = {'productos', 'ventas', 'clientes', 'sorteos', 'catalogos'}
                 contexto['modulos_permitidos'] = modulos
-            elif profile.rol == 'EMPLEADO' and profile.rol_empresa:
-                contexto['modulos_permitidos'] = set(profile.rol_empresa.modulos_permitidos.values_list('codigo', flat=True))
+                # Dueño tiene full acceso a todo automáticamente
+                contexto['permisos'] = {mod: ['ver', 'crear', 'editar', 'eliminar'] for mod in modulos}
+            elif profile.rol == 'employee' and profile.rol_empresa:
+                modulos_permitidos = set(profile.rol_empresa.modulos_permitidos.values_list('codigo', flat=True))
+                contexto['modulos_permitidos'] = modulos_permitidos
+                
+                permisos_dict = profile.rol_empresa.permisos_detallados or {}
+                # Retrocompatibilidad: Si tiene el módulo pero no hay JSON de permisos, asume full access por ahora
+                for mod_code in modulos_permitidos:
+                    if mod_code not in permisos_dict:
+                        permisos_dict[mod_code] = ['ver', 'crear', 'editar', 'eliminar']
+                
+                contexto['permisos'] = permisos_dict
                 
         except UserProfile.DoesNotExist:
             # Si no existe el perfil, crear uno

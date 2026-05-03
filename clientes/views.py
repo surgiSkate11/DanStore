@@ -1,12 +1,11 @@
 import json
 import csv
-from django.http import JsonResponse, Http404, HttpResponse
+from datetime import timedelta
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Sum, Count, Q
-from collections import defaultdict
 from django.utils import timezone
 from ventas.models import Venta, DetalleVenta
 from productos.models import Producto
@@ -61,20 +60,19 @@ def lista_clientes(request):
         })
         
     clientes_qs = Cliente.objects.filter(empresas=empresa)
-    clientes_incompletos = clientes_qs.filter(ruc_cedula__startswith='SYS-').order_by('-creado_en')
+    # OPTIMIZACIÓN DE MEMORIA RAM: Traer máximo los últimos 20 para no saturar la vista web
+    clientes_incompletos = clientes_qs.filter(ruc_cedula__startswith='SYS-').order_by('-creado_en')[:20]
     
     # 1. Agrupar métricas de ventas por cliente (Top compradores)
-    ventas_agrupadas = Venta.objects.filter(empresa=empresa).values('cliente_id').annotate(
+    ventas_agrupadas = Venta.objects.filter(empresa=empresa).exclude(estado='anulada').values('cliente_id').annotate(
         total=Sum('total'),
         cantidad=Count('id')
     )
     metricas_ventas = {v['cliente_id']: {'total': v['total'] or 0, 'cantidad': v['cantidad']} for v in ventas_agrupadas}
     
-    # 2. Agrupar deudas (productos separados) por nombre del cliente
-    productos_separados = Producto.objects.filter(empresa=empresa, estado='separado', vendido_a__isnull=False).exclude(vendido_a='')
-    deudas_dict = defaultdict(float)
-    for p in productos_separados:
-        deudas_dict[p.vendido_a] += float(p.precio or 0)
+    # OPTIMIZACIÓN: Delegar sumatoria de deudas a la Base de Datos
+    deudas_agrupadas = Producto.objects.filter(empresa=empresa, estado='reservado', vendido_a__isnull=False).exclude(vendido_a='').values('vendido_a').annotate(total=Sum('precio'))
+    deudas_dict = {d['vendido_a']: float(d['total'] or 0) for d in deudas_agrupadas}
         
     clientes_data = []
     total_deuda_general = 0
@@ -137,13 +135,11 @@ def crear_cliente(request):
 @requiere_modulo('clientes')
 def detalle_cliente(request, cliente_id):
     """Muestra la información de un cliente específico y su historial de compras."""
-    from datetime import timedelta
-
     empresa = getattr(request, 'empresa', None)
     cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
 
     # Obtener todas las ventas del cliente
-    ventas_cliente = Venta.objects.filter(cliente=cliente, empresa=empresa)
+    ventas_cliente = Venta.objects.filter(cliente=cliente, empresa=empresa).exclude(estado='anulada')
 
     # Lógica de filtrado por fecha
     filtro = request.GET.get('filtro', 'todos')
@@ -166,7 +162,8 @@ def detalle_cliente(request, cliente_id):
         ventas_filtradas = ventas_cliente
 
     # Obtener los productos de las ventas filtradas
-    detalles_venta = DetalleVenta.objects.filter(venta__in=ventas_filtradas).select_related('producto')
+    # OPTIMIZACIÓN: Cargar tipo de producto pre-asociado
+    detalles_venta = DetalleVenta.objects.filter(venta__in=ventas_filtradas).select_related('producto', 'producto__tipo_producto')
     productos_comprados = [d.producto for d in detalles_venta]
 
     context = {
@@ -222,11 +219,23 @@ def exportar_clientes_csv(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     # Escribir CSV
+    response.write(u'\ufeff'.encode('utf8'))  # Forzar codificación UTF-8
     writer = csv.writer(response)
+    
+    # --- TÍTULOS SUPERIORES CSV ---
+    writer.writerow([f"DIRECTORIO DE CLIENTES - {empresa.nombre.upper()}"])
+    writer.writerow([f"Fecha de exportación: {timezone.now().strftime('%Y-%m-%d %H:%M')}"])
+    writer.writerow([])
+    
     writer.writerow(['Nombre', 'RUC/Cédula', 'Teléfono', 'Email', 'Total Gastado', 'Fecha de Registro'])
     
-    clientes = Cliente.objects.filter(empresas=empresa)
+    # OPTIMIZACIÓN: Calcular el total gastado de TODOS los clientes en 1 sola consulta
+    clientes = Cliente.objects.filter(empresas=empresa).annotate(
+        total_gastado=Sum('ventas__total', filter=Q(ventas__empresa=empresa) & ~Q(ventas__estado='anulada'))
+    )
+    
     for c in clientes:
-        writer.writerow([c.nombre, c.ruc_cedula, c.telefono, c.email, '', c.creado_en.strftime("%Y-%m-%d")])
+        total_gastado = c.total_gastado or 0
+        writer.writerow([c.nombre, c.ruc_cedula, c.telefono, c.email, total_gastado, c.creado_en.strftime("%Y-%m-%d")])
         
     return response

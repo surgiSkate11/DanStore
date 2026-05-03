@@ -1210,7 +1210,9 @@
             const n = participantes.length;
             const sliceDeg = 360 / n;
             const winnerCenter = idx * sliceDeg + sliceDeg / 2;
-            const targetAngle = 360 - winnerCenter;
+            // Añadir un offset aleatorio para que no caiga siempre en el centro exacto
+            const randomOffset = (Math.random() - 0.5) * (sliceDeg * 0.7);
+            const targetAngle = 360 - winnerCenter + randomOffset;
             const currentNormalized = lastRotation % 360;
             
             let rotation = extraSpins * 360 + targetAngle - currentNormalized;

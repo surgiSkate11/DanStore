@@ -1,181 +1,640 @@
 {% extends 'base.html' %}
 
-{% block title %}Panel de Control {% endblock %}
+{% block title %}Panel de Control{% endblock %}
 
 {% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-    body { background-color: #f1f5f9; }
-    
-    /* Premium SaaS Cards */
-    .saas-card { 
-        background: #ffffff; 
-        border-radius: 20px; 
-        padding: 1.75rem; 
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.02), 0 8px 10px -6px rgba(0,0,0,0.01); 
-        border: 1px solid rgba(226, 232, 240, 0.8); 
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    :root {
+        --saas-primary: #4f46e5;
+        --saas-primary-light: #eef2ff;
+        --saas-primary-mid: #c7d2fe;
+        --saas-success: #059669;
+        --saas-success-light: #ecfdf5;
+        --saas-warning: #d97706;
+        --saas-warning-light: #fffbeb;
+        --saas-info: #0284c7;
+        --saas-info-light: #f0f9ff;
+        --saas-dark: #0f172a;
+        --saas-dark-2: #1e293b;
+        --saas-muted: #64748b;
+        --saas-muted-light: #94a3b8;
+        --saas-bg: #f8fafc;
+        --saas-card: #ffffff;
+        --saas-border: #e2e8f0;
+        --saas-border-light: #f1f5f9;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+        --radius-sm: 10px;
+        --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
+        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -2px rgba(0,0,0,0.03);
+        --shadow-hover: 0 16px 24px -4px rgba(0,0,0,0.07), 0 6px 10px -4px rgba(0,0,0,0.04);
+    }
+
+    body { 
+        background-color: var(--saas-bg); 
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--saas-dark);
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────── */
+    .saas-header {
+        background: var(--saas-card);
+        border: 1px solid var(--saas-border);
+        border-radius: var(--radius-lg);
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .saas-header::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(105deg, #f8fafc 0%, #eef2ff 100%);
+        pointer-events: none;
+    }
+
+    .saas-title {
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: var(--saas-dark);
+        letter-spacing: -0.03em;
+        margin-bottom: 0.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        position: relative;
+    }
+
+    .saas-title-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: var(--radius-sm);
+        background: var(--saas-primary-light);
+        color: var(--saas-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        border: 1px solid var(--saas-primary-mid);
+        flex-shrink: 0;
+    }
+
+    .saas-subtitle {
+        font-size: 0.9rem;
+        color: var(--saas-muted);
+        font-weight: 500;
+        margin: 0;
+        position: relative;
+        padding-left: 3.75rem;
+    }
+
+    .saas-realtime-badge {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--saas-card);
+        border: 1px solid var(--saas-border);
+        padding: 0.6rem 1.2rem;
+        border-radius: 100px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--saas-muted);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .saas-realtime-badge::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: var(--saas-success);
+        border-radius: 50%;
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+        animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+        0%, 100% { box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15); }
+        50%       { box-shadow: 0 0 0 5px rgba(5, 150, 105, 0.08); }
+    }
+
+    /* ─── KPI CARDS ───────────────────────────────────────── */
+    .saas-kpi-card {
+        background: var(--saas-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--saas-border);
+        padding: 1.75rem 2rem;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
         height: 100%;
+        position: relative;
+        overflow: hidden;
     }
-    .saas-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); }
-    
-    /* Elegant Icons */
-    .saas-icon { 
-        width: 56px; height: 56px; 
-        border-radius: 16px; 
-        display: flex; align-items: center; justify-content: center; 
-        font-size: 1.75rem; 
+
+    .saas-kpi-card::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--kpi-accent, var(--saas-primary));
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
-    
-    /* Table Styling */
-    .table-saas th { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; color: #64748b; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem;}
-    .table-saas td { padding: 1rem 0.5rem; vertical-align: middle; color: #334155; font-weight: 500; border-bottom: 1px solid #f8fafc; }
+
+    .saas-kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-hover);
+        border-color: #cbd5e1;
+    }
+
+    .kpi-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.25rem;
+    }
+
+    .kpi-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--saas-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .kpi-value {
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: var(--saas-dark);
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-footer {
+        font-size: 0.83rem;
+        color: var(--saas-muted);
+        font-weight: 500;
+        padding-top: 1rem;
+        border-top: 1px solid var(--saas-border-light);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .kpi-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 0.15rem 0.5rem;
+        border-radius: 6px;
+    }
+
+    .kpi-trend.up   { color: var(--saas-success); background: var(--saas-success-light); }
+    .kpi-trend.info { color: var(--saas-info);    background: var(--saas-info-light);    }
+
+    /* ─── PANELS ──────────────────────────────────────────── */
+    .saas-panel {
+        background: var(--saas-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--saas-border);
+        padding: 1.75rem 2rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
+    }
+
+    .panel-title {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--saas-dark);
+        letter-spacing: -0.02em;
+        margin-bottom: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+    }
+
+    .panel-title-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    /* ─── TABLE ───────────────────────────────────────────── */
+    .saas-table-container {
+        background: var(--saas-card);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--saas-border);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .saas-table-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--saas-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fafbfc;
+    }
+
+    .saas-table-header-title {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--saas-dark);
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        margin: 0;
+    }
+
+    .table-saas {
+        margin-bottom: 0;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table-saas thead th {
+        background: #fafbfc;
+        color: var(--saas-muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--saas-border);
+        white-space: nowrap;
+    }
+
+    .table-saas tbody td {
+        padding: 1.1rem 1.5rem;
+        vertical-align: middle;
+        color: var(--saas-dark-2);
+        font-weight: 600;
+        border-bottom: 1px solid var(--saas-border-light);
+        font-size: 0.9rem;
+    }
+
+    .table-saas tbody tr:last-child td { border-bottom: none; }
+
+    .table-saas tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    .table-saas tbody tr:hover {
+        background-color: #fafbfc;
+    }
+
+    .tenant-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .tenant-name { font-weight: 700; color: var(--saas-dark); font-size: 0.9rem; }
+    .tenant-id   { font-size: 0.78rem; color: var(--saas-muted-light); font-weight: 500; margin-top: 1px; }
+
+    .badge-plan {
+        padding: 0.35rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        border: 1px solid rgba(0,0,0,0.07);
+        background: var(--saas-border-light);
+        color: var(--saas-dark-2);
+    }
+
+    .export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: var(--saas-card);
+        border: 1px solid var(--saas-border);
+        color: var(--saas-dark-2);
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 0.55rem 1.1rem;
+        border-radius: 100px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .export-btn:hover {
+        background: var(--saas-primary);
+        border-color: var(--saas-primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+    }
+
+    /* ─── PROGRESS ────────────────────────────────────────── */
+    .progress-pill {
+        height: 7px;
+        border-radius: 100px;
+        background: var(--saas-border-light);
+        overflow: hidden;
+        flex: 1;
+    }
+
+    .progress-pill-fill {
+        height: 100%;
+        border-radius: 100px;
+        transition: width 0.6s ease;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4 px-xl-5">
-    <h2 class="fw-bold mb-4 text-dark"><i class="bi bi-rocket-takeoff-fill text-primary"></i> Centro de Mando Global</h2>
 
-    <div class="row g-4 mb-5">
+    <!-- Header -->
+    <div class="saas-header">
+        <div class="position-relative z-1">
+            <h1 class="saas-title">
+                <span class="saas-title-icon"><i class="bi bi-rocket-takeoff-fill"></i></span>
+                Centro de Mando Global
+            </h1>
+            <p class="saas-subtitle">Vista panorámica del rendimiento y estado de tu plataforma SaaS.</p>
+        </div>
+        <div class="d-none d-md-block position-relative z-1">
+            <span class="saas-realtime-badge">
+                Actualizado en tiempo real
+            </span>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-4 mb-4">
         <div class="col-md-4">
-            <div class="saas-card position-relative overflow-hidden">
-                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #10b981, #34d399);"></div>
-                <div class="d-flex justify-content-between align-items-center">
+            <div class="saas-kpi-card" style="--kpi-accent: var(--saas-success);">
+                <div class="kpi-top">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">MRR Estimado</p>
-                        <h2 class="fw-bolder mb-0 text-dark" style="font-size: 2.2rem;">${{ mrr_estimado|floatformat:2 }}</h2>
+                        <span class="kpi-label">MRR Estimado</span>
+                        <div class="kpi-value">${{ mrr_estimado|floatformat:2 }}</div>
                     </div>
-                    <div class="saas-icon bg-success bg-opacity-10 text-success"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div class="kpi-icon bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span class="kpi-trend up"><i class="bi bi-arrow-up-short"></i> Crecimiento</span>
+                    en facturación recurrente
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="saas-card position-relative overflow-hidden">
-                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
-                <div class="d-flex justify-content-between align-items-center">
+            <div class="saas-kpi-card" style="--kpi-accent: var(--saas-primary);">
+                <div class="kpi-top">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Empresas Totales</p>
-                        <h2 class="fw-bolder mb-0 text-dark" style="font-size: 2.2rem;">{{ total_empresas }}</h2>
+                        <span class="kpi-label">Empresas Totales</span>
+                        <div class="kpi-value">{{ total_empresas }}</div>
                     </div>
-                    <div class="saas-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-building"></i></div>
+                    <div class="kpi-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-buildings-fill"></i>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    Inquilinos registrados en la plataforma
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="saas-card position-relative overflow-hidden">
-                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #6366f1, #818cf8);"></div>
-                <div class="d-flex justify-content-between align-items-center">
+            <div class="saas-kpi-card" style="--kpi-accent: var(--saas-info);">
+                <div class="kpi-top">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Empresas Activas</p>
-                        <h2 class="fw-bolder mb-0 text-dark" style="font-size: 2.2rem;">{{ empresas_activas }}</h2>
+                        <span class="kpi-label">Empresas Activas</span>
+                        <div class="kpi-value">{{ empresas_activas }}</div>
                     </div>
-                    <div class="saas-icon bg-indigo bg-opacity-10" style="color: #6366f1;"><i class="bi bi-check-circle-fill"></i></div>
+                    <div class="kpi-icon bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span class="kpi-trend info"><i class="bi bi-circle-fill" style="font-size:0.45rem;"></i> En línea</span>
+                    operando sin restricciones
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Gráficas ApexCharts -->
-    <div class="row g-4 mb-5">
+
+    <!-- Charts -->
+    <div class="row g-4 mb-4">
         <div class="col-lg-8">
-            <div class="saas-card">
-                <h6 class="fw-bold text-dark mb-4">Crecimiento de Ingresos (MRR)</h6>
-                <div id="mrrChart" style="min-height: 300px;"></div>
+            <div class="saas-panel h-100">
+                <h3 class="panel-title">
+                    <span class="panel-title-icon bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-activity"></i>
+                    </span>
+                    Crecimiento de Ingresos (MRR)
+                </h3>
+                <div id="mrrChart" style="min-height: 280px;"></div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="saas-card">
-                <h6 class="fw-bold text-dark mb-4">Distribución de Planes</h6>
-                <div id="planesChart" class="d-flex justify-content-center align-items-center" style="min-height: 300px;"></div>
+            <div class="saas-panel h-100">
+                <h3 class="panel-title">
+                    <span class="panel-title-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-pie-chart-fill"></i>
+                    </span>
+                    Distribución de Planes
+                </h3>
+                <div id="planesChart" class="d-flex justify-content-center align-items-center" style="min-height: 280px;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Tabla de Suscripciones Premium -->
-    <div class="saas-card p-0 overflow-hidden">
-        <div class="d-flex justify-content-between align-items-center pt-4 pb-3 px-4 border-bottom">
-            <h5 class="fw-bold mb-0 text-dark">Empresas y Suscripciones</h5>
-            <a href="{% url 'exportar_empresas_csv' %}" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 shadow-sm">
-                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Exportar Empresas
+    <!-- Tenants Table -->
+    <div class="saas-table-container">
+        <div class="saas-table-header">
+            <h4 class="saas-table-header-title">
+                <span class="panel-title-icon bg-primary bg-opacity-10 text-primary" style="width:32px;height:32px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-journal-check"></i>
+                </span>
+                Directorio de Inquilinos
+            </h4>
+            <a href="{% url 'exportar_empresas_csv' %}" class="export-btn">
+                <i class="bi bi-cloud-download"></i> Exportar CSV
             </a>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover table-saas align-middle mb-0 w-100">
-                <thead style="background-color: #f8fafc;">
+            <table class="table-saas">
+                <thead>
                     <tr>
                         <th class="ps-4">Empresa / Inquilino</th>
-                        <th>Plan Contratado</th>
+                        <th>Plan</th>
                         <th>Facturación</th>
                         <th>Vencimiento</th>
-                        <th>Progreso</th>
+                        <th class="pe-4">Progreso</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for sub in suscripciones %}
                     <tr>
                         <td class="ps-4">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center fw-bold me-3" style="width: 40px; height: 40px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="tenant-avatar bg-primary bg-opacity-10 text-primary">
                                     {{ sub.empresa.nombre|make_list|first|upper }}
                                 </div>
                                 <div>
-                                    <div class="fw-bold text-dark">{{ sub.empresa.nombre }}</div>
-                                    <div class="small text-muted">ID: #{{ sub.empresa.id }}</div>
+                                    <div class="tenant-name">{{ sub.empresa.nombre }}</div>
+                                    <div class="tenant-id">ID #{{ sub.empresa.id }}</div>
                                 </div>
                             </div>
                         </td>
-                        <td><span class="badge bg-dark bg-opacity-10 text-dark border px-2 py-1 rounded-pill">{{ sub.plan.nombre|default:"Básico" }}</span></td>
-                        <td><span class="text-muted"><i class="bi bi-calendar-event"></i> {{ sub.get_tipo_plan_display }}</span></td>
-                        <td><span class="fw-semibold">{{ sub.fecha_vencimiento|date:"d M Y" }}</span></td>
                         <td>
-                            <div class="d-flex align-items-center">
-                                <div class="progress flex-grow-1 me-2" style="height: 6px; background-color: #e2e8f0;">
-                                    <div class="progress-bar bg-{{ sub.estado_color }}" role="progressbar" style="width: {{ sub.porcentaje_consumido }}%;"></div>
+                            <span class="badge-plan">{{ sub.plan.nombre|default:"Básico" }}</span>
+                        </td>
+                        <td>
+                            <span class="d-flex align-items-center gap-2 text-muted" style="font-size:0.88rem; font-weight:600;">
+                                <i class="bi bi-calendar-event text-primary" style="font-size:0.85rem;"></i>
+                                {{ sub.get_tipo_plan_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="fw-700" style="color: var(--saas-dark); font-size:0.88rem;">
+                                {{ sub.fecha_vencimiento|date:"d M Y" }}
+                            </span>
+                        </td>
+                        <td class="pe-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="progress-pill">
+                                    <div class="progress-pill-fill bg-{{ sub.estado_color }}" style="width: {{ sub.porcentaje_consumido }}%;"></div>
                                 </div>
-                                <span class="small fw-bold text-{{ sub.estado_color }}">{{ sub.porcentaje_consumido }}%</span>
+                                <span class="text-{{ sub.estado_color }}" style="font-size:0.78rem; font-weight:800; min-width:36px; text-align:right;">
+                                    {{ sub.porcentaje_consumido }}%
+                                </span>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="text-center py-5 text-muted"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i> No hay suscripciones activas.</td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center opacity-40" style="gap:0.75rem;">
+                                <i class="bi bi-inbox" style="font-size: 2.5rem; color: var(--saas-muted-light);"></i>
+                                <span class="fw-700 text-muted" style="font-size:0.95rem;">No hay suscripciones activas</span>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // 1. Gráfico de MRR (Simulado para demostración visual, requiere datos del backend)
-        var optionsMRR = {
-            series: [{ name: 'MRR ($)', data: [120, 250, 450, 600, 850, 1100, {{ mrr_estimado|floatformat:0 }}] }],
-            chart: { type: 'area', height: 300, toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
-            colors: ['#10b981'],
-            fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] } },
-            dataLabels: { enabled: false },
-            stroke: { curve: 'smooth', width: 3 },
-            xaxis: { categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Actual'], axisBorder: { show: false }, axisTicks: { show: false } },
-            yaxis: { labels: { formatter: function (value) { return "$" + value; } } },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-        };
-        new ApexCharts(document.querySelector("#mrrChart"), optionsMRR).render();
+document.addEventListener("DOMContentLoaded", function () {
 
-        // 2. Gráfico de Planes
-        var optionsPlanes = {
-            series: {{ planes_series|safe }},
-            chart: { type: 'donut', height: 300, fontFamily: 'Inter, sans-serif' },
-            labels: {{ planes_labels|safe }},
-            colors: ['#3b82f6', '#8b5cf6', '#10b981'],
-            plotOptions: { pie: { donut: { size: '75%', labels: { show: true, total: { show: true, label: 'Planes Activos', formatter: function (w) { return w.globals.seriesTotals.reduce((a, b) => { return a + b }, 0) } } } } } },
-            dataLabels: { enabled: false },
-            legend: { position: 'bottom' }
-        };
-        new ApexCharts(document.querySelector("#planesChart"), optionsPlanes).render();
-    });
+    const fontFamily = 'Plus Jakarta Sans, sans-serif';
+    const muted = '#94a3b8';
+    const gridColor = '#f1f5f9';
+
+    // MRR Chart
+    new ApexCharts(document.querySelector("#mrrChart"), {
+        series: [{ name: 'MRR ($)', data: [120, 250, 450, 600, 850, 1100, {{ mrr_estimado|floatformat:0 }}] }],
+        chart: {
+            type: 'area', height: 280,
+            toolbar: { show: false },
+            fontFamily, parentHeightOffset: 0,
+            animations: { enabled: true, easing: 'easeinout', speed: 600 }
+        },
+        colors: ['#059669'],
+        fill: {
+            type: 'gradient',
+            gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0, 100] }
+        },
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 2.5 },
+        xaxis: {
+            categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Actual'],
+            axisBorder: { show: false }, axisTicks: { show: false },
+            labels: { style: { colors: muted, fontSize: '12px', fontWeight: 600 } }
+        },
+        yaxis: {
+            labels: {
+                formatter: v => "$" + v,
+                style: { colors: muted, fontSize: '12px', fontWeight: 600 }
+            }
+        },
+        grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 8, right: 0 } },
+        tooltip: {
+            theme: 'light',
+            y: { formatter: v => "$" + v.toLocaleString() },
+            style: { fontFamily }
+        }
+    }).render();
+
+    // Plans Donut
+    new ApexCharts(document.querySelector("#planesChart"), {
+        series: {{ planes_series|safe }},
+        chart: { type: 'donut', height: 280, fontFamily },
+        labels: {{ planes_labels|safe }},
+        colors: ['#4f46e5', '#7c3aed', '#059669', '#d97706'],
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '72%',
+                    labels: {
+                        show: true,
+                        name: { fontSize: '0.8rem', color: muted, fontFamily, fontWeight: 600 },
+                        value: { fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', fontFamily },
+                        total: {
+                            show: true, label: 'Total Activos',
+                            fontSize: '0.8rem', color: muted, fontFamily, fontWeight: 600,
+                            formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                        }
+                    }
+                }
+            }
+        },
+        dataLabels: { enabled: false },
+        legend: {
+            position: 'bottom',
+            fontSize: '12px', fontWeight: 600, fontFamily,
+            markers: { radius: 6, width: 10, height: 10 },
+            itemMargin: { horizontal: 10, vertical: 4 }
+        },
+        stroke: { show: true, colors: ['#fff'], width: 2 }
+    }).render();
+});
 </script>
 {% endblock %}

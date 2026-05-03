@@ -58,11 +58,11 @@
                         <div class="row g-4 mb-4">
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Nombre de la Plataforma</label>
-                                <input type="text" name="app_name" class="form-control form-control-lg bg-light border-0" value="Tiendita SaaS" style="border-radius: 12px;">
+                                <input type="text" name="app_name" class="form-control form-control-lg bg-light border-0" value="{{ config.nombre_plataforma|default:'Tiendita SaaS' }}" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Correo de Soporte Global</label>
-                                <input type="email" name="support_email" class="form-control form-control-lg bg-light border-0" value="soporte@tiendita.com" style="border-radius: 12px;">
+                                <input type="email" name="support_email" class="form-control form-control-lg bg-light border-0" value="{{ config.support_email|default:'soporte@tiendita.com' }}" style="border-radius: 12px;">
                             </div>
                         </div>
 
@@ -78,8 +78,8 @@
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Color de Acento (SaaS)</label>
                                 <div class="d-flex align-items-center bg-light p-2 rounded-3">
-                                    <input type="color" name="theme_color" class="form-control form-control-color border-0 p-0 me-3 bg-transparent shadow-none" value="#3b82f6" title="Elige tu color" style="width: 35px; height: 35px; border-radius: 8px; cursor: pointer;">
-                                    <span class="fw-bold text-dark font-monospace">#3b82f6</span>
+                                    <input type="color" name="theme_color" class="form-control form-control-color border-0 p-0 me-3 bg-transparent shadow-none" value="{{ config.theme_color|default:'#3b82f6' }}" title="Elige tu color" style="width: 35px; height: 35px; border-radius: 8px; cursor: pointer;" oninput="this.nextElementSibling.textContent = this.value">
+                                    <span class="fw-bold text-dark font-monospace">{{ config.theme_color|default:'#3b82f6' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -93,23 +93,23 @@
                         <div class="row g-4 mb-3">
                             <div class="col-md-8">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Servidor (Host)</label>
-                                <input type="text" name="smtp_host" class="form-control form-control-lg bg-light border-0" value="smtp.mailgun.org" style="border-radius: 12px;">
+                                <input type="text" name="smtp_host" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_host|default:'smtp.mailgun.org' }}" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Puerto</label>
-                                <input type="number" name="smtp_port" class="form-control form-control-lg bg-light border-0" value="587" style="border-radius: 12px;">
+                                <input type="number" name="smtp_port" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_port|default:'587' }}" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Usuario</label>
-                                <input type="text" name="smtp_user" class="form-control form-control-lg bg-light border-0" value="postmaster@tiendita.com" style="border-radius: 12px;">
+                                <input type="text" name="smtp_user" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_user|default:'postmaster@tiendita.com' }}" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Contraseña</label>
-                                <input type="password" name="smtp_pass" class="form-control form-control-lg bg-light border-0" value="********" style="border-radius: 12px;">
+                                <input type="password" name="smtp_pass" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_password|default:'' }}" placeholder="********" style="border-radius: 12px;">
                             </div>
                             <div class="col-12 mt-4">
                                 <div class="form-check custom-switch d-flex align-items-center ps-0">
-                                    <input class="form-check-input ms-0 me-3" type="checkbox" id="useTls" name="smtp_tls" checked>
+                                    <input class="form-check-input ms-0 me-3" type="checkbox" id="useTls" name="smtp_tls" {% if config.smtp_tls or config.smtp_tls is None %}checked{% endif %}>
                                     <label class="form-check-label fw-bold text-dark mb-0" for="useTls">Usar cifrado seguro (TLS/SSL)</label>
                                 </div>
                             </div>
@@ -126,17 +126,17 @@
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h5 class="fw-bold text-dark mb-0"><i class="bi bi-stripe text-primary fs-3 me-2 align-middle"></i> Stripe</h5>
                                     <div class="form-check custom-switch ps-0">
-                                        <input class="form-check-input ms-0" type="checkbox" id="stripeActive" name="stripe_active" checked>
+                                        <input class="form-check-input ms-0" type="checkbox" id="stripeActive" name="stripe_active" {% if config.stripe_active %}checked{% endif %}>
                                     </div>
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Clave Pública (Publishable Key)</label>
-                                        <input type="text" name="stripe_public" class="form-control form-control-lg bg-white border-0 shadow-sm" value="pk_test_51Nx..." style="border-radius: 10px;">
+                                        <input type="text" name="stripe_public" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.stripe_public_key|default:'' }}" placeholder="pk_test_51Nx..." style="border-radius: 10px;">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Clave Secreta (Secret Key)</label>
-                                        <input type="password" name="stripe_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="sk_test_51Nx..." style="border-radius: 10px;">
+                                        <input type="password" name="stripe_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.stripe_secret_key|default:'' }}" placeholder="sk_test_51Nx..." style="border-radius: 10px;">
                                     </div>
                                 </div>
                             </div>
@@ -147,17 +147,17 @@
                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                     <h5 class="fw-bold text-dark mb-0"><i class="bi bi-paypal text-primary fs-3 me-2 align-middle" style="color: #003087 !important;"></i> PayPal</h5>
                                     <div class="form-check custom-switch ps-0">
-                                        <input class="form-check-input ms-0" type="checkbox" id="paypalActive" name="paypal_active">
+                                        <input class="form-check-input ms-0" type="checkbox" id="paypalActive" name="paypal_active" {% if config.paypal_active %}checked{% endif %}>
                                     </div>
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Client ID</label>
-                                        <input type="text" name="paypal_client_id" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Ad_D9k..." style="border-radius: 10px;">
+                                        <input type="text" name="paypal_client_id" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.paypal_client_id|default:'' }}" placeholder="Ad_D9k..." style="border-radius: 10px;">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Secret Key</label>
-                                        <input type="password" name="paypal_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="E_J3k..." style="border-radius: 10px;">
+                                        <input type="password" name="paypal_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.paypal_secret_key|default:'' }}" placeholder="E_J3k..." style="border-radius: 10px;">
                                     </div>
                                 </div>
                             </div>
@@ -170,13 +170,13 @@
                                         <span class="bg-warning text-dark px-2 py-1 rounded-3 fw-bolder fs-5 me-2 align-middle">P</span> PayPhone
                                     </h5>
                                     <div class="form-check custom-switch ps-0">
-                                        <input class="form-check-input ms-0" type="checkbox" id="payphoneActive" name="payphone_active">
+                                        <input class="form-check-input ms-0" type="checkbox" id="payphoneActive" name="payphone_active" {% if config.payphone_active %}checked{% endif %}>
                                     </div>
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Token de Autenticación (Bearer)</label>
-                                        <input type="password" name="payphone_token" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="eyJhbGciOiJIUzI1NiIs..." style="border-radius: 10px;">
+                                        <input type="password" name="payphone_token" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.payphone_token|default:'' }}" placeholder="eyJhbGciOiJIUzI1NiIs..." style="border-radius: 10px;">
                                     </div>
                                 </div>
                             </div>
@@ -195,7 +195,7 @@
                                             <p class="text-muted small mb-0">Obliga a los Dueños a configurar Autenticación de Dos Pasos.</p>
                                         </div>
                                         <div class="form-check custom-switch ps-0">
-                                            <input class="form-check-input ms-0" type="checkbox" id="force2fa" name="force_2fa">
+                                            <input class="form-check-input ms-0" type="checkbox" id="force2fa" name="force_2fa" {% if config.force_2fa %}checked{% endif %}>
                                         </div>
                                     </div>
                                 </div>
@@ -203,10 +203,10 @@
                             <div class="col-md-6 mt-4">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Expiración de Sesión</label>
                                 <select class="form-select form-select-lg bg-light border-0" name="session_timeout" style="border-radius: 12px; font-weight: 500;">
-                                    <option value="30">30 minutos inactivo</option>
-                                    <option value="60">1 hora inactivo</option>
-                                    <option value="120" selected>2 horas inactivo</option>
-                                    <option value="1440">No expirar (24 hrs)</option>
+                                    <option value="30" {% if config.session_timeout == 30 %}selected{% endif %}>30 minutos inactivo</option>
+                                    <option value="60" {% if config.session_timeout == 60 %}selected{% endif %}>1 hora inactivo</option>
+                                    <option value="120" {% if config.session_timeout == 120 or not config.session_timeout %}selected{% endif %}>2 horas inactivo</option>
+                                    <option value="1440" {% if config.session_timeout == 1440 %}selected{% endif %}>No expirar (24 hrs)</option>
                                 </select>
                             </div>
                         </div>

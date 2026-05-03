@@ -12,6 +12,10 @@ class ModuloSaaS(models.Model):
     icono = models.CharField(max_length=50, default="bi-box", help_text="Clase de Bootstrap Icon")
     requiere_plan_premium = models.BooleanField(default=False)
 
+    class Meta:
+        verbose_name = "Módulo"
+        verbose_name_plural = "Módulos"
+
     def __str__(self):
         return self.nombre
 
@@ -47,17 +51,17 @@ class UserProfile(models.Model):
     ]
 
     ROLES = (
-        ('SUPERADMIN', 'Dueño del Software'),
-        ('DUEÑO', 'Dueño de Empresa (Tenant Owner)'),
-        ('EMPLEADO', 'Empleado de Empresa'),
-        ('CLIENTE', 'Cliente Final'),
+        ('superadmin', 'Dueño del Software'),
+        ('owner', 'Dueño de Empresa (Tenant Owner)'),
+        ('employee', 'Empleado de Empresa'),
+        ('cliente', 'Cliente Final'),
     )
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     
     # Sistema Multi-tenant
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='empleados')
-    rol = models.CharField(max_length=20, choices=ROLES, default='DUEÑO')
+    rol = models.CharField(max_length=20, choices=ROLES, default='owner')
     
     # Si el usuario es EMPLEADO, aquí se asigna qué rol tiene dentro de la empresa
     rol_empresa = models.ForeignKey(RolEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')

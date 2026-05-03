@@ -154,6 +154,8 @@ class ConfiguracionSaaS(models.Model):
     paypal_client_id = models.CharField(max_length=255, blank=True, verbose_name="PayPal Client ID")
     paypal_secret_key = models.CharField(max_length=255, blank=True, verbose_name="PayPal Secret Key")
     payphone_token = models.CharField(max_length=255, blank=True, verbose_name="PayPhone Bearer Token")
+    support_email = models.EmailField(blank=True, null=True, verbose_name="Email de Soporte", help_text="Correo para recibir y enviar notificaciones de tickets")
+    nombre_plataforma = models.CharField(max_length=100, default="Tiendita SaaS", verbose_name="Nombre de la Plataforma")
     
     class Meta:
         verbose_name = "Configuración SaaS"

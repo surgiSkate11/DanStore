@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | {{ empresa.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --tenant-primary:       #3b82f6;
+        --tenant-primary-light: #eff6ff;
+        --tenant-primary-mid:   #bfdbfe;
+        --tenant-success:       #059669;
+        --tenant-success-light: #ecfdf5;
+        --tenant-warning:       #d97706;
+        --tenant-warning-light: #fffbeb;
+        --tenant-indigo:        #6366f1;
+        --tenant-indigo-light:  #eef2ff;
+        --tenant-indigo-mid:    #c7d2fe;
+        --tenant-dark:          #0f172a;
+        --tenant-dark-2:        #1e293b;
+        --tenant-muted:         #64748b;
+        --tenant-muted-light:   #94a3b8;
+        --tenant-border:        #e2e8f0;
+        --tenant-border-light:  #f1f5f9;
+        --tenant-bg:            #f8fafc;
+        --radius-lg: 22px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+        --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03);
+        --shadow-hover: 0 16px 24px -4px rgba(0,0,0,0.07), 0 6px 10px -4px rgba(0,0,0,0.04);
+    }
+
+    body {
+        background-color: var(--tenant-bg);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--tenant-dark);
+    }
+
+    /* ─── WELCOME BANNER ─────────────────────────────────── */
+    .tenant-welcome {
+        background: linear-gradient(130deg, #eff6ff 0%, #eef2ff 55%, #f5f3ff 100%);
+        border: 1px solid var(--tenant-primary-mid);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem 3rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .tenant-welcome::after {
+        content: '';
+        position: absolute;
+        top: -60%;
+        right: -5%;
+        width: 420px;
+        height: 420px;
+        background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .welcome-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-sm);
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--tenant-primary);
+        border: 1px solid var(--tenant-primary-mid);
+        box-shadow: 0 4px 10px -2px rgba(59,130,246,0.12);
+        flex-shrink: 0;
+    }
+
+    .welcome-title {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        margin-bottom: 0.4rem;
+        color: var(--tenant-dark);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+    }
+
+    .welcome-sub {
+        font-size: 0.9rem;
+        color: var(--tenant-muted);
+        font-weight: 500;
+        margin: 0;
+        padding-left: 4.5rem;
+        position: relative;
+    }
+
+    .export-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: white;
+        border: 1px solid var(--tenant-border);
+        color: var(--tenant-dark-2);
+        font-size: 0.83rem;
+        font-weight: 700;
+        padding: 0.65rem 1.3rem;
+        border-radius: 100px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        z-index: 1;
+    }
+
+    .export-btn:hover {
+        background: var(--tenant-primary);
+        border-color: var(--tenant-primary);
+        color: white;
+        box-shadow: 0 4px 14px rgba(59,130,246,0.28);
+    }
+
+    /* ─── KPI CARDS ───────────────────────────────────────── */
+    .tenant-kpi {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.75rem 2rem;
+        border: 1px solid var(--tenant-border);
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .tenant-kpi::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--kpi-color, var(--tenant-primary));
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+
+    .tenant-kpi:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-hover);
+        border-color: #cbd5e1;
+    }
+
+    .kpi-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0;
+    }
+
+    .kpi-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .kpi-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--tenant-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.55rem;
+        display: block;
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--tenant-dark);
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ─── PANEL ───────────────────────────────────────────── */
+    .tenant-panel {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 1.75rem 2rem;
+        border: 1px solid var(--tenant-border);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
+    }
+
+    .panel-heading {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--tenant-dark);
+        letter-spacing: -0.025em;
+        margin-bottom: 1.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    .panel-heading-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+    }
+
+    /* ─── ACTION CARDS ────────────────────────────────────── */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: 2rem 1.75rem;
+        text-align: center;
+        border: 1px solid var(--tenant-border);
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        text-decoration: none !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+    }
+
+    .action-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-hover);
+    }
+
+    .action-icon {
+        width: 68px;
+        height: 68px;
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        margin-bottom: 1.25rem;
+        transition: transform 0.25s ease;
+    }
+
+    .action-card:hover .action-icon {
+        transform: scale(1.08);
+    }
+
+    .action-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: var(--tenant-dark);
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.025em;
+    }
+
+    .action-desc {
+        font-size: 0.875rem;
+        color: var(--tenant-muted);
+        margin-bottom: 1.5rem;
+        flex-grow: 1;
+        font-weight: 500;
+        line-height: 1.65;
+    }
+
+    .action-btn {
+        width: 100%;
+        padding: 0.7rem 1.5rem;
+        border-radius: var(--radius-sm);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        font-size: 0.78rem;
+        transition: all 0.2s ease;
+        text-decoration: none !important;
+        display: block;
+        text-align: center;
+    }
+
+    /* ─── VARIANTS ────────────────────────────────────────── */
+    .variant-primary { --v-color: var(--tenant-primary); --v-bg: var(--tenant-primary-light); }
+    .variant-success { --v-color: var(--tenant-success); --v-bg: var(--tenant-success-light); }
+    .variant-warning { --v-color: var(--tenant-warning); --v-bg: var(--tenant-warning-light); }
+    .variant-indigo  { --v-color: var(--tenant-indigo);  --v-bg: var(--tenant-indigo-light);  }
+
+    .action-card.variant-primary:hover { border-color: var(--tenant-primary-mid); }
+    .action-card.variant-success:hover { border-color: #6ee7b7; }
+    .action-card.variant-warning:hover { border-color: #fcd34d; }
+
+    .icon-variant { background: var(--v-bg); color: var(--v-color); }
+
+    .btn-variant {
+        background: var(--v-bg);
+        color: var(--v-color);
+        border: 1px solid transparent;
+    }
+
+    .btn-variant:hover {
+        background: var(--v-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    /* ─── SECTION LABEL ───────────────────────────────────── */
+    .section-label {
+        font-size: 1rem;
+        font-weight: 800;
+        color: var(--tenant-dark);
+        letter-spacing: -0.025em;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-xl-5">
+
+    <!-- Welcome Banner -->
+    <div class="tenant-welcome">
+        <div class="position-relative z-1">
+            <h1 class="welcome-title">
+                <div class="welcome-avatar">
+                    {{ empresa.nombre|make_list|first|upper }}
+                </div>
+                Bienvenido, {{ user.first_name|default:user.username }}
+            </h1>
+            <p class="welcome-sub">
+                Resumen operativo de <strong style="color: var(--tenant-dark); font-weight: 800;">{{ empresa.nombre }}</strong>
+            </p>
+        </div>
+        {% if rol_usuario == 'owner' %}
+        <div class="position-relative z-1">
+            <a href="{% url 'exportar_clientes_csv' %}" class="export-btn">
+                <i class="bi bi-cloud-download text-primary"></i> Exportar Clientes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="tenant-kpi" style="--kpi-color: var(--tenant-primary);">
+                <div class="kpi-header">
+                    <div>
+                        <span class="kpi-label">Ventas del Mes</span>
+                        <div class="kpi-value">${{ ventas_mes|floatformat:2 }}</div>
+                    </div>
+                    <div class="kpi-icon variant-primary icon-variant">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="tenant-kpi" style="--kpi-color: var(--tenant-success);">
+                <div class="kpi-header">
+                    <div>
+                        <span class="kpi-label">Productos Activos</span>
+                        <div class="kpi-value">{{ productos_activos }}</div>
+                    </div>
+                    <div class="kpi-icon variant-success icon-variant">
+                        <i class="bi bi-box-seam-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="tenant-kpi" style="--kpi-color: var(--tenant-indigo);">
+                <div class="kpi-header">
+                    <div>
+                        <span class="kpi-label">Nuevos Clientes</span>
+                        <div class="kpi-value">{{ nuevos_clientes }}</div>
+                    </div>
+                    <div class="kpi-icon variant-indigo icon-variant">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="tenant-panel">
+        <h3 class="panel-heading">
+            <span class="panel-heading-icon bg-primary bg-opacity-10 text-primary">
+                <i class="bi bi-graph-up-arrow"></i>
+            </span>
+            Mis Ingresos Recientes
+        </h3>
+        <div id="ventasChart" style="min-height: 300px;"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section-label mt-4">
+        <span class="panel-heading-icon bg-warning bg-opacity-10 text-warning" style="width:32px;height:32px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:0.95rem;">
+            <i class="bi bi-lightning-charge-fill"></i>
+        </span>
+        Accesos Rápidos
+    </div>
+    <div class="action-grid">
+        {% if 'ventas' in modulos_permitidos and 'crear' in permisos.ventas %}
+        <div class="action-card variant-primary">
+            <div class="action-icon icon-variant"><i class="bi bi-receipt-cutoff"></i></div>
+            <h4 class="action-title">Nueva Factura</h4>
+            <p class="action-desc">Registra una nueva venta y genera un comprobante profesional al instante.</p>
+            <a href="{% url 'crear_venta' %}" class="action-btn btn-variant">Facturar Ahora</a>
+        </div>
+        {% endif %}
+
+        {% if 'productos' in modulos_permitidos and 'crear' in permisos.productos %}
+        <div class="action-card variant-success">
+            <div class="action-icon icon-variant"><i class="bi bi-bag-plus-fill"></i></div>
+            <h4 class="action-title">Añadir Producto</h4>
+            <p class="action-desc">Ingresa nueva mercancía a tu inventario para empezar a vender inmediatamente.</p>
+            <a href="{% url 'crear_producto' %}" class="action-btn btn-variant">Crear Producto</a>
+        </div>
+        {% endif %}
+
+        {% if 'reportes' in modulos_permitidos %}
+        <div class="action-card variant-warning">
+            <div class="action-icon icon-variant"><i class="bi bi-pie-chart-fill"></i></div>
+            <h4 class="action-title">Reportes y Datos</h4>
+            <p class="action-desc">Consulta estadísticas detalladas y exporta datos para tu contabilidad.</p>
+            <a href="{% url 'tenant_reportes' %}" class="action-btn btn-variant">Ver Reportes</a>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fontFamily = 'Plus Jakarta Sans, sans-serif';
+    const muted = '#94a3b8';
+    const gridColor = '#f1f5f9';
+
+    new ApexCharts(document.querySelector("#ventasChart"), {
+        series: [{ name: 'Ingresos por Ventas', data: {{ totales_chart|safe }} }],
+        chart: {
+            type: 'area', height: 300,
+            fontFamily, toolbar: { show: false }, parentHeightOffset: 0,
+            animations: { enabled: true, easing: 'easeinout', speed: 600 }
+        },
+        colors: ['#3b82f6'],
+        fill: {
+            type: 'gradient',
+            gradient: { shadeIntensity: 1, opacityFrom: 0.38, opacityTo: 0.02, stops: [0, 100] }
+        },
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 2.5 },
+        xaxis: {
+            categories: {{ fechas_chart|safe }},
+            tooltip: { enabled: false },
+            axisBorder: { show: false }, axisTicks: { show: false },
+            labels: { style: { colors: muted, fontSize: '12px', fontWeight: 600 } }
+        },
+        yaxis: {
+            labels: {
+                formatter: v => "$" + v.toFixed(0),
+                style: { colors: muted, fontSize: '12px', fontWeight: 600 }
+            }
+        },
+        grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 8, right: 0 } },
+        tooltip: {
+            theme: 'light',
+            y: { formatter: val => "$" + val.toFixed(2) },
+            style: { fontFamily }
+        }
+    }).render();
+});
+</script>
+{% endblock %}

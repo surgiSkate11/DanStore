@@ -5,183 +5,247 @@
 
 {% block extra_css %}
 <style>
-    body { background-color: #f1f5f9; } /* Restauramos el scroll natural por si la pantalla es muy pequeña */
-    main.container-fluid { padding: 2rem 1.5rem 3rem 1.5rem !important; height: calc(100vh - 85px); min-height: 650px; }
+    /* Bloqueamos el scroll de toda la ventana para manejarlo por paneles */
+    html, body { height: 100%; overflow: hidden; background: #ffffff; }
     
-    .inbox-container { 
-        height: 100%; 
-        display: flex; 
-        background: #f4f7fb; 
-        border-radius: 24px; 
-        box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); 
-        border: 1px solid rgba(226, 232, 240, 0.8); 
-        overflow: hidden; 
+    /* Ocultamos el footer y sobreescribimos los margenes/paddings del contenedor global */
+    footer { display: none !important; }
+    main.container-fluid, main.container { 
+        padding: 0 !important; 
+        margin: 0 !important; 
+        max-width: 100% !important; 
+        height: calc(100vh - 65px); /* Ajusta al alto debajo del navbar */
     }
     
-    /* Columna Izquierda (Lista) */
-    .inbox-list { width: 380px; border-right: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column; flex-shrink: 0; z-index: 2; }
-    .inbox-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; z-index: 10; }
-    .ticket-list-wrapper { flex-grow: 1; overflow-y: auto; padding: 1rem 0; }
+    /* Layout General Estilo Gmail */
+    .gmail-layout { display: flex; height: 100%; width: 100%; background: #ffffff; border-top: 1px solid #e2e8f0; }
     
-    .ticket-item { 
-        margin: 0 1rem 0.5rem 1rem; padding: 1.25rem; border-radius: 16px; border: 1px solid transparent; 
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); text-decoration: none; display: block; color: inherit; position: relative; 
-    }
-    .ticket-item:hover { background-color: rgba(255,255,255,0.6); border-color: #e2e8f0; }
-    .ticket-item.active { background-color: #ffffff; border-color: #e2e8f0; box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05); }
-    .ticket-item.active::before { 
-        content: ''; position: absolute; left: -1px; top: 15%; height: 70%; width: 4px; 
-        background: #3b82f6; border-radius: 0 4px 4px 0; 
-    }
+    /* 1. Panel de Carpetas (Sidebar) */
+    .gmail-sidebar { width: 260px; background: #f8fafc; border-right: 1px solid #e2e8f0; padding: 1.5rem 1rem; display: flex; flex-direction: column; flex-shrink: 0; }
+    .folder-item { display: flex; align-items: center; padding: 0.75rem 1.25rem; color: #475569; font-weight: 600; border-radius: 0 50px 50px 0; margin-left: -1rem; margin-bottom: 0.25rem; text-decoration: none; transition: all 0.2s; }
+    .folder-item:hover { background: #f1f5f9; color: #0f172a; }
+    .folder-item.active { background: #e0e7ff; color: #4338ca; font-weight: 700; }
+    .folder-item i { margin-right: 1rem; font-size: 1.15rem; }
     
-    /* Columna Derecha (Chat) */
-    .inbox-detail { flex-grow: 1; display: flex; flex-direction: column; background: #f4f7fb; height: 100%; }
-    .chat-header { padding: 1.5rem 2rem; border-bottom: 1px solid #e2e8f0; background: #ffffff; z-index: 10; box-shadow: 0 4px 15px -10px rgba(0,0,0,0.05); }
-    .chat-body { flex-grow: 1; overflow-y: auto; padding: 2rem; background: #f4f7fb; }
-    .chat-footer { padding: 1.5rem 2rem; background: #ffffff; z-index: 10; border-top: 1px solid #e2e8f0; margin-top: auto; }
+    /* 2. Lista de Tickets */
+    .gmail-list { width: 400px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; }
+    .list-header { padding: 0.75rem 1.5rem; border-bottom: 1px solid #e2e8f0; background: #ffffff; display: flex; align-items: center; justify-content: space-between; }
+    .ticket-scroll { overflow-y: auto; flex-grow: 1; }
+    .ticket-row { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.2s; text-decoration: none; display: block; color: inherit; border-left: 4px solid transparent; }
+    .ticket-row:hover { background: #f8fafc; box-shadow: inset 1px 0 0 #e2e8f0, inset -1px 0 0 #e2e8f0; }
+    .ticket-row.active { background: #eff6ff; border-left-color: #4338ca; }
     
-    /* Burbujas de Chat */
-    .chat-bubble { max-width: 75%; padding: 1.25rem; border-radius: 20px; margin-bottom: 1.5rem; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-    .bubble-customer { background: #ffffff; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; margin-right: auto; color: #334155; }
-    .bubble-staff { background: linear-gradient(135deg, #3b82f6, #2563eb); border-bottom-right-radius: 4px; margin-left: auto; color: white; border: 1px solid #2563eb; }
-    .bubble-meta { font-size: 0.75rem; font-weight: 600; opacity: 0.7; margin-top: 8px; display: block; }
+    /* 3. Panel de Lectura (Detalle) */
+    .gmail-detail { flex-grow: 1; display: flex; flex-direction: column; background: #ffffff; height: 100%; overflow: hidden; }
     
-    /* Input Footer Premium */
-    .chat-input-wrapper { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 0.5rem; display: flex; align-items: flex-end; transition: all 0.3s; }
-    .chat-input-wrapper:focus-within { background: #ffffff; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-    .chat-input { background: transparent !important; border: none !important; resize: none; padding: 0.75rem 1rem; max-height: 150px; min-height: 48px; box-shadow: none !important; }
-    .chat-input:focus { outline: none; }
+    /* Toolbar del Detalle */
+    .detail-toolbar { padding: 0.75rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.5rem; background: #ffffff; }
+    .toolbar-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: transparent; color: #475569; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 1.15rem; }
+    .toolbar-btn:hover { background: #f1f5f9; color: #0f172a; }
+    .toolbar-btn.danger:hover { background: #fee2e2; color: #ef4444; }
     
-    .empty-state { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; background: #f4f7fb; }
+    /* Contenido del Chat (estilo Email Thread) */
+    .detail-content { flex-grow: 1; overflow-y: auto; padding: 0 2.5rem 2rem 2.5rem; background: #ffffff; }
+    .thread-title { padding: 2rem 0 1rem 0; }
     
-    /* Animación de recarga */
-    @keyframes spinFast { 100% { transform: rotate(360deg); } }
-    .spin-icon { animation: spinFast 0.8s linear infinite; }
+    .message-card { display: flex; gap: 1.25rem; margin-bottom: 1.5rem; }
+    .message-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4338ca; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; font-size: 1.2rem;}
+    .message-body { flex-grow: 1; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .message-staff .message-body { background: #f8fafc; border-color: #cbd5e1; }
+    
+    /* Caja de Respuesta Integrada */
+    .reply-box { margin-top: 1rem; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: all 0.3s; }
+    .reply-box:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .reply-box textarea { border: none; box-shadow: none; resize: vertical; min-height: 120px; padding: 1.25rem; font-size: 0.95rem; }
+    .reply-box textarea:focus { outline: none; box-shadow: none; }
+    .reply-actions { padding: 0.75rem 1.25rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="inbox-container">
-    <!-- PANEL IZQUIERDO: LISTA DE TICKETS -->
-    <div class="inbox-list">
-        <div class="inbox-header position-sticky top-0 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bolder text-dark mb-0" style="letter-spacing: -0.5px;"><i class="bi bi-inbox-fill text-primary me-2"></i>Bandeja de Soporte</h5>
-            <button onclick="recargarBandeja(this)" class="btn btn-sm btn-light border-0 rounded-circle text-primary shadow-sm d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Actualizar bandeja" data-bs-toggle="tooltip">
-                <i class="bi bi-arrow-clockwise fs-5"></i>
+<div class="gmail-layout">
+    
+    <!-- 1. PANEL DE CARPETAS (SIDEBAR) -->
+    <div class="gmail-sidebar">
+        <a href="?filtro=inbox" class="folder-item {% if filtro_actual != 'archivados' %}active{% endif %}">
+            <i class="bi bi-inbox-fill"></i> Bandeja de entrada
+        </a>
+        <a href="?filtro=archivados" class="folder-item {% if filtro_actual == 'archivados' %}active{% endif %}">
+            <i class="bi bi-archive-fill"></i> Archivados / Resueltos
+        </a>
+    </div>
+
+    <!-- 2. PANEL DE LISTA DE TICKETS -->
+    <div class="gmail-list">
+        <div class="list-header">
+            <button onclick="window.location.reload()" class="toolbar-btn" title="Actualizar Lista" data-bs-toggle="tooltip">
+                <i class="bi bi-arrow-clockwise"></i>
             </button>
+            <span class="text-muted small fw-semibold">{{ tickets.count }} conversaciones</span>
         </div>
-        
         <div class="ticket-list-wrapper">
         {% for ticket in tickets %}
-        <a href="?id={{ ticket.id }}" class="ticket-item {% if ticket_activo and ticket_activo.id == ticket.id %}active{% endif %}">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <span class="fw-bold text-dark text-truncate d-block" style="max-width: 80%;">{{ ticket.empresa.nombre }}</span>
-                <span class="small text-muted" style="font-size: 0.7rem;">{{ ticket.actualizado_en|date:"d M" }}</span>
+        <a href="?id={{ ticket.id }}&filtro={{ filtro_actual }}" class="ticket-row {% if ticket_activo and ticket_activo.id == ticket.id %}active{% endif %}">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-bolder text-dark text-truncate" style="font-size: 0.95rem; max-width: 75%;">{{ ticket.empresa.nombre }}</span>
+                <span class="small text-muted" style="font-size: 0.75rem;">{{ ticket.actualizado_en|date:"d M" }}</span>
             </div>
-            <p class="small text-muted mb-2 text-truncate fw-semibold">{{ ticket.asunto }}</p>
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="badge 
-                    {% if ticket.estado == 'abierto' %}bg-danger bg-opacity-10 text-danger
-                    {% elif ticket.estado == 'en_progreso' %}bg-warning bg-opacity-10 text-warning
-                    {% else %}bg-success bg-opacity-10 text-success{% endif %} rounded-pill px-2 py-1" style="font-size: 0.7rem;">
-                    {{ ticket.get_estado_display }}
-                </span>
-                {% if ticket.prioridad == 'alta' or ticket.prioridad == 'critica' %}
-                    <i class="bi bi-exclamation-circle-fill text-danger" title="Prioridad Alta"></i>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                {% if ticket.estado == 'abierto' %}
+                    <span class="badge bg-danger rounded-pill" style="font-size: 0.6rem;">NUEVO</span>
+                {% elif ticket.estado == 'en_progreso' %}
+                    <span class="badge bg-warning text-dark rounded-pill" style="font-size: 0.6rem;">EN CURSO</span>
+                {% else %}
+                    <span class="badge bg-secondary rounded-pill" style="font-size: 0.6rem;">RESUELTO</span>
                 {% endif %}
+                <span class="fw-semibold text-dark text-truncate" style="font-size: 0.85rem;">{{ ticket.asunto }}</span>
             </div>
+            <p class="text-muted small mb-0 text-truncate" style="opacity: 0.8;">
+                {{ ticket.mensajes.last.mensaje|truncatechars:65|default:"Sin mensajes" }}
+            </p>
         </a>
         {% empty %}
-        <div class="p-5 text-center text-muted">
-            <i class="bi bi-check-circle-fill text-success opacity-50 fs-1 d-block mb-2"></i>
-            <p class="small fw-semibold">No hay tickets pendientes.</p>
+        <div class="p-5 text-center text-muted d-flex flex-column align-items-center justify-content-center h-100">
+            <i class="bi bi-inbox-fill text-primary" style="font-size: 4rem; opacity: 0.2; margin-bottom: 1rem;"></i>
+            <h6 class="fw-bold">Todo al día</h6>
+            <p class="small">No tienes tickets en esta vista.</p>
         </div>
         {% endfor %}
         </div>
     </div>
 
-    <!-- PANEL DERECHO: DETALLE DEL TICKET -->
-    <div class="inbox-detail">
+    <!-- 3. PANEL DE LECTURA DE CORREO/TICKET -->
+    <div class="gmail-detail">
         {% if ticket_activo %}
-        <div class="chat-header d-flex justify-content-between align-items-center">
-            <div>
-                <h4 class="fw-bolder text-dark mb-1" style="letter-spacing: -0.5px;">{{ ticket_activo.asunto }}</h4>
-                <p class="text-muted small fw-semibold mb-0">
-                    <span class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle me-1" style="width: 24px; height: 24px;">
-                        {{ ticket_activo.empresa.nombre|make_list|first|upper }}
-                    </span>
-                    {{ ticket_activo.empresa.nombre }}
-                    <span class="mx-2 opacity-25">|</span>
-                    <i class="bi bi-tag ms-2 me-1"></i> {{ ticket_activo.get_categoria_display }}
-                </p>
-            </div>
-            <form method="POST" action="?id={{ ticket_activo.id }}" class="d-flex align-items-center gap-2">
-                {% csrf_token %}
-                <select name="estado" class="form-select form-select-sm bg-light border-0 fw-bold text-secondary rounded-pill px-3 shadow-sm" onchange="this.form.submit()">
-                    <option value="abierto" {% if ticket_activo.estado == 'abierto' %}selected{% endif %}>🔴 Abierto</option>
-                    <option value="en_progreso" {% if ticket_activo.estado == 'en_progreso' %}selected{% endif %}>🟡 En Progreso</option>
-                    <option value="resuelto" {% if ticket_activo.estado == 'resuelto' %}selected{% endif %}>🟢 Resuelto</option>
-                </select>
-            </form>
-        </div>
         
-        <div class="chat-body" id="chatBody">
-            {% for msj in ticket_activo.mensajes.all %}
-            <div class="chat-bubble {% if msj.es_staff %}bubble-staff{% else %}bubble-customer{% endif %}">
-                <div class="fw-bold mb-1" style="font-size: 0.8rem; opacity: 0.8;">
-                    {% if msj.es_staff %}<i class="bi bi-headset me-1"></i> Soporte Tiendita{% else %}<i class="bi bi-person-circle me-1"></i> {{ msj.remitente.first_name|default:msj.remitente.username }}{% endif %}
-                </div>
-                {{ msj.mensaje|linebreaksbr }}
+        <!-- Barra de Herramientas Estilo Gmail -->
+        <div class="detail-toolbar">
+            <form method="POST" action="?id={{ ticket_activo.id }}&filtro={{ filtro_actual }}" id="actionForm" class="d-flex gap-1 m-0 w-100 align-items-center">
+                {% csrf_token %}
                 
-                {% if msj.adjunto %}
-                <div class="mt-3 p-3 rounded-3" style="background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.05);">
-                    <a href="{{ msj.adjunto.url }}" target="_blank" class="text-decoration-none {% if msj.es_staff %}text-white{% else %}text-primary{% endif %} fw-bold small d-flex align-items-center gap-2">
-                        <i class="bi bi-paperclip fs-5 me-2"></i> Ver archivo adjunto
-                    </a>
-                </div>
+                {% if ticket_activo.estado != 'resuelto' %}
+                <button type="submit" name="estado" value="resuelto" class="toolbar-btn" data-bs-toggle="tooltip" title="Archivar (Marcar como Resuelto)">
+                    <i class="bi bi-archive-fill"></i>
+                </button>
+                {% else %}
+                <button type="submit" name="estado" value="abierto" class="toolbar-btn" data-bs-toggle="tooltip" title="Mover a Recibidos">
+                    <i class="bi bi-inbox-fill"></i>
+                </button>
                 {% endif %}
                 
-                <span class="bubble-meta">{{ msj.creado_en|date:"d M, H:i" }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        
-        <div class="chat-footer">
-            <form method="POST" action="?id={{ ticket_activo.id }}" enctype="multipart/form-data" class="mb-0">
-                {% csrf_token %}
-                <div class="chat-input-wrapper">
-                    <label class="btn btn-link text-secondary rounded-circle d-flex align-items-center justify-content-center p-0 m-1" style="width: 40px; height: 40px; cursor: pointer;">
-                        <i class="bi bi-paperclip fs-4"></i>
-                        <input type="file" name="adjunto" class="d-none">
-                    </label>
-                    <textarea name="mensaje" class="form-control chat-input" rows="1" placeholder="Escribe tu respuesta aquí..." required oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
-                    <button type="submit" class="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center m-1" style="width: 40px; height: 40px;">
-                        <i class="bi bi-send-fill"></i>
-                    </button>
+                <button type="button" onclick="confirmarEliminar()" class="toolbar-btn danger" data-bs-toggle="tooltip" title="Eliminar definitivamente">
+                    <i class="bi bi-trash-fill"></i>
+                </button>
+                
+                <!-- Input oculto para gatillar la eliminación en Python -->
+                <input type="hidden" name="eliminar_ticket" id="eliminarInput" value="">
+                
+                <!-- Badge de Status Visual -->
+                <div class="ms-auto pe-2">
+                    <span class="badge {% if ticket_activo.estado == 'abierto' %}bg-danger{% elif ticket_activo.estado == 'en_progreso' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                        Estado: {{ ticket_activo.get_estado_display }}
+                    </span>
                 </div>
             </form>
         </div>
+        
+        <!-- Hilo de Mensajes -->
+        <div class="detail-content" id="chatBody">
+            
+            <!-- Título del Hilo -->
+            <div class="thread-title">
+                <h2 class="fw-normal text-dark mb-3" style="font-size: 1.6rem; letter-spacing: -0.5px;">{{ ticket_activo.asunto }}</h2>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-light text-dark border px-2 py-1"><i class="bi bi-tag-fill text-muted"></i> {{ ticket_activo.get_categoria_display }}</span>
+                    <span class="text-muted small fw-semibold">Ticket de Soporte #{{ ticket_activo.id }}</span>
+                </div>
+            </div>
+            
+            {% for msj in ticket_activo.mensajes.all %}
+            <div class="message-card {% if msj.es_staff %}message-staff{% endif %}">
+                <div class="message-avatar">
+                    {% if msj.es_staff %}
+                        <i class="bi bi-headset"></i>
+                    {% else %}
+                        {{ msj.remitente.first_name|default:msj.remitente.username|make_list|first|upper }}
+                    {% endif %}
+                </div>
+                <div class="message-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <strong class="text-dark fs-6">
+                                {% if msj.es_staff %}Equipo de Soporte{% else %}{{ msj.remitente.first_name|default:msj.remitente.username }}{% endif %}
+                            </strong>
+                            <span class="text-muted small ms-2 d-none d-md-inline">&lt;{{ msj.remitente.email|default:"Sin correo registrado" }}&gt;</span>
+                        </div>
+                        <span class="text-muted small fw-semibold" title="{{ msj.creado_en|date:'d/m/Y H:i' }}">{{ msj.creado_en|timesince }}</span>
+                    </div>
+                    
+                    <div class="text-dark" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;">{{ msj.mensaje }}</div>
+                    
+                    {% if msj.adjunto %}
+                    <div class="mt-4 pt-3 border-top">
+                        <a href="{{ msj.adjunto.url }}" target="_blank" class="btn btn-sm btn-light border fw-semibold text-primary shadow-sm rounded-pill px-3">
+                            <i class="bi bi-paperclip"></i> Ver archivo adjunto
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Caja de Respuesta -->
+            <div class="message-card mt-5">
+                <div class="message-avatar" style="background: #10b981; color: white;">
+                    <i class="bi bi-reply-fill"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <form method="POST" action="?id={{ ticket_activo.id }}&filtro={{ filtro_actual }}" enctype="multipart/form-data" class="reply-box">
+                        {% csrf_token %}
+                        <textarea name="mensaje" class="form-control" placeholder="Escribe tu respuesta aquí..." required></textarea>
+                        <div class="reply-actions">
+                            <label class="btn btn-sm btn-light border text-muted fw-semibold mb-0 px-3 rounded-pill" style="cursor: pointer;">
+                                <i class="bi bi-paperclip"></i> Adjuntar archivo
+                                <input type="file" name="adjunto" class="d-none">
+                            </label>
+                            
+                            <div class="d-flex gap-2">
+                                <select name="estado" class="form-select form-select-sm border-0 bg-transparent text-muted" style="width: auto; font-weight: 600; cursor: pointer;">
+                                    <option value="en_progreso" {% if ticket_activo.estado == 'en_progreso' or ticket_activo.estado == 'abierto' %}selected{% endif %}>Responder y dejar En Curso</option>
+                                    <option value="resuelto">Responder y Archivar</option>
+                                </select>
+                                <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm rounded-pill"><i class="bi bi-send-fill me-1"></i> Enviar</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         {% else %}
-        <div class="empty-state">
-            <i class="bi bi-chat-square-dots-fill text-primary" style="font-size: 5rem; opacity: 0.15;"></i>
-            <h4 class="mt-3 fw-bold text-dark">Bandeja de Entrada</h4>
-            <p>Selecciona un ticket de la lista a la izquierda para comenzar a responder.</p>
+        <div class="h-100 d-flex flex-column align-items-center justify-content-center text-muted text-center" style="background: #f8fafc;">
+            <i class="bi bi-chat-square-text-fill text-primary" style="font-size: 6rem; opacity: 0.15; margin-bottom: 1.5rem;"></i>
+            <h5 class="fw-normal text-dark">Ningún mensaje seleccionado</h5>
+            <p class="small">Haz clic en un ticket de la lista para leer y responder la conversación.</p>
         </div>
         {% endif %}
     </div>
 </div>
 
 <script>
-    // Auto-scroll al fondo del chat
     const chatBody = document.getElementById('chatBody');
-    if (chatBody) { chatBody.scrollTop = chatBody.scrollHeight; }
+    if (chatBody) { chatBody.scrollTop = chatBody.scrollHeight; } // Scroll al fondo si hay mensajes
     
-    // Función para recargar la bandeja con animación
-    function recargarBandeja(btn) {
-        const icon = btn.querySelector('i');
-        icon.classList.add('spin-icon');
-        // Recarga la página limpiando los parámetros GET extras (como el id del ticket activo si deseas)
-        window.location.reload();
+    function confirmarEliminar() {
+        showConfirmationModal({
+            title: 'Eliminar Ticket',
+            message: '¿Estás seguro de que deseas eliminar este ticket permanentemente? Esta acción no se puede deshacer.',
+            icon: '<i class="bi bi-trash3-fill text-danger"></i>',
+            confirmText: 'Sí, Eliminar',
+            onConfirm: function() {
+                document.getElementById('eliminarInput').value = '1';
+                document.getElementById('actionForm').submit();
+            }
+        });
     }
 </script>
 {% endblock %}

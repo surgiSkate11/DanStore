@@ -1,27 +1,27 @@
+import json
+import re
+from decimal import Decimal
+from datetime import datetime
+from collections import defaultdict
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
-from django.conf import settings
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.urls import reverse
-import json
-import re
 from productos.models import Producto
 from .models import Venta, DetalleVenta, ConfiguracionFactura
 from clientes.models import Cliente
-from decimal import Decimal
-import io
-import os
 from empresas.mixins import requiere_modulo
 
 
 # ── VISTAS DE VENTAS ──────────────────────────────────────────────────────────
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='ver')
 def lista_ventas(request):
     """Lista todas las ventas/facturas con estadísticas"""
 
@@ -54,11 +54,9 @@ def lista_ventas(request):
 
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='ver')
 def lista_deudas(request):
     """Muestra todos los productos separados agrupados por cliente"""
-    from collections import defaultdict
-
     productos_separados = Producto.objects.filter(
         estado='reservado',
         vendido_a__isnull=False
@@ -93,7 +91,7 @@ def lista_deudas(request):
 
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='crear')
 def crear_venta(request):
     """Crea una nueva venta/factura"""
 
@@ -211,35 +209,28 @@ def crear_venta(request):
     # GET
     cliente_nombre_param = request.GET.get('cliente')
 
-    clientes_sheets = Producto.objects.filter(
-        vendido_a__isnull=False
-    ).exclude(vendido_a='').values('vendido_a').distinct().order_by('vendido_a')
-
-    clientes = []
-    for c in clientes_sheets:
-        try:
-            cliente_bd = Cliente.objects.get(nombre=c['vendido_a'])
-            clientes.append({
-                'nombre': c['vendido_a'],
-                'telefono': cliente_bd.telefono or '',
-                'direccion': cliente_bd.direccion or '',
-                'ruc_cedula': cliente_bd.ruc_cedula or '',
-                'compras': cliente_bd.cantidad_ventas()
-            })
-        except Cliente.DoesNotExist:
-            clientes.append({'nombre': c['vendido_a'], 'telefono': '', 'direccion': '', 'ruc_cedula': '', 'compras': 0})
-
-    for cliente_bd in Cliente.objects.filter(empresas=getattr(request, 'empresa', None)).order_by('nombre'):
-        if not any(c['nombre'] == cliente_bd.nombre for c in clientes):
-            clientes.append({
-                'nombre': cliente_bd.nombre,
-                'telefono': cliente_bd.telefono or '',
-                'direccion': cliente_bd.direccion or '',
-                'ruc_cedula': cliente_bd.ruc_cedula or '',
-                'compras': cliente_bd.cantidad_ventas()
-            })
-
-    clientes = sorted(clientes, key=lambda x: x['nombre'])
+    # OPTIMIZACIÓN: Cargar clientes sin N+1 Queries y calcular compras masivamente
+    empresa = getattr(request, 'empresa', None)
+    clientes_bd = Cliente.objects.filter(empresas=empresa).annotate(
+        num_compras=Count('ventas', filter=Q(ventas__empresa=empresa) & ~Q(ventas__estado='anulada'))
+    )
+    
+    clientes_dict = {}
+    for c in clientes_bd:
+        clientes_dict[c.nombre] = {
+            'nombre': c.nombre,
+            'telefono': c.telefono or '',
+            'direccion': c.direccion or '',
+            'ruc_cedula': c.ruc_cedula or '',
+            'compras': c.num_compras
+        }
+        
+    nombres_sheets = Producto.objects.filter(empresa=empresa, vendido_a__isnull=False).exclude(vendido_a='').values_list('vendido_a', flat=True).distinct()
+    for nombre in nombres_sheets:
+        if nombre not in clientes_dict:
+            clientes_dict[nombre] = {'nombre': nombre, 'telefono': '', 'direccion': '', 'ruc_cedula': '', 'compras': 0}
+            
+    clientes = sorted(list(clientes_dict.values()), key=lambda x: x['nombre'])
 
     productos_cliente_ids = []
     if cliente_nombre_param:
@@ -272,7 +263,7 @@ def crear_venta(request):
 
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='editar')
 def editar_venta(request, venta_id):
     """Edita una venta existente"""
     venta = get_object_or_404(Venta, pk=venta_id)
@@ -311,7 +302,7 @@ def editar_venta(request, venta_id):
 
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='ver')
 def detalle_venta(request, venta_id):
     """Detalle de una venta"""
     venta = get_object_or_404(
@@ -326,7 +317,7 @@ def detalle_venta(request, venta_id):
 # ── PDF CON WEASYPRINT (vía template HTML) ────────────────────────────────────
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='ver')
 def factura_pdf(request, venta_id):
     """
     Genera PDF de factura usando WeasyPrint + template HTML.
@@ -359,43 +350,9 @@ def factura_pdf(request, venta_id):
 # ── PDF CON REPORTLAB (comprobante de deuda) ──────────────────────────────────
 
 @login_required
-@requiere_modulo('ventas')
-def generar_factura_pdf(request, venta_id):
-    """
-    Genera PDF de ticket térmico usando pdfkit (formato de 80mm) y template HTML.
-    """
-    venta = get_object_or_404(
-        Venta.objects.select_related('cliente').prefetch_related(
-            'detalles__producto__tipo_producto'
-        ),
-        pk=venta_id
-    )
-    empresa_id = getattr(request, 'empresa', None).id if getattr(request, 'empresa', None) else 1
-    config = ConfiguracionFactura.obtener_configuracion(empresa_id)
-
-    html_string = render_to_string('ventas/factura_pdf.html', {
-        'venta': venta,
-        'config': config,
-    }, request=request)
-
-    # Si la petición incluye ?html=1, devolvemos el HTML crudo para que el navegador ejecute window.print()
-    if request.GET.get('html') == '1':
-        return HttpResponse(html_string)
-
-    # Usar WeasyPrint: nativo de Python, sin errores de Windows ni archivos vacíos
-    pdf = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
-
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="ticket_{venta.numero_factura}.pdf"'
-    return response
-
-
-@login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='ver')
 def generar_comprobante_deuda_pdf(request, cliente_nombre):
     """Genera PDF de comprobante de deuda para un cliente usando pdfkit (A4)"""
-    from datetime import datetime
-
     productos = Producto.objects.filter(
         estado='reservado',
         vendido_a=cliente_nombre
@@ -438,7 +395,7 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
 # ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
 
 @login_required
-@requiere_modulo('ventas')
+@requiere_modulo('ventas', accion='editar')
 def configuracion_facturas(request):
     """Configura logo, colores y datos de la empresa para las facturas"""
     # Obtención segura de la empresa (fallback a id=1 si el middleware no la inyectó)

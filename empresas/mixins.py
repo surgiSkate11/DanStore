@@ -40,7 +40,7 @@ def requiere_rol_dueño(view_func):
         if not hasattr(request, 'user') or not request.user.is_authenticated:
             raise PermissionDenied("Debe iniciar sesión.")
             
-        if hasattr(request.user, 'profile') and request.user.profile.rol == 'DUEÑO':
+        if hasattr(request.user, 'profile') and request.user.profile.rol == 'owner':
             return view_func(request, *args, **kwargs)
         elif request.user.is_superuser:
             return view_func(request, *args, **kwargs)
@@ -50,10 +50,11 @@ def requiere_rol_dueño(view_func):
     return _wrapped_view
 
 
-def requiere_modulo(modulo_codigo):
+def requiere_modulo(modulo_codigo, accion='ver'):
     """
     Decorador SaaS: Verifica si la empresa tiene el módulo activo en su plan,
     y si el usuario (si es empleado) tiene permiso asignado para verlo.
+    Permite validación granular: 'ver', 'crear', 'editar', 'eliminar'.
     """
     def decorator(view_func):
         @wraps(view_func)
@@ -63,11 +64,17 @@ def requiere_modulo(modulo_codigo):
                 
             perfil = getattr(request.user, 'profile', None)
             
-            if perfil and perfil.rol in ['SUPERADMIN', 'DUEÑO']:
+            if perfil and perfil.rol in ['superadmin', 'owner']:
                 return view_func(request, *args, **kwargs)
                 
-            if perfil and perfil.rol == 'EMPLEADO':
-                if perfil.rol_empresa and perfil.rol_empresa.modulos_permitidos.filter(codigo=modulo_codigo).exists():
+            if perfil and perfil.rol == 'employee':
+                if perfil.rol_empresa and perfil.rol_empresa.modulos_permitidos.filter(codigo__iexact=modulo_codigo).exists():
+                    permisos = perfil.rol_empresa.permisos_detallados.get(modulo_codigo, None)
+                    
+                    # Si es un rol antiguo sin JSON de permisos explícito, por retrocompatibilidad lo dejamos pasar
+                    if permisos is not None and accion not in permisos:
+                        raise PermissionDenied(f"Tu rol no tiene permiso de '{accion}' en el módulo '{modulo_codigo}'.")
+                        
                     return view_func(request, *args, **kwargs)
                 raise PermissionDenied(f"Tu rol no tiene acceso al módulo: {modulo_codigo}")
                 

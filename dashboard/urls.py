@@ -16,5 +16,6 @@ urlpatterns = [
     path('saas/control-panel/', views.saas_control_panel, name='saas_control_panel'),
     path('saas/control-panel/crear/<str:app_label>/<str:model_name>/', views.saas_crear_registro, name='saas_crear_registro'),
     path('app/dashboard/', views.dashboard_tenant, name='dashboard_tenant'),
+    path('app/reportes/', views.tenant_reportes, name='tenant_reportes'),
     path('tienda/<slug:slug>/', views.tienda_publica, name='tienda_publica'),
 ]

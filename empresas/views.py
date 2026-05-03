@@ -1,3 +1,7 @@
+import calendar
+import threading
+import stripe
+import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,11 +12,10 @@ from django.db.models import Sum, Count
 from django.utils import timezone
 from datetime import timedelta
 from django.urls import reverse
-import stripe
-import requests
-from paypalcheckoutsdk.core import PayPalHttpClient, SandboxEnvironment, LiveEnvironment
-from paypalcheckoutsdk.orders import OrdersCreateRequest
-import calendar
+from django.core.mail import send_mail
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 from usuarios.models import UserProfile, RolEmpresa, ModuloSaaS
 from .models import Empresa, SuscripcionEmpresa, Ticket, MensajeTicket, Plan, ConfiguracionSaaS
@@ -33,6 +36,19 @@ def lista_roles(request):
         rol_id = request.POST.get('rol_id')
         
         if nombre:
+            # Recolectar permisos granulares del formulario (UI)
+            permisos_json = {}
+            if modulos_ids:
+                modulos_objs = ModuloSaaS.objects.filter(id__in=modulos_ids)
+                for mod in modulos_objs:
+                    perms = request.POST.getlist(f'permisos_{mod.codigo}')
+                    if request.POST.get('granular_ui') == 'true':
+                        if 'ver' not in perms: perms.append('ver')
+                        permisos_json[mod.codigo] = perms
+                    else:
+                        # Si no viene de la nueva UI, otorga Full Access por compatibilidad
+                        permisos_json[mod.codigo] = ['ver', 'crear', 'editar', 'eliminar']
+                        
             if action == 'crear':
                 if RolEmpresa.objects.filter(empresa=request.empresa, nombre__iexact=nombre).exists():
                     messages.error(request, f"Ya existe un rol con el nombre '{nombre}'.")
@@ -40,11 +56,14 @@ def lista_roles(request):
                     rol = RolEmpresa.objects.create(empresa=request.empresa, nombre=nombre)
                     if modulos_ids:
                         rol.modulos_permitidos.set(modulos_ids)
+                    rol.permisos_detallados = permisos_json
+                    rol.save()
                     messages.success(request, f"Rol '{nombre}' creado exitosamente.")
             
             elif action == 'editar' and rol_id:
                 rol = get_object_or_404(RolEmpresa, id=rol_id, empresa=request.empresa)
                 rol.nombre = nombre
+                rol.permisos_detallados = permisos_json
                 rol.save()
                 rol.modulos_permitidos.set(modulos_ids)
                 messages.success(request, f"Rol '{nombre}' actualizado exitosamente.")
@@ -148,10 +167,15 @@ def configuracion_empresa(request):
 def crear_ticket(request):
     """Vista para que el cliente (Dueño) envíe un ticket desde el modal de soporte"""
     if request.method == 'POST':
-        asunto = request.POST.get('asunto')
+        asunto = request.POST.get('asunto', '').strip()
         categoria = request.POST.get('categoria')
-        mensaje_texto = request.POST.get('mensaje')
+        mensaje_texto = request.POST.get('mensaje', '').strip()
         adjunto = request.FILES.get('adjunto')
+        
+        # VALIDACIÓN CRÍTICA: Asunto y Mensaje Obligatorios en el Backend
+        if not asunto or not mensaje_texto:
+            messages.error(request, "El asunto y el mensaje son obligatorios para crear un ticket.")
+            return redirect(request.META.get('HTTP_REFERER', 'home'))
         
         empresa = getattr(request, 'empresa', getattr(request.user.profile, 'empresa', None))
         
@@ -168,7 +192,61 @@ def crear_ticket(request):
                 ticket=ticket, remitente=request.user, mensaje=mensaje_texto, adjunto=adjunto, es_staff=False
             )
             
-        messages.success(request, "Ticket creado exitosamente. Te contactaremos pronto.")
+        # FUNCIÓN ASÍNCRONA PARA NO BLOQUEAR LA PÁGINA
+        def enviar_correos_async():
+            try:
+                config = ConfiguracionSaaS.objects.first()
+                remitente = config.support_email if config and config.support_email else getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com')
+                nombre_app = config.nombre_plataforma if config and config.nombre_plataforma else "Tiendita SaaS"
+                
+                # 1. Correo de confirmación para el Usuario que creó el ticket
+                if request.user.email:
+                    ctx_cliente = {
+                        'usuario': request.user.first_name or request.user.username,
+                        'asunto': asunto,
+                        'categoria': ticket.get_categoria_display(),
+                        'mensaje': mensaje_texto,
+                        'app_name': nombre_app,
+                        'ticket_id': ticket.id
+                    }
+                    html_cliente = render_to_string('dashboard/ticket_creado_cliente.html', ctx_cliente)
+                    text_cliente = strip_tags(html_cliente)
+                    send_mail(
+                        subject=f"[Ticket #{ticket.id}] {asunto}",
+                        message=text_cliente,
+                        html_message=html_cliente,
+                        from_email=remitente,
+                        recipient_list=[request.user.email],
+                        fail_silently=True
+                    )
+                    
+                # 2. Correo de Alerta para el Administrador del SaaS (Dueño del Software)
+                if config and config.support_email:
+                    ctx_admin = {
+                        'empresa': empresa.nombre,
+                        'usuario': request.user.username,
+                        'asunto': asunto,
+                        'mensaje': mensaje_texto,
+                        'app_name': nombre_app,
+                        'ticket_id': ticket.id
+                    }
+                    html_admin = render_to_string('dashboard/ticket_creado_admin.html', ctx_admin)
+                    text_admin = strip_tags(html_admin)
+                    send_mail(
+                        subject=f"NUEVO TICKET: [#{ticket.id}] {asunto}",
+                        message=text_admin,
+                        html_message=html_admin,
+                        from_email=remitente,
+                        recipient_list=[config.support_email],
+                        fail_silently=True
+                    )
+            except Exception as e:
+                print(f"Error enviando correo de confirmación de ticket: {e}")
+                
+        # Lanzar en segundo plano para que la respuesta sea inmediata
+        threading.Thread(target=enviar_correos_async).start()
+            
+        messages.success(request, "Ticket enviado exitosamente. Revisa el comprobante con los detalles a tu correo electrónico.")
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 

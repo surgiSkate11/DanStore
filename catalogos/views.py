@@ -1,3 +1,8 @@
+import io
+import os
+import json
+import tempfile
+
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
@@ -13,9 +18,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from reportlab.pdfgen import canvas
-import io
-import os
-import json
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image as PILImage
 from PyPDF2 import PdfReader, PdfWriter
 from empresas.mixins import requiere_modulo
@@ -29,7 +33,7 @@ def generar_catalogo(request):
     
     # Obtener productos según filtros
     # Excluir productos vendidos y separados (no deben aparecer en catálogo público)
-    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado'])
+    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado']).select_related('tipo_producto')
     
     if filtro_form.is_valid():
         if filtro_form.cleaned_data.get('categoria'):
@@ -62,7 +66,7 @@ def preview_catalogo(request):
     """Vista para mostrar previsualización HTML del catálogo antes de descargar PDF"""
     
     # Obtener productos según filtros
-    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado'])
+    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado']).select_related('tipo_producto')
     
     # Aplicar filtros
     categoria = request.GET.get('categoria')
@@ -154,7 +158,7 @@ def descargar_catalogo(request):
     
     # Obtener productos según filtros
     # IMPORTANTE: Solo productos disponibles (excluir vendidos y separados)
-    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado'])
+    productos = Producto.objects.filter(empresa=request.empresa).exclude(estado__in=['vendido', 'separado']).select_related('tipo_producto')
     catalogo_dir = os.path.join(settings.MEDIA_ROOT, f'catalogo_tenant_{request.empresa.id}')
     
     # Aplicar filtros de la query string
@@ -253,9 +257,6 @@ def descargar_catalogo(request):
     )
     
     # Registrar fuentes personalizadas si existen
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    
     fuente_titulo_nombre = 'Helvetica-Bold'
     fuente_texto_nombre = 'Helvetica'
     
@@ -450,7 +451,6 @@ def descargar_catalogo(request):
                     img_error = str(e1)
                     try:
                         # Intento 2: Usar PIL para convertir primero
-                        import tempfile
                         pil_img = PILImage.open(producto.imagen.path)
                         # Convertir a RGB si es necesario
                         if pil_img.mode not in ('RGB', 'RGBA'):
@@ -474,10 +474,8 @@ def descargar_catalogo(request):
             else:
                 # Producto sin imagen o archivo inexistente
                 # Dibujar un recuadro o texto que indique que no hay imagen
-                from reportlab.platypus import Spacer
                 # Creamos una tabla con un "icono" de no imagen
                 no_img_data = [[Paragraph('<b style="color: #9ca3af; font-size: 14px;"><br/><br/><br/><br/>Sin Imagen</b>', style_precio)]]
-                from reportlab.platypus import Table, TableStyle
                 img = Table(no_img_data, colWidths=[img_size], rowHeights=[img_size])
                 img.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
