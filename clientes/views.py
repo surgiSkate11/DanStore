@@ -15,6 +15,7 @@ from empresas.mixins import requiere_modulo
 from tiendita_project.utils import form_errors_to_messages
 
 @login_required
+@requiere_modulo('clientes', accion='crear')
 def api_crear_cliente(request):
     if request.method == 'POST':
         try:
@@ -109,7 +110,7 @@ def lista_clientes(request):
 
 
 @login_required
-@requiere_modulo('clientes')
+@requiere_modulo('clientes', accion='crear')
 def crear_cliente(request):
     """Vista para crear un nuevo cliente desde un template dedicado (sin modal)."""
     if request.method == 'POST':
@@ -202,6 +203,34 @@ def editar_cliente(request, cliente_id):
         'cliente': cliente
     }
     return render(request, 'clientes/editar_cliente.html', context)
+
+
+@login_required
+@requiere_modulo('clientes', accion='eliminar')
+def eliminar_cliente(request, cliente_id):
+    """Elimina un cliente de forma segura, preservando el historial si es necesario."""
+    if request.method == 'POST':
+        empresa = getattr(request, 'empresa', None)
+        cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
+        
+        ventas_count = Venta.objects.filter(cliente=cliente, empresa=empresa).count()
+        nombre = cliente.nombre
+        
+        # Desvincular de la empresa en lugar de un borrado forzado para proteger la contabilidad
+        cliente.empresas.remove(empresa)
+        
+        # Intentar borrar el registro global si ya no pertenece a ninguna empresa y no tiene ventas
+        if cliente.empresas.count() == 0 and not Venta.objects.filter(cliente=cliente).exists():
+            cliente.delete()
+            messages.success(request, f'El cliente "{nombre}" ha sido eliminado completamente del sistema.')
+        else:
+            if ventas_count > 0:
+                messages.success(request, f'El cliente "{nombre}" fue ocultado del directorio. Su historial de {ventas_count} venta(s) se conserva para tus reportes.')
+            else:
+                messages.success(request, f'El cliente "{nombre}" ha sido removido de tu directorio.')
+                
+        return redirect('lista_clientes')
+    return redirect('lista_clientes')
 
 
 @login_required

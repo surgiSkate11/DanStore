@@ -1,28 +1,28 @@
-import gspread
-import os
 import json
+import os
 import re
 import uuid
-import tempfile
-from decimal import Decimal
 from collections import defaultdict
+from decimal import Decimal
 
-from google.oauth2.credentials import Credentials as OAuthCredentials
+import gspread
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.conf import settings
-from django.db import models
-from django.utils import timezone
-from django.db.models import Sum
-from django.core.cache import cache
+from google.oauth2.credentials import Credentials as OAuthCredentials
 
-from productos.models import Producto, TipoProducto
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
+from django.db import models
+from django.db.models import Sum
+from django.shortcuts import redirect, render
+from django.utils import timezone
+
 from clientes.models import Cliente
-from ventas.models import Venta, DetalleVenta
 from empresas.mixins import requiere_modulo
+from productos.models import Producto, TipoProducto
+from ventas.models import Venta, DetalleVenta
 
 
 # Permitir OAuth sobre HTTP (solo para entorno de desarrollo local)
@@ -88,7 +88,7 @@ def conectar_google_sheets(empresa=None):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='crear')
 def sincronizar_sheets(request):
     """Vista para sincronizar productos desde Google Sheets"""
     if not getattr(request, 'empresa', None):
@@ -605,7 +605,7 @@ def mapear_talla(talla, categoria):
 
 
 @login_required
-@requiere_modulo('productos')
+@requiere_modulo('productos', accion='editar')
 def subir_fotos_productos(request):
     """Vista para subir fotos a productos sincronizados desde Sheets"""
     if not getattr(request, 'empresa', None):

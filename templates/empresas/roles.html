@@ -6,12 +6,20 @@
 <style>
     .page-header { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3); color: white; margin-bottom: 2rem; }
     .section-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; height: 100%; }
-    .rol-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; transition: all 0.3s; }
-    .rol-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+    .rol-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; transition: all 0.3s; z-index: 1; }
+    .rol-card:hover, .rol-card:focus-within { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-color: #cbd5e1; z-index: 10; }
     .module-badge { background: #e0e7ff; color: #4338ca; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-right: 5px; margin-bottom: 5px; display: inline-block; }
-    .module-checkbox-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 1rem; cursor: pointer; transition: all 0.2s; }
+    .module-checkbox-card { border: 2px solid #e2e8f0; border-radius: 12px; padding: 1rem; transition: all 0.2s; }
     .module-checkbox-card:hover { border-color: #818cf8; background: #f5f3ff; }
     .form-check-input:checked + .form-check-label { font-weight: 700; color: #4338ca; }
+    
+    /* Botón de configuración discreto */
+    .btn-config-perms { border-radius: 8px; transition: all 0.2s; background: #e2e8f0; padding: 0.25rem 0.6rem;}
+    .btn-config-perms:hover { background: #cbd5e1 !important; color: #0f172a !important; }
+    
+    /* Evitar el color fuerte azul por defecto de Bootstrap al dar clic (active) en el dropdown */
+    .dropdown-item:active { background-color: #f8fafc !important; color: inherit !important; }
+    .dropdown-menu { border-radius: 14px; padding: 0.5rem; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1) !important; }
 </style>
 {% endblock %}
 
@@ -29,9 +37,24 @@
                 <h4 class="fw-bold mb-4">Roles Creados</h4>
                 {% if roles %}
                     {% for rol in roles %}
-                    <div class="rol-card">
-                        <h5 class="fw-bold text-dark mb-3">{{ rol.nombre }}</h5>
-                        <div>
+                    <div class="rol-card position-relative">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="fw-bold text-dark mb-0 pe-4">{{ rol.nombre }}</h5>
+                            
+                            <!-- Menú de Acciones -->
+                            <div class="dropdown position-absolute top-0 end-0 mt-3 me-3">
+                                <button class="btn btn-sm btn-light border-0 px-2 py-1 shadow-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical text-muted"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                                    <li><a class="dropdown-item fw-semibold text-primary py-2 rounded" href="#" onclick="editarRol('{{ rol.id }}', '{{ rol.nombre|escapejs }}', '{{ rol.modulos_ids }}', 'perms_{{ rol.id }}')"><i class="bi bi-pencil-square me-2"></i> Editar Rol</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item fw-semibold text-danger py-2 rounded" href="#" onclick="eliminarRol('{{ rol.id }}', '{{ rol.nombre|escapejs }}')"><i class="bi bi-trash-fill me-2"></i> Eliminar</a></li>
+                                </ul>
+                            </div>
+                            <script type="application/json" id="perms_{{ rol.id }}">{{ rol.permisos_json|safe }}</script>
+                        </div>
+                        <div class="pt-2">
                             {% for mod in rol.modulos_permitidos.all %}
                                 <span class="module-badge"><i class="{{ mod.icono }}"></i> {{ mod.nombre }}</span>
                             {% empty %}
@@ -53,9 +76,14 @@
         <!-- Crear Nuevo Rol -->
         <div class="col-lg-5">
             <div class="section-card">
-                <h4 class="fw-bold mb-4 text-primary"><i class="bi bi-plus-circle-fill"></i> Crear Nuevo Rol</h4>
+                <h4 class="fw-bold mb-4 text-primary" id="formTitle"><i class="bi bi-plus-circle-fill"></i> Crear Nuevo Rol</h4>
                 <form method="POST">
                     {% csrf_token %}
+                    <!-- Activa el procesamiento granular en el backend -->
+                    <input type="hidden" name="granular_ui" value="true">
+                    <input type="hidden" name="action" id="formAction" value="crear">
+                    <input type="hidden" name="rol_id" id="formRolId" value="">
+                    
                     <div class="mb-4">
                         <label class="form-label fw-bold">Nombre del Rol</label>
                         <input type="text" name="nombre" class="form-control form-control-lg" placeholder="Ej: Cajero Principal" required>
@@ -64,19 +92,151 @@
                     <label class="form-label fw-bold mb-3">Módulos Permitidos</label>
                     <div class="d-flex flex-column gap-2 mb-4">
                         {% for modulo in modulos %}
-                        <label class="module-checkbox-card d-flex align-items-center gap-3">
-                            <input class="form-check-input fs-5 mt-0" type="checkbox" name="modulos" value="{{ modulo.id }}">
-                            <div class="form-check-label">
-                                <strong class="d-block"><i class="{{ modulo.icono }} text-primary"></i> {{ modulo.nombre }}</strong>
+                        <div class="module-checkbox-card mb-2">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <label class="d-flex align-items-center gap-3 mb-0 w-100" style="cursor: pointer;">
+                                    <input class="form-check-input fs-5 mt-0 mod-main-cb" type="checkbox" name="modulos" value="{{ modulo.id }}" id="mod_{{ modulo.id }}" data-target="{{ modulo.codigo }}">
+                                    <div class="form-check-label">
+                                        <strong class="d-block text-dark"><i class="{{ modulo.icono }} text-primary me-1"></i> {{ modulo.nombre }}</strong>
+                                    </div>
+                                </label>
+                                <button type="button" class="btn btn-sm text-muted fw-bold d-none btn-config-perms" data-bs-toggle="collapse" data-bs-target="#perms_{{ modulo.codigo }}" title="Configurar permisos">
+                                    <i class="bi bi-gear-fill"></i>
+                                </button>
                             </div>
-                        </label>
+                            
+                            <!-- Panel oculto de permisos granulares -->
+                            <div class="collapse mt-2" id="perms_{{ modulo.codigo }}">
+                                <hr class="my-2 opacity-25">
+                                <div class="d-flex flex-wrap gap-3 pt-1 ms-4 ps-2">
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input perm-cb-{{ modulo.codigo }}" type="checkbox" name="permisos_{{ modulo.codigo }}" value="ver" id="ver_{{ modulo.codigo }}" checked onclick="forceVerChecked(event)">
+                                        <label class="form-check-label small fw-semibold text-secondary" for="ver_{{ modulo.codigo }}" style="cursor: pointer;"><i class="bi bi-eye me-1"></i> Leer</label>
+                                    </div>
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input perm-cb-{{ modulo.codigo }}" type="checkbox" name="permisos_{{ modulo.codigo }}" value="crear" id="crear_{{ modulo.codigo }}" checked>
+                                        <label class="form-check-label small fw-semibold text-secondary" for="crear_{{ modulo.codigo }}" style="cursor: pointer;"><i class="bi bi-plus-circle me-1"></i> Crear</label>
+                                    </div>
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input perm-cb-{{ modulo.codigo }}" type="checkbox" name="permisos_{{ modulo.codigo }}" value="editar" id="editar_{{ modulo.codigo }}" checked>
+                                        <label class="form-check-label small fw-semibold text-secondary" for="editar_{{ modulo.codigo }}" style="cursor: pointer;"><i class="bi bi-pencil me-1"></i> Editar</label>
+                                    </div>
+                                    <div class="form-check m-0">
+                                        <input class="form-check-input perm-cb-{{ modulo.codigo }}" type="checkbox" name="permisos_{{ modulo.codigo }}" value="eliminar" id="eliminar_{{ modulo.codigo }}" checked>
+                                        <label class="form-check-label small fw-semibold text-secondary" for="eliminar_{{ modulo.codigo }}" style="cursor: pointer;"><i class="bi bi-trash me-1"></i> Eliminar</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         {% endfor %}
                     </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">Guardar Rol</button>
+                    <div class="d-flex gap-3 mt-2">
+                        <button type="button" class="btn btn-light btn-lg fw-bold border d-none px-4 shadow-sm text-muted" id="btnCancelEdit" onclick="cancelarEdicion()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary btn-lg flex-grow-1 fw-bold shadow-sm" id="btnSubmitForm">Guardar Rol</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const moduleCheckboxes = document.querySelectorAll('.mod-main-cb');
+        
+        moduleCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const targetCode = this.getAttribute('data-target');
+                const btnConfig = document.querySelector(`button[data-bs-target="#perms_${targetCode}"]`);
+                const collapseDiv = document.getElementById(`perms_${targetCode}`);
+                
+                if (this.checked) {
+                    btnConfig.classList.remove('d-none');
+                    // Por defecto activamos todos los permisos al activar el módulo
+                    document.querySelectorAll(`.perm-cb-${targetCode}`).forEach(p => p.checked = true);
+                } else {
+                    btnConfig.classList.add('d-none');
+                    // Si se desactiva el módulo, ocultamos el acordeón
+                    const bsCollapse = bootstrap.Collapse.getInstance(collapseDiv);
+                    if (bsCollapse) bsCollapse.hide();
+                }
+            });
+        });
+    });
+
+    function forceVerChecked(e) {
+        // Prevenir que el usuario desmarque el permiso de lectura
+        if (!e.target.checked) {
+            e.preventDefault();
+            e.target.checked = true;
+            showDjangoToast("El permiso 'Leer' es obligatorio para acceder al módulo y no puede ser desactivado.", "warning");
+        }
+    }
+
+    function editarRol(id, nombre, modulosIds, permsScriptId) {
+        // Cambiar título y botones del form
+        document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil-square"></i> Editar Rol';
+        document.getElementById('formTitle').className = 'fw-bold mb-4 text-success';
+        document.getElementById('formAction').value = 'editar';
+        document.getElementById('formRolId').value = id;
+        
+        const btnSubmit = document.getElementById('btnSubmitForm');
+        btnSubmit.innerHTML = '<i class="bi bi-save-fill me-2"></i>Actualizar Rol';
+        btnSubmit.className = 'btn btn-primary btn-lg flex-grow-1 fw-bold shadow-sm';
+        document.getElementById('btnCancelEdit').classList.remove('d-none');
+
+        // Llenar Nombre
+        document.querySelector('input[name="nombre"]').value = nombre;
+
+        // Resetear todos los checkboxes
+        document.querySelectorAll('.mod-main-cb').forEach(cb => {
+            cb.checked = false;
+            cb.dispatchEvent(new Event('change'));
+        });
+
+        // Parsear arrays de módulos y permisos
+        const modulosList = modulosIds ? modulosIds.split(',') : [];
+        const permisosDict = JSON.parse(document.getElementById(permsScriptId).textContent || '{}');
+
+        // Activar módulos correspondientes y sus permisos granulares
+        modulosList.forEach(modId => {
+            const cleanId = modId.trim();
+            if (!cleanId) return; // Validación de seguridad
+            
+            const mainCb = document.getElementById('mod_' + cleanId);
+            if (mainCb) {
+                mainCb.checked = true;
+                mainCb.dispatchEvent(new Event('change')); // Despliega el acordeón
+                
+                const targetCode = mainCb.getAttribute('data-target');
+                const permsList = permisosDict[targetCode] || ['ver', 'crear', 'editar', 'eliminar'];
+                
+                document.querySelectorAll(`.perm-cb-${targetCode}`).forEach(p => {
+                    p.checked = permsList.includes(p.value);
+                });
+            }
+        });
+    }
+
+    function cancelarEdicion() {
+        window.location.reload(); // Recarga limpia la página para volver a estado "crear"
+    }
+
+    function eliminarRol(id, nombre) {
+        showConfirmationModal({
+            title: 'Eliminar Rol Definitivamente',
+            message: `¿Estás seguro de eliminar el rol <strong>${nombre}</strong>?<br><br><span class="text-danger small"><i class="bi bi-exclamation-triangle-fill"></i> Los empleados que tengan este rol perderán inmediatamente el acceso a todos los módulos.</span>`,
+            icon: '<i class="bi bi-trash3-fill text-danger" style="font-size:3.5rem;"></i>',
+            confirmText: 'Sí, Eliminar',
+            onConfirm: function() {
+                document.getElementById('formAction').value = 'eliminar';
+                document.getElementById('formRolId').value = id;
+                document.getElementById('formAction').closest('form').submit();
+            }
+        });
+    }
+</script>
 {% endblock %}

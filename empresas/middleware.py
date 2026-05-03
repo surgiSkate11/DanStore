@@ -1,7 +1,6 @@
-from django.utils.deprecation import MiddlewareMixin
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.core.exceptions import PermissionDenied
+from django.utils.deprecation import MiddlewareMixin
 
 class TenantMiddleware(MiddlewareMixin):
     """

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from empresas.models import Empresa
 from django.utils import timezone
+from datetime import timedelta
 
 
 class ModuloSaaS(models.Model):
@@ -148,3 +149,59 @@ class UserProfile(models.Model):
             },
         }
         return vocabularios.get(self.negocio_tipo, vocabularios['otro'])
+
+
+class AdminActionRequest(models.Model):
+    """Modelo para gestionar el Protocolo de Consenso entre Administradores"""
+    ACTION_CHOICES = (
+        ('solicitar_suspension', 'Suspender Administrador'),
+        ('solicitar_eliminacion', 'Eliminar Administrador'),
+    )
+    STATUS_CHOICES = (
+        ('pending', 'Pendiente de Votación'),
+        ('approved', 'Aprobado y Ejecutado'),
+        ('rejected', 'Rechazado'),
+        ('expired', 'Expirado por tiempo'),
+    )
+    
+    target_admin = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='targeted_actions')
+    requester = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='requested_actions')
+    action_type = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    
+    votes_approve = models.ManyToManyField(UserProfile, related_name='approved_actions', blank=True)
+    votes_reject = models.ManyToManyField(UserProfile, related_name='rejected_actions', blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=48)
+        super().save(*args, **kwargs)
+        
+    def check_and_execute(self):
+        if self.status != 'pending': 
+            return
+            
+        # 1. Expiración: Si pasaron las 48 horas sin decisión unánime, expira y no se ejecuta.
+        if timezone.now() > self.expires_at:
+            self.status = 'expired'
+            self.save()
+            return
+            
+        total_admins = UserProfile.objects.filter(rol='superadmin').exclude(id=self.target_admin.id).count()
+        total_votes = self.votes_approve.count() + self.votes_reject.count()
+        
+        # 2. Si todos los administradores elegibles ya votaron
+        if total_votes >= total_admins:
+            if self.votes_approve.count() > self.votes_reject.count():
+                self.status = 'approved'
+                if self.action_type == 'solicitar_suspension':
+                    self.target_admin.user.is_active = False
+                    self.target_admin.user.save()
+                elif self.action_type == 'solicitar_eliminacion':
+                    self.target_admin.user.delete()
+            else:
+                self.status = 'rejected'
+            self.save()

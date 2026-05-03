@@ -46,8 +46,8 @@ def perfil(request):
                 usuario.email = request.POST.get('email', '').strip()
                 usuario.save()
 
-                # 2. Si es DUEÑO, actualizamos los datos de la Empresa y Negocio
-                if perfil.rol in ['owner', 'superadmin']:
+                # 2. Si es DUEÑO, actualizamos los datos de la Empresa y Negocio Operativo
+                if perfil.rol == 'owner':
                     perfil.nombre_negocio = request.POST.get('nombre_negocio', '').strip()
                     perfil.descripcion_negocio = request.POST.get('descripcion_negocio', '').strip()
                     perfil.negocio_tipo = request.POST.get('negocio_tipo', 'otro')
@@ -108,8 +108,6 @@ def cargar_demo(request):
         empresa = getattr(request, 'empresa', None)
         
         if not perfil.usa_demo_data and empresa:
-            from productos.models import Producto, TipoProducto
-            
             # Crear una categoría y un par de productos de demostración
             tipo_demo, _ = TipoProducto.objects.get_or_create(nombre="Demo", empresa=empresa)
             

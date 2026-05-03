@@ -56,7 +56,7 @@
             </p>
             <div class="powered-by mt-5 border-top-0">
                 <span class="text-white opacity-50">Impulsado por</span>
-                <a href="/" class="text-white opacity-75"> <i class="bi bi-layers-fill"></i> Tiendita SaaS</a>
+                <a href="/" class="text-white opacity-75"> <i class="bi bi-layers-fill"></i> {{ app_name|default:"Tiendita SaaS" }}</a>
             </div>
         </div>
     </div>
@@ -124,7 +124,7 @@
     
     <div class="powered-by container">
         <span>Gestión e Inventario impulsado por</span>
-        <a href="/"> <i class="bi bi-layers-fill text-primary"></i> Tiendita SaaS</a>
+        <a href="/"> <i class="bi bi-layers-fill text-primary"></i> {{ app_name|default:"Tiendita SaaS" }}</a>
     </div>
     
     {% endif %}

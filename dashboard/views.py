@@ -26,7 +26,7 @@ from django.utils.html import strip_tags
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from empresas.models import Empresa, SuscripcionEmpresa, Plan, Ticket, MensajeTicket, ConfiguracionSaaS
-from usuarios.models import ModuloSaaS, RolEmpresa
+from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
 from ventas.models import Venta, DetalleVenta
 from productos.models import Producto
 from clientes.models import Cliente
@@ -204,6 +204,11 @@ def saas_configuracion(request):
         if payphone_token:
             config.payphone_token = payphone_token
             
+        config.transferencia_active = request.POST.get('transferencia_active') == 'on'
+        config.banco_pichincha = request.POST.get('banco_pichincha', '')
+        config.banco_guayaquil = request.POST.get('banco_guayaquil', '')
+        config.banco_jep = request.POST.get('banco_jep', '')
+            
         config.force_2fa = request.POST.get('force_2fa') == 'on'
         config.session_timeout = request.POST.get('session_timeout', 120) or 120
         
@@ -360,6 +365,121 @@ def saas_crear_registro(request, app_label, model_name):
         'titulo': f"Añadir {Modelo._meta.verbose_name.title()}",
     }
     return render(request, 'dashboard/saas_generic_form.html', context)
+
+
+@login_required
+def saas_listar_registros(request, app_label, model_name):
+    """Fábrica de Vistas: Lista dinámicamente CUALQUIER modelo del sistema"""
+    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+        raise PermissionDenied("Acceso exclusivo para administradores globales.")
+
+    try:
+        Modelo = apps.get_model(app_label, model_name)
+    except LookupError:
+        messages.error(request, "El módulo o tabla solicitada no existe.")
+        return redirect('saas_control_panel')
+
+    query = request.GET.get('q', '').strip()
+    
+    # Buscador Mágico: Busca en todos los campos de texto
+    if query:
+        q_objects = Q()
+        for field in Modelo._meta.fields:
+            if field.get_internal_type() in ['CharField', 'TextField']:
+                q_objects |= Q(**{f"{field.name}__icontains": query})
+        
+        registros = Modelo.objects.filter(q_objects).order_by('-id')[:100] if q_objects else Modelo.objects.all().order_by('-id')[:100]
+    else:
+        registros = Modelo.objects.all().order_by('-id')[:100]
+    
+    # Obtener los campos para la tabla (excluyendo contraseñas o campos conflictivos M2M)
+    campos = [f for f in Modelo._meta.fields if f.name not in ['password']]
+        
+    campos = campos[:6] # Limitar a un máximo de 6 columnas para no desbordar la pantalla
+    
+    registros_data = []
+    for reg in registros:
+        fila = []
+        for campo in campos:
+            # Obtener el valor legible (ej: en lugar de 'en_progreso', mostrar 'En Progreso')
+            if hasattr(reg, f'get_{campo.name}_display'):
+                valor = getattr(reg, f'get_{campo.name}_display')()
+            else:
+                valor = getattr(reg, campo.name)
+            fila.append(valor)
+        registros_data.append({'id': reg.id, 'fila': fila})
+
+    context = {
+        'titulo': f"Directorio de {Modelo._meta.verbose_name_plural.title()}",
+        'modelo_nombre': Modelo._meta.verbose_name.title(),
+        'app_label': app_label,
+        'model_name': model_name,
+        'campos': campos,
+        'registros_data': registros_data,
+    }
+    return render(request, 'dashboard/saas_generic_list.html', context)
+
+
+@login_required
+def saas_editar_registro(request, app_label, model_name, object_id):
+    """Fábrica de Edición: Edita cualquier registro existente de manera automática"""
+    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+        raise PermissionDenied("Acceso exclusivo para administradores globales.")
+
+    try:
+        Modelo = apps.get_model(app_label, model_name)
+    except LookupError:
+        messages.error(request, "El módulo o tabla solicitada no existe.")
+        return redirect('saas_control_panel')
+
+    instancia = get_object_or_404(Modelo, id=object_id)
+    FormularioDinamico = modelform_factory(Modelo, exclude=[])
+
+    if request.method == 'POST':
+        form = FormularioDinamico(request.POST, request.FILES, instance=instancia)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"¡Registro actualizado exitosamente en {Modelo._meta.verbose_name.title()}!")
+            return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
+        else:
+            form_errors_to_messages(request, form)
+    else:
+        form = FormularioDinamico(instance=instancia)
+
+    # Aplicar estilos Bootstrap
+    for field_name, field in form.fields.items():
+        if isinstance(field.widget, forms.CheckboxInput):
+            field.widget.attrs.update({'class': 'form-check-input ms-0 me-2', 'style': 'width: 1.5em; height: 1.5em; cursor: pointer;'})
+        elif isinstance(field.widget, forms.SelectMultiple):
+            field.widget.attrs.update({'class': 'form-select bg-light border-0 shadow-sm', 'style': 'border-radius: 12px; min-height: 120px;'})
+        elif isinstance(field.widget, forms.Select) or isinstance(field.widget, forms.Textarea) or isinstance(field.widget, forms.TextInput):
+            field.widget.attrs.update({'class': 'form-control form-control-lg bg-light border-0 shadow-sm', 'style': 'border-radius: 12px;'})
+
+    context = {
+        'form': form,
+        'titulo': f"Editar {Modelo._meta.verbose_name.title()} #{object_id}",
+    }
+    return render(request, 'dashboard/saas_generic_form.html', context)
+
+
+@login_required
+def saas_eliminar_registro(request, app_label, model_name, object_id):
+    """Fábrica de Eliminación: Borra dinámicamente un registro"""
+    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+        raise PermissionDenied("Acceso exclusivo para administradores globales.")
+
+    try:
+        Modelo = apps.get_model(app_label, model_name)
+    except LookupError:
+        messages.error(request, "El módulo o tabla solicitada no existe.")
+        return redirect('saas_control_panel')
+
+    instancia = get_object_or_404(Modelo, id=object_id)
+    if request.method == 'POST':
+        instancia.delete()
+        messages.success(request, f"Registro eliminado exitosamente.")
+        
+    return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
 
 
 @login_required
@@ -756,7 +876,100 @@ def tienda_publica(request, slug):
     if suspendida:
         return render(request, 'dashboard/tienda_publica.html', {'empresa': empresa, 'suspendida': True})
 
-    productos = Producto.objects.filter(empresa=empresa, estado='disponible').select_related('tipo_producto').order_by('-creado_en')[:20]
+    productos = Producto.objects.filter(empresa=empresa, estado='disponible').select_related('tipo_producto').order_by('-creado_en')
     
-    context = {'empresa': empresa, 'productos': productos, 'suspendida': False}
+    # Obtener categorías únicas de los productos disponibles
+    categorias = set(p.categoria for p in productos if p.categoria)
+    categorias = sorted(list(categorias))
+    
+    context = {'empresa': empresa, 'productos': productos, 'categorias': categorias, 'suspendida': False}
     return render(request, 'dashboard/tienda_publica.html', context)
+
+
+@login_required
+def saas_equipo(request):
+    """Gestión de administradores globales del sistema (SaaS)"""
+    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+        raise PermissionDenied("Acceso exclusivo para administradores globales.")
+        
+    # Evaluación Inteligente: Cierra votaciones expiradas (48h) o ejecuta si hay consenso antes
+    for req_obj in AdminActionRequest.objects.filter(status='pending'):
+        req_obj.check_and_execute()
+        
+    admins = UserProfile.objects.filter(rol=ROLE_SUPERADMIN).select_related('user').order_by('-creado_en')
+    active_requests = AdminActionRequest.objects.filter(status='pending').select_related('target_admin__user', 'requester__user').prefetch_related('votes_approve', 'votes_reject')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action', 'crear')
+        
+        if action == 'crear':
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            password = request.POST.get('password')
+            
+            if username and email and password:
+                try:
+                    with transaction.atomic():
+                        # 1. Crear el usuario nativo de Django
+                        user = User.objects.create_user(username=username, email=email, password=password)
+                        user.is_staff = True  # Para que puedan acceder al /admin/ nativo si se requiere
+                        user.save()
+                        
+                        # 2. Obtener o crear su perfil de forma segura
+                        profile, _ = UserProfile.objects.get_or_create(user=user)
+                        profile.rol = ROLE_SUPERADMIN
+                        profile.onboarding_completado = True
+                        profile.save()
+                        
+                        messages.success(request, f"Administrador {username} añadido exitosamente al Equipo del Sistema.")
+                except Exception as e:
+                    messages.error(request, f"No se pudo crear el administrador: Ya existe un usuario con ese nombre o correo.")
+                    
+        elif action in ['solicitar_suspension', 'solicitar_eliminacion']:
+            admin_id = request.POST.get('admin_id')
+            target_admin = get_object_or_404(UserProfile, id=admin_id, rol=ROLE_SUPERADMIN)
+            
+            if target_admin.user == request.user:
+                messages.error(request, "Por políticas de seguridad, no puedes realizar esta acción sobre tu propia cuenta.")
+                return redirect('saas_equipo')
+                
+            # Evaluar el consenso: Buscamos a TODOS los otros admins, excluyéndote a ti y al afectado
+            otros_admins = UserProfile.objects.filter(rol=ROLE_SUPERADMIN).exclude(id__in=[target_admin.id, request.user.profile.id])
+            
+            if not otros_admins.exists():
+                messages.warning(request, "Acción denegada: Se requiere al menos un tercer administrador en el sistema para aprobar esta solicitud (Protocolo de Consenso de Dueños).")
+            else:
+                # Verificar que no exista un consenso pendiente para este usuario
+                if AdminActionRequest.objects.filter(target_admin=target_admin, status='pending').exists():
+                    messages.warning(request, "Ya existe una votación en curso para este administrador.")
+                    return redirect('saas_equipo')
+                    
+                accion_txt = "suspender" if action == 'solicitar_suspension' else "eliminar"
+                
+                # Crear la propuesta y agregar el voto "A favor" del creador automáticamente
+                nueva_solicitud = AdminActionRequest.objects.create(target_admin=target_admin, requester=request.user.profile, action_type=action)
+                nueva_solicitud.votes_approve.add(request.user.profile)
+                nueva_solicitud.check_and_execute() # Por si solo existen 2 admins en total
+                
+                messages.success(request, f"Protocolo de Consenso activado: Se ha notificado en el panel al resto de dueños para autorizar '{accion_txt}' a '{target_admin.user.username}'. Tienen 48 horas para votar.")
+                
+        elif action == 'votar_consenso':
+            req_id = request.POST.get('request_id')
+            voto = request.POST.get('voto')
+            req = get_object_or_404(AdminActionRequest, id=req_id, status='pending')
+            
+            if req.target_admin == request.user.profile:
+                messages.error(request, "Seguridad: No puedes votar en tu propio protocolo de consenso.")
+            elif req.votes_approve.filter(id=request.user.profile.id).exists() or req.votes_reject.filter(id=request.user.profile.id).exists():
+                messages.error(request, "Ya has emitido tu voto para esta solicitud.")
+            else:
+                if voto == 'approve':
+                    req.votes_approve.add(request.user.profile)
+                else:
+                    req.votes_reject.add(request.user.profile)
+                messages.success(request, "Tu voto ha sido registrado correctamente.")
+                req.check_and_execute() # Evaluamos si con este voto se cumple la meta
+                
+        return redirect('saas_equipo')
+        
+    return render(request, 'dashboard/saas_equipo.html', {'admins': admins, 'active_requests': active_requests})

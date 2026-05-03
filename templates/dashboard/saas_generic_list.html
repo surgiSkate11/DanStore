@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} | SaaS Control Base de Datos{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f8fafc; }
+    .list-card {
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(226,232,240,0.8);
+        overflow: hidden;
+    }
+    .list-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        padding: 2.5rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .table-saas { margin-bottom: 0; width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-saas thead th {
+        background: #fafbfc; color: #64748b; font-size: 0.75rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.1em; padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+    }
+    .table-saas tbody td {
+        padding: 1.25rem 1.5rem; vertical-align: middle; color: #334155;
+        font-weight: 500; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem;
+    }
+    .table-saas tbody tr:last-child td { border-bottom: none; }
+    .table-saas tbody tr:hover { background-color: #f8fafc; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5 px-xl-5">
+    <a href="{% url 'saas_control_panel' %}" class="btn btn-light bg-white border shadow-sm rounded-pill fw-bold text-secondary mb-4 px-4 py-2 d-inline-flex align-items-center">
+        <i class="bi bi-arrow-left fs-5 me-2"></i> Volver
+    </a>
+
+    <div class="list-card">
+        <div class="list-header">
+            <div>
+                <h2 class="fw-bolder mb-1" style="letter-spacing: -0.5px;">{{ titulo }}</h2>
+                <p class="mb-0 opacity-75">Visualizando los registros más recientes en el sistema.</p>
+            </div>
+            <a href="{% url 'saas_crear_registro' app_label model_name %}" class="btn btn-light text-primary px-4 py-2 rounded-pill fw-bold shadow-sm">
+                <i class="bi bi-plus-lg me-1"></i> Añadir Nuevo
+            </a>
+        </div>
+        
+        <div class="p-4 bg-white border-bottom">
+            <form method="GET" class="d-flex gap-2" style="max-width: 500px;">
+                <input type="text" name="q" class="form-control bg-light border-0 shadow-sm" placeholder="Buscar en todos los campos..." value="{{ request.GET.q|default:'' }}" style="border-radius: 10px;">
+                <button type="submit" class="btn btn-primary px-4 shadow-sm fw-bold" style="border-radius: 10px;"><i class="bi bi-search"></i></button>
+                {% if request.GET.q %}
+                <a href="{% url 'saas_listar_registros' app_label model_name %}" class="btn btn-light px-3 border shadow-sm" style="border-radius: 10px;" title="Limpiar filtro"><i class="bi bi-x-lg"></i></a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table-saas">
+                <thead>
+                    <tr>
+                        {% for campo in campos %}<th>{{ campo.verbose_name }}</th>{% endfor %}
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in registros_data %}
+                    <tr>
+                        {% for valor in reg.fila %}<td>{% if forloop.first %}<span class="fw-bold text-dark">{% endif %}{{ valor|default:"-"|truncatechars:50 }}{% if forloop.first %}</span>{% endif %}</td>{% endfor %}
+                        <td class="text-end text-nowrap">
+                            <a href="{% url 'saas_editar_registro' app_label model_name reg.id %}" class="btn btn-sm btn-light text-primary shadow-sm border me-1" title="Editar"><i class="bi bi-pencil-square"></i></a>
+                            <form method="POST" action="{% url 'saas_eliminar_registro' app_label model_name reg.id %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-light text-danger shadow-sm border" title="Eliminar"><i class="bi bi-trash3-fill"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center py-5 text-muted fw-bold">No se encontraron registros.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

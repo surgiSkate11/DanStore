@@ -1,6 +1,7 @@
+import re
+
 from django import forms
 from .models import Cliente
-import re
 
 class ClienteForm(forms.ModelForm):
     tipo_identificacion = forms.ChoiceField(
@@ -127,4 +128,7 @@ class ClienteForm(forms.ModelForm):
         if len(telefono_limpio) < 7 or len(telefono_limpio) > 15:
             raise forms.ValidationError("El teléfono debe tener entre 7 y 15 dígitos.")
             
+        return telefono_limpio
+        return telefono_limpio
+        return telefono_limpio
         return telefono_limpio

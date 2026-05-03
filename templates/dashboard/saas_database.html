@@ -64,7 +64,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Módulos del Sistema</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Aplicaciones base que se pueden activar en los planes.</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/usuarios/modulosaas/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_listar_registros' 'usuarios' 'modulosaas' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
                     <a href="{% url 'saas_crear_registro' 'usuarios' 'modulosaas' %}" class="btn btn-primary fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>
@@ -75,7 +75,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Planes de Venta</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Configuración de precios y características a vender.</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/empresas/plan/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_listar_registros' 'empresas' 'plan' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
                     <a href="{% url 'saas_crear_registro' 'empresas' 'plan' %}" class="btn btn-success fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>
@@ -86,7 +86,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Suscripciones</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Planes vinculados a los inquilinos (Tenants) y vigencias.</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/empresas/suscripcionempresa/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todas</a>
+                    <a href="{% url 'saas_listar_registros' 'empresas' 'suscripcionempresa' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todas</a>
                     <a href="{% url 'saas_crear_registro' 'empresas' 'suscripcionempresa' %}" class="btn btn-info text-white fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Empresas (Bruto)</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Gestión técnica de la tabla Empresas (Landing, redes, slugs).</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/empresas/empresa/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Explorar BD</a>
+                    <a href="{% url 'saas_listar_registros' 'empresas' 'empresa' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Explorar BD</a>
                     <a href="{% url 'saas_crear_registro' 'empresas' 'empresa' %}" class="btn btn-indigo text-white fw-bold px-3 shadow-sm" style="border-radius: 10px; background-color: #6366f1;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>
@@ -113,7 +113,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Roles de Inquilinos</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Roles personalizados creados internamente por las empresas.</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/usuarios/rolempresa/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Explorar BD</a>
+                    <a href="{% url 'saas_listar_registros' 'usuarios' 'rolempresa' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Explorar BD</a>
                     <a href="{% url 'saas_crear_registro' 'usuarios' 'rolempresa' %}" class="btn btn-warning fw-bold px-3 shadow-sm text-dark" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>
@@ -129,7 +129,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Cuentas Nativas</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Tabla Auth nativa de Django (Logins, contraseñas, correos).</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/auth/user/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_listar_registros' 'auth' 'user' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
                     <a href="{% url 'saas_crear_registro' 'auth' 'user' %}" class="btn btn-dark fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>
@@ -140,7 +140,7 @@
                 <h5 class="fw-bolder text-dark mb-1">Perfiles SaaS (Profiles)</h5>
                 <p class="text-muted small fw-medium mb-4 flex-grow-1">Extensión de los usuarios vinculados a un Tenant y Rol.</p>
                 <div class="d-flex gap-2">
-                    <a href="/admin/usuarios/userprofile/" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
+                    <a href="{% url 'saas_listar_registros' 'usuarios' 'userprofile' %}" class="btn btn-light fw-bold text-secondary border flex-grow-1" style="border-radius: 10px;">Ver todos</a>
                     <a href="{% url 'saas_crear_registro' 'usuarios' 'userprofile' %}" class="btn btn-danger fw-bold px-3 shadow-sm" style="border-radius: 10px;" title="Crear" data-bs-toggle="tooltip"><i class="bi bi-plus-lg"></i></a>
                 </div>
             </div>

@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Configuración de Tienda | {{ empresa.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); color: white; margin-bottom: 2rem; }
+    .config-card {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
+        border: 1px solid rgba(226,232,240,0.8);
+    }
+    .form-label-custom {
+        font-weight: 700;
+        color: #475569;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .input-group-text-icon {
+        background-color: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-right: none;
+        padding: 0 1rem;
+        border-radius: 12px 0 0 12px;
+    }
+    .form-control-custom {
+        border-radius: 0 12px 12px 0 !important;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-left: none;
+        padding: 0.75rem 1rem;
+    }
+    .form-control-custom:focus {
+        background: white;
+        border-color: var(--primary-color);
+        box-shadow: none;
+        z-index: 2;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="page-header">
+                <h1 class="mb-2 fw-bold"><i class="bi bi-palette-fill"></i> Personalizar Tienda</h1>
+                <p class="mb-0 opacity-75"><i class="bi bi-info-circle"></i> Ajusta la apariencia, información de contacto y redes sociales de tu tienda pública.</p>
+            </div>
+
+            <form method="post" class="config-card" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <h5 class="fw-bolder text-dark mb-4 pb-3 border-bottom">Diseño y Marca</h5>
+                <div class="row g-4 mb-5">
+                    <div class="col-md-8">
+                        <label class="form-label-custom mb-2">Título Principal de la Tienda</label>
+                        <input type="text" name="landing_titulo" class="form-control form-control-lg bg-light border-0" value="{{ empresa.landing_titulo }}" placeholder="Ej: Bienvenidos a mi Tienda" style="border-radius: 12px;">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-custom mb-2">Color de Acento</label>
+                        <input type="color" name="color_primario" class="form-control form-control-color w-100 border-0 shadow-sm" value="{{ empresa.color_primario|default:'#6366f1' }}" title="Elige el color de tu marca" style="height: 50px; border-radius: 12px; cursor: pointer;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">Logotipo (Recomendado PNG transparente)</label>
+                        <input type="file" name="logo" class="form-control bg-light border-0" accept="image/*" style="border-radius: 12px;">
+                        {% if empresa.logo %}<small class="text-success mt-1 d-block"><i class="bi bi-check-circle"></i> Logo actual cargado.</small>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">Imagen de Portada (Hero Banner)</label>
+                        <input type="file" name="hero_image" class="form-control bg-light border-0" accept="image/*" style="border-radius: 12px;">
+                        {% if empresa.hero_image %}<small class="text-success mt-1 d-block"><i class="bi bi-check-circle"></i> Portada actual cargada.</small>{% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom mb-2">Mensaje de Bienvenida (Subtítulo)</label>
+                        <textarea name="landing_descripcion" class="form-control bg-light border-0" rows="2" style="border-radius: 12px;">{{ empresa.landing_descripcion }}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-custom mb-2">Banner Promocional (Opcional)</label>
+                        <input type="text" name="mensaje_promocional" class="form-control bg-light border-0" value="{{ empresa.mensaje_promocional }}" placeholder="Ej: ¡Envío gratis a todo el país!" style="border-radius: 12px;">
+                    </div>
+                </div>
+
+                <h5 class="fw-bolder text-dark mb-4 pb-3 border-bottom">Redes Sociales y Contacto</h5>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">WhatsApp</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-whatsapp fs-5" style="color: #25D366;"></i></span>
+                            <input type="text" name="telefono_whatsapp" class="form-control form-control-custom" value="{{ empresa.telefono_whatsapp }}" placeholder="593991234567">
+                        </div>
+                        <small class="text-muted mt-1 d-block">Sin el símbolo +, solo números con código de país.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">Instagram</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-instagram fs-5" style="color: #E1306C;"></i></span>
+                            <input type="url" name="instagram_url" class="form-control form-control-custom" value="{{ empresa.instagram_url }}" placeholder="https://instagram.com/tu_tienda">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">Facebook</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-facebook fs-5" style="color: #1877F2;"></i></span>
+                            <input type="url" name="facebook_url" class="form-control form-control-custom" value="{{ empresa.facebook_url }}" placeholder="https://facebook.com/tu_tienda">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">YouTube</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-youtube fs-5" style="color: #FF0000;"></i></span>
+                            <input type="url" name="youtube_url" class="form-control form-control-custom" value="{{ empresa.youtube_url }}" placeholder="https://youtube.com/c/tu_canal">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end mt-5 border-top pt-4">
+                    <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm">Guardar Preferencias</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

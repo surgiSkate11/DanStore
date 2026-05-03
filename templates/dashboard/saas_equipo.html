@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Equipo del Sistema | SaaS{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { background-color: #f8fafc; }
+    .page-header { background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%); padding: 2rem 2.5rem; border-radius: 20px; box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.08); border: 1px solid #bae6fd; color: #0f172a; margin-bottom: 2rem; }
+    .section-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; height: 100%; }
+    .admin-card { background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1; }
+    .admin-card:hover, .admin-card:focus-within { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(0,0,0,0.05); border-color: #cbd5e1; z-index: 10;}
+    .rol-tag { background: #eff6ff; color: #1d4ed8; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; border: 1px solid #bfdbfe; }
+    .dropdown-item:active { background-color: #f8fafc !important; color: inherit !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-xl-5">
+    <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <h1 class="mb-2 fw-bolder text-dark d-flex align-items-center" style="letter-spacing: -0.5px;">
+                <div class="d-inline-flex align-items-center justify-content-center bg-white text-primary rounded-3 me-3 shadow-sm border border-light" style="width: 48px; height: 48px;">
+                    <i class="bi bi-shield-lock-fill fs-3"></i>
+                </div>
+                Equipo del Sistema
+            </h1>
+            <p class="mb-0 text-muted fs-5 fw-medium" style="margin-left: 4.1rem;">Administra los usuarios con acceso global al ecosistema SaaS.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <!-- Módulo de Notificaciones de Votación de Consenso -->
+        {% if active_requests %}
+        <div class="col-12 mb-0">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-inbox-fill text-warning me-2"></i> Decisiones Pendientes (Consenso de Dueños)</h5>
+            {% for req in active_requests %}
+            <div class="alert shadow-sm border d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3" style="border-radius: 16px; background-color: #fffbeb; border-color: #fcd34d !important;">
+                <div class="mb-3 mb-md-0">
+                    <h6 class="fw-bold mb-1 text-dark">
+                        {% if req.action_type == 'solicitar_suspension' %}<i class="bi bi-pause-circle-fill text-warning me-1"></i> Propuesta de Suspensión{% else %}<i class="bi bi-shield-lock-fill text-danger me-1"></i> Propuesta de Eliminación{% endif %}
+                    </h6>
+                    <p class="mb-0 small text-muted fw-medium">
+                        <strong>{{ req.requester.user.username }}</strong> ha propuesto esta acción para <strong>{{ req.target_admin.user.username }}</strong>. 
+                        Cierre en: <strong class="text-danger">{{ req.expires_at|timeuntil }}</strong>.
+                    </p>
+                </div>
+                {% if request.user.profile != req.target_admin %}
+                    {% if request.user.profile in req.votes_approve.all or request.user.profile in req.votes_reject.all %}
+                        <span class="badge bg-white text-muted border px-4 py-2 rounded-pill shadow-sm"><i class="bi bi-check2-circle me-1"></i> Tu voto fue registrado</span>
+                    {% else %}
+                    <form method="POST" class="d-flex gap-2 m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="votar_consenso">
+                        <input type="hidden" name="request_id" value="{{ req.id }}">
+                        <button type="submit" name="voto" value="reject" class="btn btn-white text-danger fw-bold rounded-pill px-4 shadow-sm border border-danger border-opacity-25">Rechazar</button>
+                        <button type="submit" name="voto" value="approve" class="btn btn-warning text-dark fw-bold rounded-pill px-4 shadow-sm">Aprobar Propuesta</button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                    <span class="badge bg-white text-danger border px-4 py-2 rounded-pill shadow-sm"><i class="bi bi-exclamation-circle me-1"></i> Eres el afectado en revisión</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Lista de Administradores -->
+        <div class="col-lg-7">
+            <div class="section-card">
+                <h4 class="fw-bold mb-4 text-dark"><i class="bi bi-people-fill text-secondary me-2"></i> Administradores Globales</h4>
+                {% if admins %}
+                    {% for admin in admins %}
+                <div class="admin-card position-relative">
+                        <div>
+                        <h5 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-person-circle text-primary me-2"></i> {{ admin.user.username }}
+                            {% if request.user == admin.user %}
+                            <span class="badge bg-success bg-opacity-10 text-success ms-2 border border-success border-opacity-25" style="font-size: 0.65rem; vertical-align: middle;">TÚ</span>
+                            {% endif %}
+                        </h5>
+                            <p class="text-muted small mb-2 fw-medium">{{ admin.user.email }}</p>
+                            <span class="rol-tag"><i class="bi bi-star-fill text-warning me-1"></i> Dueño del Software (SaaS)</span>
+                        </div>
+                    
+                    <!-- Menú de Acciones -->
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border-0 px-2 py-1 shadow-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical text-muted"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" style="border-radius: 14px; padding: 0.5rem;">
+                            <li><a class="dropdown-item fw-semibold text-warning py-2 rounded" href="#" onclick="solicitarAccionSaaS('solicitar_suspension', '{{ admin.id }}', '{{ admin.user.username|escapejs }}')"><i class="bi bi-pause-circle-fill me-2"></i> Solicitar Suspensión</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item fw-semibold text-danger py-2 rounded" href="#" onclick="solicitarAccionSaaS('solicitar_eliminacion', '{{ admin.id }}', '{{ admin.user.username|escapejs }}')"><i class="bi bi-shield-lock-fill me-2"></i> Solicitar Eliminación</a></li>
+                        </ul>
+                    </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-shield-x fs-1 opacity-50 mb-3 d-block"></i>
+                        <h5>No hay administradores registrados</h5>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Crear Nuevo Administrador -->
+        <div class="col-lg-5">
+            <div class="section-card">
+                <h4 class="fw-bold mb-4 text-primary"><i class="bi bi-person-plus-fill me-2"></i> Añadir Administrador</h4>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                <input type="hidden" name="action" value="crear">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Usuario (Login)</label>
+                        <input type="text" name="username" class="form-control form-control-lg bg-light border-0 shadow-sm" placeholder="Ej: admin_principal" required style="border-radius: 12px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Correo Electrónico</label>
+                        <input type="email" name="email" class="form-control form-control-lg bg-light border-0 shadow-sm" placeholder="admin@tiendita.com" required style="border-radius: 12px;">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted small text-uppercase" style="letter-spacing: 0.5px;">Contraseña de Acceso</label>
+                        <input type="password" name="password" class="form-control form-control-lg bg-light border-0 shadow-sm" placeholder="********" required style="border-radius: 12px;">
+                        <small class="text-muted mt-2 d-block fw-medium"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Esta cuenta tendrá poder total sobre la facturación e inquilinos.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" style="border-radius: 12px;">Crear Administrador</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulario Oculto para Acciones de Consenso -->
+<form id="saasActionForm" method="POST" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="saasFormAction">
+    <input type="hidden" name="admin_id" id="saasFormAdminId">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function solicitarAccionSaaS(action, id, username) {
+        let title = action === 'solicitar_suspension' ? 'Solicitar Suspensión' : 'Solicitar Eliminación';
+        let accionTxt = action === 'solicitar_suspension' ? 'suspender' : 'eliminar';
+        let icon = action === 'solicitar_suspension' ? '<i class="bi bi-pause-circle-fill text-warning"></i>' : '<i class="bi bi-shield-lock-fill text-danger"></i>';
+        
+        showConfirmationModal({
+            title: title,
+            message: `Para proteger el ecosistema, no puedes <strong>${accionTxt}</strong> a <strong>${username}</strong> de forma directa.<br><br><span class="text-primary small fw-semibold"><i class="bi bi-info-circle-fill"></i> Se enviará una solicitud al resto de los dueños del software para que evalúen y aprueben esta acción de forma conjunta.</span>`,
+            icon: `<div style="font-size: 3.5rem;">${icon}</div>`,
+            confirmText: 'Iniciar Protocolo',
+            onConfirm: function() {
+                document.getElementById('saasFormAction').value = action;
+                document.getElementById('saasFormAdminId').value = id;
+                document.getElementById('saasActionForm').submit();
+            }
+        });
+    }
+</script>
+{% endblock %}

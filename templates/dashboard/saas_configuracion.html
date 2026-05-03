@@ -64,6 +64,18 @@
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Correo de Soporte Global</label>
                                 <input type="email" name="support_email" class="form-control form-control-lg bg-light border-0" value="{{ config.support_email|default:'soporte@tiendita.com' }}" style="border-radius: 12px;">
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-whatsapp text-success"></i> WhatsApp (Soporte)</label>
+                                <input type="text" name="telefono_whatsapp" class="form-control form-control-lg bg-light border-0" value="{{ config.telefono_whatsapp|default:'' }}" placeholder="Ej: 593991234567" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-instagram text-danger"></i> Instagram SaaS</label>
+                                <input type="url" name="instagram_url" class="form-control form-control-lg bg-light border-0" value="{{ config.instagram_url|default:'' }}" placeholder="https://instagram.com/..." style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-facebook text-primary"></i> Facebook SaaS</label>
+                                <input type="url" name="facebook_url" class="form-control form-control-lg bg-light border-0" value="{{ config.facebook_url|default:'' }}" placeholder="https://facebook.com/..." style="border-radius: 12px;">
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -177,6 +189,91 @@
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Token de Autenticación (Bearer)</label>
                                         <input type="password" name="payphone_token" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.payphone_token|default:'' }}" placeholder="eyJhbGciOiJIUzI1NiIs..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-credit-card-2-front text-primary fs-3 me-2 align-middle" style="color: #009ee3 !important;"></i> MercadoPago</h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="mercadopagoActive" name="mercadopago_active" {% if config.mercadopago_active %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Access Token</label>
+                                        <input type="password" name="mercadopago_token" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.mercadopago_token|default:'' }}" placeholder="APP_USR-..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-currency-bitcoin text-primary fs-3 me-2 align-middle" style="color: #0052ff !important;"></i> Coinbase Commerce</h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="coinbaseActive" name="coinbase_active" {% if config.coinbase_active %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">API Key</label>
+                                        <input type="password" name="coinbase_api_key" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.coinbase_api_key|default:'' }}" placeholder="Tu API Key de Coinbase..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-lightning-charge-fill text-primary fs-3 me-2 align-middle" style="color: #3395ff !important;"></i> Razorpay</h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="razorpayActive" name="razorpay_active" {% if config.razorpay_active %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Key ID</label>
+                                        <input type="text" name="razorpay_key_id" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.razorpay_key_id|default:'' }}" placeholder="rzp_test_..." style="border-radius: 10px;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Key Secret</label>
+                                        <input type="password" name="razorpay_key_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.razorpay_key_secret|default:'' }}" placeholder="Tu Secret Key..." style="border-radius: 10px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TRANSFERENCIAS BANCARIAS -->
+                        <div class="card bg-light border-0 mb-4" style="border-radius: 16px;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-bank text-dark fs-3 me-2 align-middle"></i> Transferencia Bancaria (Ecuador)</h5>
+                                    <div class="form-check custom-switch ps-0">
+                                        <input class="form-check-input ms-0" type="checkbox" id="transferenciaActive" name="transferencia_active" {% if config.transferencia_active %}checked{% endif %}>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Banco Pichincha (Cuenta 1 - Ahorros)</label>
+                                        <input type="text" name="banco_pichincha" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.banco_pichincha|default:'' }}" placeholder="Ej: Cta. Ahorros #123456789 - Juan Pérez - CI: 0999999999" style="border-radius: 10px;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Banco Pichincha (Cuenta 2 - Corriente)</label>
+                                        <input type="text" name="banco_pichincha_2" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.banco_pichincha_2|default:'' }}" placeholder="Ej: Cta. Corriente #987654321 - Juan Pérez - CI: 0999999999" style="border-radius: 10px;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Banco Guayaquil</label>
+                                        <input type="text" name="banco_guayaquil" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.banco_guayaquil|default:'' }}" placeholder="Ej: Cta. Corriente #987654321 - Juan Pérez - CI: 0999999999" style="border-radius: 10px;">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Cooperativa JEP</label>
+                                        <input type="text" name="banco_jep" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.banco_jep|default:'' }}" placeholder="Ej: Cta. Ahorros #456123 - Juan Pérez - CI: 0999999999" style="border-radius: 10px;">
                                     </div>
                                 </div>
                             </div>

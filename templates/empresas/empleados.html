@@ -6,8 +6,12 @@
 <style>
     .page-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3); color: white; margin-bottom: 2rem; }
     .section-card { background: white; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 16px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; height: 100%; }
-    .empleado-card { background: #f8fafc; border-left: 4px solid #10b981; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .empleado-card { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; z-index: 1; }
+    .empleado-card:hover, .empleado-card:focus-within { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); border-color: #cbd5e1; z-index: 10; }
+    .empleado-card.suspended { border-left-color: #ef4444; background: #fff5f5; opacity: 0.85; }
     .rol-tag { background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .dropdown-item:active { background-color: #f8fafc !important; color: inherit !important; }
+    .dropdown-menu { border-radius: 14px; padding: 0.5rem; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1) !important; }
 </style>
 {% endblock %}
 
@@ -25,12 +29,29 @@
                 <h4 class="fw-bold mb-4">Personal Activo</h4>
                 {% if empleados %}
                     {% for emp in empleados %}
-                    <div class="empleado-card">
+                <div class="empleado-card position-relative {% if not emp.user.is_active %}suspended{% endif %}">
                         <div>
-                            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-person-circle text-secondary me-2"></i> {{ emp.user.username }}</h5>
+                        <h5 class="fw-bold text-dark mb-1">
+                            <i class="bi bi-person-circle text-secondary me-2"></i> {{ emp.user.username }}
+                            {% if not emp.user.is_active %}
+                            <span class="badge bg-danger ms-2" style="font-size: 0.7rem; vertical-align: middle;">Suspendido</span>
+                            {% endif %}
+                        </h5>
                             <p class="text-muted small mb-2">{{ emp.user.email }}</p>
-                            <span class="rol-tag"><i class="bi bi-shield-check"></i> {{ emp.rol_empresa.nombre }}</span>
+                        <span class="rol-tag"><i class="bi bi-shield-check"></i> {{ emp.rol_empresa.nombre|default:"Sin Rol" }}</span>
                         </div>
+                    
+                    <!-- Menú de Acciones -->
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border-0 px-2 py-1 shadow-sm" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical text-muted"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                            <li><a class="dropdown-item fw-semibold {% if emp.user.is_active %}text-warning{% else %}text-success{% endif %} py-2 rounded" href="#" onclick="accionEmpleado('toggle_estado', '{{ emp.id }}', '{{ emp.user.username|escapejs }}', {{ emp.user.is_active|yesno:'true,false' }})"><i class="bi {% if emp.user.is_active %}bi-pause-circle-fill{% else %}bi-play-circle-fill{% endif %} me-2"></i> {% if emp.user.is_active %}Suspender Acceso{% else %}Reactivar Acceso{% endif %}</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item fw-semibold text-danger py-2 rounded" href="#" onclick="accionEmpleado('eliminar', '{{ emp.id }}', '{{ emp.user.username|escapejs }}')"><i class="bi bi-person-x-fill me-2"></i> Eliminar Empleado</a></li>
+                        </ul>
+                    </div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -55,6 +76,7 @@
                 {% else %}
                 <form method="POST">
                     {% csrf_token %}
+                    <input type="hidden" name="action" value="crear">
                     <div class="mb-3">
                         <label class="form-label fw-bold">Usuario (Login)</label>
                         <input type="text" name="username" class="form-control" placeholder="Ej: cajero_maria" required>
@@ -88,4 +110,46 @@
         </div>
     </div>
 </div>
+
+<!-- Formulario Oculto para Acciones -->
+<form id="actionForm" method="POST" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="formAction">
+    <input type="hidden" name="empleado_id" id="formEmpleadoId">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function accionEmpleado(action, id, username, isActive = true) {
+        let title = '';
+        let message = '';
+        let confirmText = '';
+        let icon = '';
+        
+        if (action === 'toggle_estado') {
+            title = isActive ? 'Suspender Empleado' : 'Reactivar Empleado';
+            message = isActive ? `¿Estás seguro de suspender el acceso de <strong>${username}</strong>? No podrá ingresar al sistema.` : `¿Deseas reactivar el acceso de <strong>${username}</strong> a la plataforma?`;
+            icon = isActive ? '<i class="bi bi-pause-circle-fill text-warning"></i>' : '<i class="bi bi-play-circle-fill text-success"></i>';
+            confirmText = isActive ? 'Sí, Suspender' : 'Sí, Reactivar';
+        } else if (action === 'eliminar') {
+            title = 'Eliminar Definitivamente';
+            message = `¿Estás seguro de eliminar a <strong>${username}</strong>?<br><br><span class="text-danger small"><i class="bi bi-exclamation-triangle-fill"></i> Se borrará su cuenta y no podrá recuperarse. Las ventas que haya realizado se mantendrán en el sistema para tus reportes.</span>`;
+            icon = '<i class="bi bi-person-x-fill text-danger"></i>';
+            confirmText = 'Sí, Eliminar';
+        }
+        
+        showConfirmationModal({
+            title: title,
+            message: message,
+            icon: `<div style="font-size: 3.5rem;">${icon}</div>`,
+            confirmText: confirmText,
+            onConfirm: function() {
+                document.getElementById('formAction').value = action;
+                document.getElementById('formEmpleadoId').value = id;
+                document.getElementById('actionForm').submit();
+            }
+        });
+    }
+</script>
 {% endblock %}

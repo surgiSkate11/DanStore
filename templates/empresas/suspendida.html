@@ -96,6 +96,20 @@
     .btn-payphone { background: #ff7b00; color: white; border: none; }
     .btn-payphone:hover { background: #e66d00; color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(255, 123, 0, 0.3); }
     
+    .btn-transfer { background: #1e293b; color: white; border: none; }
+    .btn-transfer:hover { background: #0f172a; color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(15, 23, 42, 0.3); }
+    
+    .btn-mercadopago { background: #009ee3; color: white; border: none; }
+    .btn-mercadopago:hover { background: #008cc9; color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 158, 227, 0.3); }
+    
+    .btn-coinbase { background: #0052ff; color: white; border: none; }
+    .btn-coinbase:hover { background: #0045d8; color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0, 82, 255, 0.3); }
+    
+    .btn-razorpay { background: #02042b; color: #3395ff; border: 1px solid #3395ff; }
+    .btn-razorpay:hover { background: #02042b; color: white; border-color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(51, 149, 255, 0.3); }
+    
+    .bank-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 0.8rem; font-size: 0.9rem; text-align: left; }
+    
     /* Icono de advertencia principal */
     .alert-icon-wrapper {
         width: 90px; height: 90px;
@@ -112,7 +126,7 @@
 
 {% block content %}
 <div class="suspension-wrapper">
-{% if request.user.profile.rol == 'DUEÑO' and motivo == 'pago' %}
+{% if request.user.profile.rol == 'owner' and motivo == 'pago' %}
 <!-- 1. VISTA DE DUEÑO: BLOQUEO POR PAGO (MUESTRA PLANES) -->
 <div class="container">
     <div class="text-center mb-5">
@@ -165,23 +179,98 @@
                 </div>
                 <p class="text-muted fw-semibold mb-3 text-center small text-uppercase" style="letter-spacing: 0.5px;">Métodos de Pago Seguros</p>
                 
-                <div class="d-grid gap-3">
+                <div class="d-grid gap-3" id="paymentButtonsDiv">
+                    {% if config_pagos.stripe_active %}
                     <button class="payment-btn btn-stripe" onclick="procesarPago('stripe')">
                         <i class="bi bi-credit-card-fill fs-5"></i><span>Tarjeta de Crédito / Débito</span>
                     </button>
+                    {% endif %}
+                    
+                    {% if config_pagos.paypal_active %}
                     <button class="payment-btn btn-paypal" onclick="procesarPago('paypal')">
                         <i class="bi bi-paypal fs-5"></i><span>Pagar con PayPal</span>
                     </button>
+                    {% endif %}
+                    
+                    {% if config_pagos.payphone_active %}
                     <button class="payment-btn btn-payphone" onclick="procesarPago('payphone')">
                         <span class="bg-white text-dark px-1 rounded text-center fw-bolder" style="font-size: 0.8rem; line-height:1;">P</span><span>Pagar con PayPhone</span>
                     </button>
+                    {% endif %}
+                    
+                    {% if config_pagos.transferencia_active %}
+                    <button class="payment-btn btn-transfer" onclick="mostrarTransferencia()">
+                        <i class="bi bi-bank fs-5"></i><span>Transferencia Bancaria (Ecuador)</span>
+                    </button>
+                    {% endif %}
+                    
+                    {% if config_pagos.mercadopago_active %}
+                    <button class="payment-btn btn-mercadopago" onclick="procesarPago('mercadopago')">
+                        <i class="bi bi-credit-card-2-front fs-5"></i><span>Pagar con MercadoPago</span>
+                    </button>
+                    {% endif %}
+                    
+                    {% if config_pagos.coinbase_active %}
+                    <button class="payment-btn btn-coinbase" onclick="procesarPago('coinbase')">
+                        <i class="bi bi-currency-bitcoin fs-5"></i><span>Pagar con Criptomonedas</span>
+                    </button>
+                    {% endif %}
+                    
+                    {% if config_pagos.razorpay_active %}
+                    <button class="payment-btn btn-razorpay" onclick="procesarPago('razorpay')">
+                        <i class="bi bi-lightning-charge-fill fs-5"></i><span>Pagar con Razorpay</span>
+                    </button>
+                    {% endif %}
+                    
+                    {% if not config_pagos.stripe_active and not config_pagos.paypal_active and not config_pagos.payphone_active and not config_pagos.transferencia_active and not config_pagos.mercadopago_active and not config_pagos.coinbase_active and not config_pagos.razorpay_active %}
+                    <div class="alert alert-warning text-center small">El administrador aún no ha configurado ningún método de pago. Contacta a soporte.</div>
+                    {% endif %}
                 </div>
+                
+                <!-- Contenedor oculto para Transferencias -->
+                <div id="transferenciaDiv" class="d-none">
+                    <button class="btn btn-sm btn-light border mb-3 w-100" onclick="ocultarTransferencia()"><i class="bi bi-arrow-left me-1"></i> Volver a métodos de pago</button>
+                    
+                    {% if config_pagos.banco_pichincha %}<div class="bank-box"><strong class="text-primary d-block mb-1">Banco Pichincha</strong>{{ config_pagos.banco_pichincha }}</div>{% endif %}
+                    {% if config_pagos.banco_pichincha_2 %}<div class="bank-box"><strong class="text-primary d-block mb-1">Banco Pichincha (Cuenta Corriente)</strong>{{ config_pagos.banco_pichincha_2 }}</div>{% endif %}
+                    {% if config_pagos.banco_guayaquil %}<div class="bank-box"><strong class="text-danger d-block mb-1">Banco Guayaquil</strong>{{ config_pagos.banco_guayaquil }}</div>{% endif %}
+                    {% if config_pagos.banco_jep %}<div class="bank-box"><strong class="text-success d-block mb-1">Cooperativa JEP</strong>{{ config_pagos.banco_jep }}</div>{% endif %}
+                    
+                    <form action="{% url 'reportar_transferencia' %}" method="POST" enctype="multipart/form-data" class="mt-4 border-top pt-3">
+                        {% csrf_token %}
+                        <input type="hidden" name="plan_id" id="transferPlanId">
+                        <input type="hidden" name="tipo_plan" id="transferTipoPlan">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1">Nombre del Titular de la Cuenta</label>
+                            <input type="text" name="titular_cuenta" class="form-control bg-light border-0" required placeholder="Ej: Juan Pérez">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1">Cédula o RUC del Titular</label>
+                            <input type="text" name="cedula_cuenta" class="form-control bg-light border-0" required placeholder="Ej: 0999999999">
+                        </div>
+                        
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Subir Comprobante (PDF o Imagen)</label>
+                        <input type="file" name="comprobante" class="form-control bg-light border-0 mb-3" required accept="image/*,.pdf">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-pill shadow-sm" onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm me-2\'></span>Enviando...';">Enviar Comprobante</button>
+                    </form>
+                    
+                    {% if config_pagos.telefono_whatsapp %}
+                    <div class="text-center mt-3 pt-3 border-top">
+                        <p class="small text-muted mb-2 fw-semibold">¿Prefieres enviarlo directamente a un asesor?</p>
+                        <a href="https://wa.me/{{ config_pagos.telefono_whatsapp }}?text=Hola, acabo de realizar una transferencia para el pago de mi suscripción de la tienda *{{ request.user.profile.empresa.nombre }}*. Adjunto mi comprobante por este medio." target="_blank" class="btn btn-success w-100 fw-bold py-2 rounded-pill shadow-sm"><i class="bi bi-whatsapp me-2"></i> Reportar por WhatsApp</a>
+                    </div>
+                    {% endif %}
+                    
+                </div>
+                
             </div>
         </div>
     </div>
 </div>
 
-{% elif request.user.profile.rol == 'DUEÑO' and motivo == 'admin' %}
+{% elif request.user.profile.rol == 'owner' and motivo == 'admin' %}
 <!-- 2. VISTA DE DUEÑO: BLOQUEO ADMINISTRATIVO (SIN PLANES) -->
 <div class="container">
     <div class="card border-0 text-center mx-auto" style="max-width: 550px; border-radius: 32px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08); overflow: hidden;">
@@ -199,6 +288,11 @@
                 <button type="button" class="btn btn-warning btn-lg rounded-pill fw-bold w-100 text-dark d-flex align-items-center justify-content-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#supportModal">
                     <i class="bi bi-headset"></i><span>Contactar Soporte Técnico</span>
                 </button>
+                {% if config_pagos.telefono_whatsapp %}
+                <a href="https://wa.me/{{ config_pagos.telefono_whatsapp }}" target="_blank" class="btn btn-success btn-lg rounded-pill fw-bold w-100 mt-3 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                    <i class="bi bi-whatsapp"></i><span>Escribirnos a WhatsApp</span>
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -278,6 +372,12 @@ function prepararPago(id, nombre, precio, tipo = 'mensual') {
     tipoPlanSeleccionado = tipo;
     document.getElementById('selectedPlan').innerText = nombre + (tipo === 'anual' ? ' (Anual)' : ' (Mensual)');
     document.getElementById('selectedPrice').innerText = '$' + precio;
+    
+    // Rellenar ocultos para transferencia
+    document.getElementById('transferPlanId').value = id;
+    document.getElementById('transferTipoPlan').value = tipo;
+    
+    ocultarTransferencia(); // Resetear vista siempre que se abre el modal
 }
 
 function procesarPago(metodo) {
@@ -287,6 +387,16 @@ function procesarPago(metodo) {
     }
     showDjangoToast(`Conectando de forma segura con ${metodo.toUpperCase()}...`, 'info');
     window.location.href = `/empresa/pagar/${metodo}/${planSeleccionadoId}/${tipoPlanSeleccionado}/`;
+}
+
+function mostrarTransferencia() {
+    document.getElementById('paymentButtonsDiv').classList.add('d-none');
+    document.getElementById('transferenciaDiv').classList.remove('d-none');
+}
+
+function ocultarTransferencia() {
+    document.getElementById('transferenciaDiv').classList.add('d-none');
+    document.getElementById('paymentButtonsDiv').classList.remove('d-none');
 }
 </script>
 {% endblock %}

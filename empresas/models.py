@@ -41,6 +41,9 @@ class Empresa(models.Model):
     mensaje_promocional = models.CharField(max_length=150, blank=True, help_text="Banner superior. Ej: ¡Envío gratis en compras mayores a $50!")
     color_primario = models.CharField(max_length=7, default="#0d6efd", help_text="Color Hexadecimal (Ej: #0d6efd)")
     
+    logo = models.ImageField(upload_to='empresas/logos/', null=True, blank=True, verbose_name="Logotipo de la Tienda")
+    hero_image = models.ImageField(upload_to='empresas/hero/', null=True, blank=True, verbose_name="Imagen de Portada (Hero)")
+    
     # Plantillas de Mensajes del Sistema
     mensaje_planes = models.TextField(blank=True, default="Hola, soy de la empresa {empresa}. Me interesa renovar/adquirir el plan {plan}.")
     # -------------------------------------
@@ -157,6 +160,31 @@ class ConfiguracionSaaS(models.Model):
     support_email = models.EmailField(blank=True, null=True, verbose_name="Email de Soporte", help_text="Correo para recibir y enviar notificaciones de tickets")
     nombre_plataforma = models.CharField(max_length=100, default="Tiendita SaaS", verbose_name="Nombre de la Plataforma")
     
+    # --- REDES Y CONTACTO DEL SAAS ---
+    telefono_whatsapp = models.CharField(max_length=20, blank=True, verbose_name="WhatsApp de Soporte", help_text="Incluir código de país, ej: 593991234567")
+    instagram_url = models.URLField(blank=True, verbose_name="Instagram del SaaS")
+    facebook_url = models.URLField(blank=True, verbose_name="Facebook del SaaS")
+    
+    # --- TRANSFERENCIAS BANCARIAS LOCALES ---
+    transferencia_active = models.BooleanField(default=False, verbose_name="Activar Pago por Transferencia")
+    banco_pichincha = models.TextField(blank=True, help_text="Ej: Cta. Ahorros #123456789 - Juan Pérez - CI: 0999999999")
+    banco_pichincha_2 = models.TextField(blank=True, verbose_name="Banco Pichincha (Cuenta 2)", help_text="Ej: Cta. Corriente #987654321 - Mi Empresa S.A.")
+    banco_guayaquil = models.TextField(blank=True, help_text="Ej: Cta. Corriente #987654321 - Juan Pérez")
+    banco_jep = models.TextField(blank=True, help_text="Ej: Cta. Ahorros #456123 - Juan Pérez")
+    # -----------------------------------------
+    
+    # --- NUEVAS PASARELAS DE PAGO ---
+    mercadopago_active = models.BooleanField(default=False, verbose_name="Activar MercadoPago")
+    mercadopago_token = models.CharField(max_length=255, blank=True, verbose_name="MercadoPago Access Token")
+    
+    coinbase_active = models.BooleanField(default=False, verbose_name="Activar Coinbase Commerce")
+    coinbase_api_key = models.CharField(max_length=255, blank=True, verbose_name="Coinbase API Key")
+    
+    razorpay_active = models.BooleanField(default=False, verbose_name="Activar Razorpay")
+    razorpay_key_id = models.CharField(max_length=255, blank=True, verbose_name="Razorpay Key ID")
+    razorpay_key_secret = models.CharField(max_length=255, blank=True, verbose_name="Razorpay Key Secret")
+    # -----------------------------------------
+
     class Meta:
         verbose_name = "Configuración SaaS"
         verbose_name_plural = "Configuración SaaS"
