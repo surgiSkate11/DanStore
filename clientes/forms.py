@@ -129,6 +129,3 @@ class ClienteForm(forms.ModelForm):
             raise forms.ValidationError("El teléfono debe tener entre 7 y 15 dígitos.")
             
         return telefono_limpio
-        return telefono_limpio
-        return telefono_limpio
-        return telefono_limpio

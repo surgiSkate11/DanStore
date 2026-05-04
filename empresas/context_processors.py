@@ -9,7 +9,10 @@ def empresa_actual(request):
     if hasattr(request, 'empresa') and request.empresa:
         context['empresa'] = request.empresa
         
-    if hasattr(request, 'user') and hasattr(request.user, 'profile'):
+    # OPTIMIZACIÓN: Reutilizar el rol ya cargado por el middleware en RAM
+    if hasattr(request, 'rol') and request.rol:
+        context['rol_usuario'] = request.rol
+    elif hasattr(request, 'user') and hasattr(request.user, 'profile'):
         context['rol_usuario'] = request.user.profile.rol
         
     # OPTIMIZACIÓN EXTREMA: Leer el nombre de la app desde la memoria RAM (Caché)

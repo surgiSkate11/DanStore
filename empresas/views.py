@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
@@ -170,8 +171,22 @@ def cuenta_suspendida(request):
     
     # Solo consultamos y enviamos los planes si el motivo es por pago y el usuario es dueño
     if motivo == 'pago' and perfil and perfil.rol == 'owner':
-        context['planes'] = Plan.objects.prefetch_related('modulos').order_by('precio_mensual')
+        planes_qs = Plan.objects.prefetch_related('modulos').order_by('precio_mensual')
         
+        # Preparar datos para JS en el frontend
+        planes_data = []
+        for plan in planes_qs:
+            planes_data.append({
+                'id': plan.id,
+                'nombre': plan.nombre,
+                'descripcion': plan.descripcion,
+                'precio_mensual': float(plan.precio_mensual),
+                'precio_anual': float(plan.precio_anual),
+                'modulos': [{'nombre': m.nombre, 'icono': m.icono} for m in plan.modulos.all()]
+            })
+        context['planes_data_json'] = json.dumps(planes_data)
+        context['planes'] = planes_qs # Mantener por retrocompatibilidad si es necesario
+
     return render(request, 'empresas/suspendida.html', context)
 
 
@@ -185,6 +200,9 @@ def configuracion_tienda(request):
         empresa.instagram_url = request.POST.get('instagram_url', '').strip()
         empresa.facebook_url = request.POST.get('facebook_url', '').strip()
         empresa.youtube_url = request.POST.get('youtube_url', '').strip()
+        empresa.sitio_web = request.POST.get('sitio_web', '').strip()
+        empresa.tiktok_url = request.POST.get('tiktok_url', '').strip()
+        empresa.x_url = request.POST.get('x_url', '').strip()
         empresa.landing_titulo = request.POST.get('landing_titulo', '').strip()
         empresa.landing_descripcion = request.POST.get('landing_descripcion', '').strip()
         empresa.mensaje_promocional = request.POST.get('mensaje_promocional', '').strip()
@@ -231,59 +249,38 @@ def crear_ticket(request):
                 ticket=ticket, remitente=request.user, mensaje=mensaje_texto, adjunto=adjunto, es_staff=False
             )
             
-        # FUNCIÓN ASÍNCRONA PARA NO BLOQUEAR LA PÁGINA
-        def enviar_correos_async():
+        # Hilo en segundo plano para no bloquear al usuario
+        def enviar_email_ticket_async():
             try:
+                app_name = cache.get('saas_app_name', 'Tiendita SaaS')
+                
+                # 1. Notificar al cliente
+                cliente_html = render_to_string('emails/ticket_creado_cliente.html', {
+                    'app_name': app_name, 'usuario': request.user.username,
+                    'ticket_id': ticket.id, 'asunto': asunto, 
+                    'categoria': ticket.get_categoria_display(), 'mensaje': mensaje_texto
+                })
+                send_mail(
+                    f"Ticket #{ticket.id} Recibido", 
+                    f"Hemos recibido tu ticket: {asunto}\n\nDetalle: {mensaje_texto}",
+                    getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com'), 
+                    [request.user.email], 
+                    html_message=cliente_html,
+                    fail_silently=True
+                )
+                
+                # 2. Notificar al Admin del SaaS
                 config = ConfiguracionSaaS.objects.first()
-                remitente = config.support_email if config and config.support_email else getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com')
-                nombre_app = config.nombre_plataforma if config and config.nombre_plataforma else "Tiendita SaaS"
-                
-                # 1. Correo de confirmación para el Usuario que creó el ticket
-                if request.user.email:
-                    ctx_cliente = {
-                        'usuario': request.user.first_name or request.user.username,
-                        'asunto': asunto,
-                        'categoria': ticket.get_categoria_display(),
-                        'mensaje': mensaje_texto,
-                        'app_name': nombre_app,
-                        'ticket_id': ticket.id
-                    }
-                    html_cliente = render_to_string('dashboard/ticket_creado_cliente.html', ctx_cliente)
-                    text_cliente = strip_tags(html_cliente)
-                    send_mail(
-                        subject=f"[Ticket #{ticket.id}] {asunto}",
-                        message=text_cliente,
-                        html_message=html_cliente,
-                        from_email=remitente,
-                        recipient_list=[request.user.email],
-                        fail_silently=True
-                    )
-                    
-                # 2. Correo de Alerta para el Administrador del SaaS (Dueño del Software)
-                if config and config.support_email:
-                    ctx_admin = {
-                        'empresa': empresa.nombre,
-                        'usuario': request.user.username,
-                        'asunto': asunto,
-                        'mensaje': mensaje_texto,
-                        'app_name': nombre_app,
-                        'ticket_id': ticket.id
-                    }
-                    html_admin = render_to_string('dashboard/ticket_creado_admin.html', ctx_admin)
-                    text_admin = strip_tags(html_admin)
-                    send_mail(
-                        subject=f"NUEVO TICKET: [#{ticket.id}] {asunto}",
-                        message=text_admin,
-                        html_message=html_admin,
-                        from_email=remitente,
-                        recipient_list=[config.support_email],
-                        fail_silently=True
-                    )
+                admin_email = config.support_email if config and config.support_email else getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com')
+                admin_html = render_to_string('emails/ticket_creado_admin.html', {
+                    'empresa': empresa.nombre, 'ticket_id': ticket.id, 'asunto': asunto, 
+                    'usuario': request.user.username, 'mensaje': mensaje_texto
+                })
+                send_mail("⚠️ Nuevo Ticket de Soporte", f"Ticket de {empresa.nombre}", getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com'), [admin_email], html_message=admin_html, fail_silently=True)
             except Exception as e:
-                print(f"Error enviando correo de confirmación de ticket: {e}")
+                print(f"Error enviando correos de ticket: {e}")
                 
-        # Lanzar en segundo plano para que la respuesta sea inmediata
-        threading.Thread(target=enviar_correos_async).start()
+        threading.Thread(target=enviar_email_ticket_async).start()
             
         messages.success(request, "Ticket enviado exitosamente. Revisa el comprobante con los detalles a tu correo electrónico.")
     return redirect(request.META.get('HTTP_REFERER', 'home'))

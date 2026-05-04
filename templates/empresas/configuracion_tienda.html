@@ -52,7 +52,7 @@
                 <p class="mb-0 opacity-75"><i class="bi bi-info-circle"></i> Ajusta la apariencia, información de contacto y redes sociales de tu tienda pública.</p>
             </div>
 
-            <form method="post" class="config-card" enctype="multipart/form-data">
+            <form method="post" class="config-card" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
                 
                 <h5 class="fw-bolder text-dark mb-4 pb-3 border-bottom">Diseño y Marca</h5>
@@ -116,13 +116,74 @@
                             <input type="url" name="youtube_url" class="form-control form-control-custom" value="{{ empresa.youtube_url }}" placeholder="https://youtube.com/c/tu_canal">
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">Sitio Web (Web Oficial)</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-globe fs-5" style="color: #64748b;"></i></span>
+                            <input type="url" name="sitio_web" class="form-control form-control-custom" value="{{ empresa.sitio_web }}" placeholder="https://www.tutienda.com">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">TikTok</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-tiktok fs-5" style="color: #000000;"></i></span>
+                            <input type="url" name="tiktok_url" class="form-control form-control-custom" value="{{ empresa.tiktok_url }}" placeholder="https://tiktok.com/@tu_tienda">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom mb-2">X (Twitter)</label>
+                        <div class="input-group">
+                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-twitter-x fs-5" style="color: #000000;"></i></span>
+                            <input type="url" name="x_url" class="form-control form-control-custom" value="{{ empresa.x_url }}" placeholder="https://x.com/tu_tienda">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="text-end mt-5 border-top pt-4">
+                <div class="d-flex justify-content-end gap-3 mt-5 border-top pt-4">
+                    <a href="javascript:history.back()" class="btn btn-light bg-white border shadow-sm rounded-pill fw-bold text-secondary px-4 py-2 d-inline-flex align-items-center">
+                        <i class="bi bi-arrow-left me-2"></i> Volver
+                    </a>
                     <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm">Guardar Preferencias</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.config-card');
+    
+    form.addEventListener('submit', function(e) {
+        if (!this.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let primerError = null;
+            Array.from(this.elements).forEach(input => {
+                if (!input.checkValidity()) {
+                    input.classList.add('is-invalid');
+                    input.style.borderColor = '#ef4444';
+                    input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                    
+                    if (!primerError) primerError = input;
+                    
+                    input.addEventListener('input', function() {
+                        if (this.checkValidity()) {
+                            this.classList.remove('is-invalid');
+                            this.style.borderColor = '';
+                            this.style.boxShadow = '';
+                        }
+                    }, { once: true });
+                }
+            });
+            
+            showDjangoToast('Por favor, ingresa formatos válidos (ej: URLs correctas) y revisa los campos en rojo.', 'warning');
+            if (primerError) primerError.focus();
+        }
+    });
+});
+</script>
 {% endblock %}

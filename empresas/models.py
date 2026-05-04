@@ -34,6 +34,9 @@ class Empresa(models.Model):
     instagram_url = models.URLField(blank=True, verbose_name="URL de Instagram")
     facebook_url = models.URLField(blank=True, verbose_name="URL de Facebook")
     youtube_url = models.URLField(blank=True, verbose_name="URL de YouTube")
+    sitio_web = models.URLField(blank=True, verbose_name="Sitio Web")
+    tiktok_url = models.URLField(blank=True, verbose_name="URL de TikTok")
+    x_url = models.URLField(blank=True, verbose_name="URL de X (Twitter)")
     
     # Landing Page del Cliente Final (Catálogo)
     landing_titulo = models.CharField(max_length=200, blank=True, default="Bienvenido a nuestra tienda")
@@ -164,6 +167,9 @@ class ConfiguracionSaaS(models.Model):
     telefono_whatsapp = models.CharField(max_length=20, blank=True, verbose_name="WhatsApp de Soporte", help_text="Incluir código de país, ej: 593991234567")
     instagram_url = models.URLField(blank=True, verbose_name="Instagram del SaaS")
     facebook_url = models.URLField(blank=True, verbose_name="Facebook del SaaS")
+    sitio_web = models.URLField(blank=True, verbose_name="Sitio Web del SaaS")
+    tiktok_url = models.URLField(blank=True, verbose_name="TikTok del SaaS")
+    x_url = models.URLField(blank=True, verbose_name="X (Twitter) del SaaS")
     
     # --- TRANSFERENCIAS BANCARIAS LOCALES ---
     transferencia_active = models.BooleanField(default=False, verbose_name="Activar Pago por Transferencia")
@@ -173,7 +179,7 @@ class ConfiguracionSaaS(models.Model):
     banco_jep = models.TextField(blank=True, help_text="Ej: Cta. Ahorros #456123 - Juan Pérez")
     # -----------------------------------------
     
-    # --- NUEVAS PASARELAS DE PAGO ---
+    # --- PASARELAS DE PAGO ADICIONALES ---
     mercadopago_active = models.BooleanField(default=False, verbose_name="Activar MercadoPago")
     mercadopago_token = models.CharField(max_length=255, blank=True, verbose_name="MercadoPago Access Token")
     

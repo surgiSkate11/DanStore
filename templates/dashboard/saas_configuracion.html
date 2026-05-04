@@ -48,7 +48,7 @@
             <!-- Contenido de Configuración -->
             <div class="col-md-9 ps-md-4">
                 
-                <form method="POST" action="{% url 'saas_configuracion' %}">
+                <form method="POST" action="{% url 'saas_configuracion' %}" novalidate>
                     {% csrf_token %}
                     <input type="hidden" name="active_tab" id="activeTabInput" value="branding">
 
@@ -64,17 +64,29 @@
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Correo de Soporte Global</label>
                                 <input type="email" name="support_email" class="form-control form-control-lg bg-light border-0" value="{{ config.support_email|default:'soporte@tiendita.com' }}" style="border-radius: 12px;">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-whatsapp text-success"></i> WhatsApp (Soporte)</label>
                                 <input type="text" name="telefono_whatsapp" class="form-control form-control-lg bg-light border-0" value="{{ config.telefono_whatsapp|default:'' }}" placeholder="Ej: 593991234567" style="border-radius: 12px;">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-instagram text-danger"></i> Instagram SaaS</label>
                                 <input type="url" name="instagram_url" class="form-control form-control-lg bg-light border-0" value="{{ config.instagram_url|default:'' }}" placeholder="https://instagram.com/..." style="border-radius: 12px;">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-facebook text-primary"></i> Facebook SaaS</label>
                                 <input type="url" name="facebook_url" class="form-control form-control-lg bg-light border-0" value="{{ config.facebook_url|default:'' }}" placeholder="https://facebook.com/..." style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-globe text-info"></i> Sitio Web SaaS</label>
+                                <input type="url" name="sitio_web" class="form-control form-control-lg bg-light border-0" value="{{ config.sitio_web|default:'' }}" placeholder="https://mi-saas.com" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-tiktok text-dark"></i> TikTok SaaS</label>
+                                <input type="url" name="tiktok_url" class="form-control form-control-lg bg-light border-0" value="{{ config.tiktok_url|default:'' }}" placeholder="https://tiktok.com/@..." style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;"><i class="bi bi-twitter-x text-dark"></i> X (Twitter) SaaS</label>
+                                <input type="url" name="x_url" class="form-control form-control-lg bg-light border-0" value="{{ config.x_url|default:'' }}" placeholder="https://x.com/..." style="border-radius: 12px;">
                             </div>
                         </div>
 
@@ -365,6 +377,47 @@
                 document.getElementById('tab-branding').classList.remove('d-none');
             }
         }
+
+        // Validación personalizada con Toast
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                let primerError = null;
+                let errorTab = null;
+                
+                Array.from(this.elements).forEach(input => {
+                    if (!input.checkValidity()) {
+                        input.classList.add('is-invalid');
+                        input.style.borderColor = '#ef4444';
+                        input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                        
+                        if (!primerError) {
+                            primerError = input;
+                            const tabPane = input.closest('.tab-content');
+                            if (tabPane) {
+                                errorTab = tabPane.id.replace('tab-', '');
+                            }
+                        }
+                        
+                        input.addEventListener('input', function() {
+                            if (this.checkValidity()) {
+                                this.classList.remove('is-invalid');
+                                this.style.borderColor = '';
+                                this.style.boxShadow = '';
+                            }
+                        }, { once: true });
+                    }
+                });
+                
+                if (errorTab) activateTab(errorTab);
+                
+                showDjangoToast('Revisa los campos en rojo. Asegúrate de usar formatos válidos (ej: URLs correctas).', 'warning');
+                if (primerError) setTimeout(() => primerError.focus(), 100);
+            }
+        });
     });
 </script>
 {% endblock %}

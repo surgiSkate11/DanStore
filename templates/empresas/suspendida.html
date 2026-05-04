@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Cuenta Suspendida - Tiendita{% endblock %}
+{% block title %}Renovar Suscripción - Tiendita{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -13,6 +13,98 @@
         padding: 2rem 0;
         background: radial-gradient(circle at top center, #ffffff 0%, #f8fafc 100%);
     }
+
+    /* --- NUEVO DISEÑO CHECKOUT --- */
+    .checkout-container { max-width: 1100px; }
+    .checkout-grid {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 2.5rem;
+        align-items: flex-start;
+    }
+    @media (max-width: 991px) {
+        .checkout-grid { grid-template-columns: 1fr; }
+        .summary-section { position: sticky; bottom: 0; z-index: 10; }
+    }
+
+    /* Plan Tabs */
+    .plan-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        background: #f1f5f9;
+        padding: 0.5rem;
+        border-radius: 14px;
+    }
+    .plan-tab {
+        flex: 1;
+        padding: 0.8rem 1rem;
+        border-radius: 10px;
+        font-weight: 700;
+        color: #475569;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        border: 2px solid transparent;
+    }
+    .plan-tab:hover { background: #e2e8f0; }
+    .plan-tab.active {
+        background: white;
+        color: #3b82f6;
+        border-color: #bfdbfe;
+        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05);
+    }
+
+    /* Plan Content */
+    .plan-content-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 2.5rem;
+        box-shadow: 0 4px 15px -5px rgba(0,0,0,0.04);
+    }
+
+    /* Period Toggle */
+    .period-toggle {
+        display: flex;
+        background: #f1f5f9;
+        border-radius: 12px;
+        padding: 6px;
+        position: relative;
+        border: 1px solid #e2e8f0;
+    }
+    .period-option {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        font-weight: 700;
+        color: #64748b;
+        cursor: pointer;
+        position: relative;
+        z-index: 2;
+        transition: color 0.3s ease;
+    }
+    .period-option.active { color: #3b82f6; }
+    .period-slider {
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        width: calc(50% - 6px);
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+        transition: transform 0.3s cubic-bezier(0.65, 0, 0.35, 1);
+        z-index: 1;
+    }
+    .period-toggle[data-period="anual"] .period-slider {
+        transform: translateX(calc(100% - 0px));
+    }
+
+    /* Price Display */
+    .price-display { margin: 2rem 0; }
+    .price-main { font-size: 3.5rem; font-weight: 800; color: #1e293b; letter-spacing: -1.5px; }
+    .price-period { font-size: 1.2rem; font-weight: 600; color: #64748b; margin-left: 8px; }
+    .price-savings { background: #ecfdf5; color: #059669; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; margin-left: 1rem; border: 1px solid #a7f3d0; }
 
     /* Tarjetas de Precios Premium */
     .pricing-card {
@@ -108,6 +200,32 @@
     .btn-razorpay { background: #02042b; color: #3395ff; border: 1px solid #3395ff; }
     .btn-razorpay:hover { background: #02042b; color: white; border-color: white; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(51, 149, 255, 0.3); }
     
+    /* Summary Card */
+    .summary-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.08);
+    }
+    @media (max-width: 991px) {
+        .summary-card { border-radius: 20px 20px 0 0; }
+    }
+    .summary-item { display: flex; justify-content: space-between; padding: 0.8rem 0; font-weight: 600; }
+    .summary-item .label { color: #64748b; }
+    .summary-item .value { color: #1e293b; }
+    .summary-total { display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; margin-top: 1rem; border-top: 2px dashed #e2e8f0; }
+    .summary-total .label { font-size: 1.1rem; font-weight: 800; color: #1e293b; }
+    .summary-total .value { font-size: 2rem; font-weight: 900; color: #3b82f6; }
+    .btn-continue {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        border-radius: 14px;
+        margin-top: 2rem;
+    }
+
     .bank-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; margin-bottom: 0.8rem; font-size: 0.9rem; text-align: left; }
     
     /* Icono de advertencia principal */
@@ -127,40 +245,68 @@
 {% block content %}
 <div class="suspension-wrapper">
 {% if request.user.profile.rol == 'owner' and motivo == 'pago' %}
-<!-- 1. VISTA DE DUEÑO: BLOQUEO POR PAGO (MUESTRA PLANES) -->
-<div class="container">
+<!-- 1. VISTA DE DUEÑO: CHECKOUT DE RENOVACIÓN DE PLANES -->
+<div class="container checkout-container">
     <div class="text-center mb-5">
         <div class="alert-icon-wrapper">
             <i class="bi bi-lock-fill" style="font-size: 2.8rem; transform: rotate(5deg);"></i>
         </div>
         <h1 class="fw-black text-slate-900 mb-3" style="font-size: 2.5rem; letter-spacing: -1px; font-weight: 800; color: #0f172a;">Tu Suscripción ha Expirado</h1>
-        <p class="text-muted mx-auto fs-5" style="max-width: 650px; color: #475569;">El acceso a <strong>{{ request.user.profile.empresa.nombre }}</strong> está pausado. Renueva tu plan ahora mismo para reactivar tu tienda y recuperar tus herramientas de venta.</p>
+        <p class="text-muted mx-auto fs-5" style="max-width: 650px; color: #475569;">El acceso a <strong>{{ request.user.profile.empresa.nombre }}</strong> está pausado. Renueva tu plan para reactivar tu tienda y tus herramientas de venta.</p>
     </div>
 
-    <div class="row justify-content-center g-4 mb-5">
-        {% for plan in planes %}
-        <div class="col-md-6 col-lg-4">
-            <div class="pricing-card {% if forloop.counter == 2 %}popular{% endif %} d-flex flex-column">
-                {% if forloop.counter == 2 %}<div class="popular-badge">Más Elegido</div>{% endif %}
-                <h4 class="fw-bold mb-2 mt-2" style="color: #1e293b; font-size: 1.4rem;">{{ plan.nombre }}</h4>
-                <p class="text-muted small mb-4" style="line-height: 1.6;">{{ plan.descripcion }}</p>
-                <div class="mb-2">
-                    <span class="price-text">${{ plan.precio_mensual }}</span><span class="text-muted fw-bold ms-1">/mes</span>
+    <div class="checkout-grid">
+        <!-- Columna Izquierda: Detalles del Plan -->
+        <div class="plan-details-section">
+            <div class="plan-tabs" id="planTabs">
+                <!-- JS will populate this -->
+            </div>
+            <div class="plan-content-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="fw-bolder text-dark mb-0" id="planName">Plan</h3>
+                    <div class="period-toggle" id="periodToggle" data-period="mensual">
+                        <div class="period-slider"></div>
+                        <div class="period-option active" data-period="mensual">Mensual</div>
+                        <div class="period-option" data-period="anual">Anual</div>
+                    </div>
                 </div>
-                <ul class="feature-list flex-grow-1">
-                    {% for modulo in plan.modulos.all %}
-                    <li><i class="bi bi-check-lg"></i> Módulo de {{ modulo.nombre }}</li>
-                    {% endfor %}
-                    <li><i class="bi bi-check-lg"></i> Soporte Prioritario</li>
+
+                <div class="price-display">
+                    <span class="price-main" id="planPrice">$0</span>
+                    <span class="price-period" id="planPeriod">/mes</span>
+                    <span class="price-savings d-none" id="planSavings">Ahorras $0</span>
+                </div>
+
+                <p class="text-muted mb-4" id="planDescription">Descripción del plan.</p>
+
+                <h5 class="fw-bold text-dark mb-3">¿Qué incluye este plan?</h5>
+                <ul class="feature-list" id="planFeatures">
+                    <!-- JS will populate this -->
                 </ul>
-                <button type="button" class="btn btn-primary btn-lg rounded-pill fw-bold w-100 shadow-sm" style="padding: 14px; font-size: 1rem;" data-bs-toggle="modal" data-bs-target="#paymentModal" onclick="prepararPago('{{ plan.id }}', '{{ plan.nombre|escapejs }}', '{{ plan.precio_mensual }}')">
-                    Elegir {{ plan.nombre }}
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Resumen de Compra -->
+        <div class="summary-section">
+            <div class="summary-card">
+                <h4 class="fw-bold text-dark mb-4">Resumen del Pedido</h4>
+                <div class="summary-item">
+                    <span class="label" id="summaryPlanName">Plan</span>
+                    <span class="value" id="summaryPlanPrice">$0.00</span>
+                </div>
+                <div class="summary-item d-none" id="summaryDiscountRow">
+                    <span class="label text-success">Ahorro Anual</span>
+                    <span class="value text-success" id="summaryDiscountAmount">-$0.00</span>
+                </div>
+                <div class="summary-total">
+                    <span class="label">Total</span>
+                    <span class="value" id="summaryTotal">$0.00</span>
+                </div>
+                <button id="btnContinue" class="btn btn-primary btn-lg btn-continue shadow-sm">
+                    Continuar al Pago
                 </button>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12 text-center"><p class="text-muted">No hay planes disponibles. Contacta a soporte.</p></div>
-        {% endfor %}
     </div>
 </div>
 
@@ -363,6 +509,9 @@
 </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script>
 let planSeleccionadoId = null;
 let tipoPlanSeleccionado = 'mensual'; // Valor por defecto
@@ -398,5 +547,108 @@ function ocultarTransferencia() {
     document.getElementById('transferenciaDiv').classList.add('d-none');
     document.getElementById('paymentButtonsDiv').classList.remove('d-none');
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const planesData = JSON.parse('{{ planes_data_json|default:"[]"|safe }}');
+    if (!planesData || planesData.length === 0) return;
+
+    let selectedPlanId = planesData[0].id;
+    let selectedPeriod = 'mensual';
+
+    const planTabsContainer = document.getElementById('planTabs');
+    const periodToggle = document.getElementById('periodToggle');
+    const periodOptions = document.querySelectorAll('.period-option');
+    const btnContinue = document.getElementById('btnContinue');
+
+    function init() {
+        // Create plan tabs
+        planesData.forEach((plan, index) => {
+            const tab = document.createElement('div');
+            tab.className = `plan-tab ${index === 0 ? 'active' : ''}`;
+            tab.dataset.planId = plan.id;
+            tab.textContent = plan.nombre;
+            planTabsContainer.appendChild(tab);
+        });
+
+        // Add event listeners
+        planTabsContainer.addEventListener('click', handlePlanChange);
+        periodOptions.forEach(opt => opt.addEventListener('click', handlePeriodChange));
+        btnContinue.addEventListener('click', handleContinue);
+
+        // Initial render
+        updateUI();
+    }
+
+    function handlePlanChange(e) {
+        const target = e.target.closest('.plan-tab');
+        if (!target) return;
+
+        selectedPlanId = parseInt(target.dataset.planId);
+        document.querySelectorAll('.plan-tab').forEach(t => t.classList.remove('active'));
+        target.classList.add('active');
+        updateUI();
+    }
+
+    function handlePeriodChange(e) {
+        selectedPeriod = e.target.dataset.period;
+        updateUI();
+    }
+
+    function handleContinue() {
+        const plan = planesData.find(p => p.id === selectedPlanId);
+        const price = selectedPeriod === 'anual' ? plan.precio_anual : plan.precio_mensual;
+        
+        prepararPago(plan.id, plan.nombre, price, selectedPeriod);
+        
+        const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        paymentModal.show();
+    }
+
+    function updateUI() {
+        const plan = planesData.find(p => p.id === selectedPlanId);
+        if (!plan) return;
+
+        periodToggle.dataset.period = selectedPeriod;
+        periodOptions.forEach(opt => opt.classList.toggle('active', opt.dataset.period === selectedPeriod));
+
+        const monthlyPrice = plan.precio_mensual;
+        const annualPrice = plan.precio_anual;
+        const totalMonthlyForYear = monthlyPrice * 12;
+        const savings = totalMonthlyForYear - annualPrice;
+        const isAnnual = selectedPeriod === 'anual';
+        const displayPrice = isAnnual ? annualPrice : monthlyPrice;
+        const displayPeriod = isAnnual ? '/año' : '/mes';
+
+        document.getElementById('planName').textContent = plan.nombre;
+        document.getElementById('planPrice').textContent = `$${displayPrice.toFixed(2)}`;
+        document.getElementById('planPeriod').textContent = displayPeriod;
+        document.getElementById('planDescription').textContent = plan.descripcion;
+
+        const savingsEl = document.getElementById('planSavings');
+        if (isAnnual && savings > 0) {
+            savingsEl.textContent = `Ahorras $${savings.toFixed(2)}`;
+            savingsEl.classList.remove('d-none');
+        } else {
+            savingsEl.classList.add('d-none');
+        }
+
+        const featuresList = document.getElementById('planFeatures');
+        featuresList.innerHTML = plan.modulos.map(mod => `<li><i class="bi ${mod.icono || 'bi-check-lg'}"></i> Módulo de ${mod.nombre}</li>`).join('') + '<li><i class="bi bi-check-lg"></i> Soporte Prioritario</li>';
+
+        document.getElementById('summaryPlanName').textContent = `${plan.nombre} (${isAnnual ? 'Anual' : 'Mensual'})`;
+        document.getElementById('summaryPlanPrice').textContent = `$${displayPrice.toFixed(2)}`;
+        
+        const discountRow = document.getElementById('summaryDiscountRow');
+        if (isAnnual && savings > 0) {
+            document.getElementById('summaryDiscountAmount').textContent = `-$${savings.toFixed(2)}`;
+            discountRow.classList.remove('d-none');
+        } else {
+            discountRow.classList.add('d-none');
+        }
+        document.getElementById('summaryTotal').textContent = `$${displayPrice.toFixed(2)}`;
+    }
+
+    init();
+});
 </script>
 {% endblock %}

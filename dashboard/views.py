@@ -1,37 +1,37 @@
 import csv
 import json
 import threading
-import openpyxl
 from datetime import timedelta
 
-from django.urls import reverse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.apps import apps
-from django import forms
-from django.forms import modelform_factory
-from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
-from django.db.models import Sum, Count, Q
-from django.db.models.functions import TruncMonth
-from django.utils import timezone
-from django.http import HttpResponse
-from django.contrib import messages
-from django.contrib.auth.models import User
-from django.core.cache import cache
-from django.core.mail import send_mail
-from django.conf import settings
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-
+import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-from empresas.models import Empresa, SuscripcionEmpresa, Plan, Ticket, MensajeTicket, ConfiguracionSaaS
-from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
-from ventas.models import Venta, DetalleVenta
-from productos.models import Producto
+from django import forms
+from django.apps import apps
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
+from django.db.models import Sum, Count, Q
+from django.db.models.functions import TruncMonth
+from django.forms import modelform_factory
+from django.http import HttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import timezone
+from django.utils.html import strip_tags
+
 from clientes.models import Cliente
 from empresas.mixins import requiere_modulo
+from empresas.models import Empresa, SuscripcionEmpresa, Plan, Ticket, MensajeTicket, ConfiguracionSaaS
+from productos.models import Producto
 from tiendita_project.utils import form_errors_to_messages
+from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
+from ventas.models import Venta, DetalleVenta
 
 # Identificadores internos de roles (Mejor mantenibilidad)
 ROLE_SUPERADMIN = 'superadmin'
@@ -179,6 +179,13 @@ def saas_configuracion(request):
         config.support_email = request.POST.get('support_email', '')
         config.theme_color = request.POST.get('theme_color', '')
         
+        config.telefono_whatsapp = request.POST.get('telefono_whatsapp', '')
+        config.instagram_url = request.POST.get('instagram_url', '')
+        config.facebook_url = request.POST.get('facebook_url', '')
+        config.sitio_web = request.POST.get('sitio_web', '')
+        config.tiktok_url = request.POST.get('tiktok_url', '')
+        config.x_url = request.POST.get('x_url', '')
+        
         config.smtp_host = request.POST.get('smtp_host', '')
         config.smtp_port = request.POST.get('smtp_port', 587) or 587
         config.smtp_user = request.POST.get('smtp_user', '')
@@ -263,31 +270,22 @@ def saas_tickets(request):
         if enviar_correo and ticket.usuario and ticket.usuario.email:
             def enviar_respuesta_async():
                 try:
-                    config = ConfiguracionSaaS.objects.first()
-                    remitente = config.support_email if config and config.support_email else getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com')
-                    nombre_app = config.nombre_plataforma if config and config.nombre_plataforma else "Tiendita SaaS"
+                    mensaje_txt = f"Hola {ticket.usuario.username},\n\nEl equipo de soporte ha respondido a tu ticket #{ticket.id} ({ticket.asunto}):\n\n{mensaje_texto}\n\nSaludos,\nEquipo de Soporte"
                     
-                    ctx_email = {
-                        'usuario': ticket.usuario.first_name or ticket.usuario.username,
-                        'asunto': ticket.asunto,
-                        'respuesta': mensaje_texto,
-                        'app_name': nombre_app,
-                        'ticket_id': ticket.id
-                    }
-                    html_email = render_to_string('dashboard/ticket_respuesta.html', ctx_email)
-                    text_email = strip_tags(html_email)
+                    app_name = cache.get('saas_app_name', 'Tiendita SaaS')
+                    mensaje_html = render_to_string('emails/ticket_respuesta.html', {
+                        'app_name': app_name, 'ticket_id': ticket.id, 'usuario': ticket.usuario.username, 'asunto': ticket.asunto, 'respuesta': mensaje_texto
+                    })
                     
                     send_mail(
-                        subject=f"Re: [Ticket #{ticket.id}] {ticket.asunto}",
-                        message=text_email,
-                        html_message=html_email,
-                        from_email=remitente,
-                        recipient_list=[ticket.usuario.email],
-                        fail_silently=True
+                        f"Respuesta a tu ticket #{ticket.id}", 
+                        mensaje_txt, 
+                        getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com'), 
+                        [ticket.usuario.email], 
+                        html_message=mensaje_html, fail_silently=True
                     )
                 except Exception as e:
-                    print(f"Error enviando correo de respuesta de ticket: {e}")
-            
+                    print(f"Error enviando respuesta de ticket: {e}")
             threading.Thread(target=enviar_respuesta_async).start()
                 
         return redirect(f"{reverse('saas_tickets')}?id={ticket.id}&filtro={filtro_actual}")
@@ -876,11 +874,11 @@ def tienda_publica(request, slug):
     if suspendida:
         return render(request, 'dashboard/tienda_publica.html', {'empresa': empresa, 'suspendida': True})
 
-    productos = Producto.objects.filter(empresa=empresa, estado='disponible').select_related('tipo_producto').order_by('-creado_en')
+    # OPTIMIZACIÓN: Obtener todos los productos y ordenar para que los disponibles salgan primero
+    productos = Producto.objects.filter(empresa=empresa).select_related('tipo_producto').order_by('estado', '-creado_en')
     
-    # Obtener categorías únicas de los productos disponibles
-    categorias = set(p.categoria for p in productos if p.categoria)
-    categorias = sorted(list(categorias))
+    # OPTIMIZACIÓN: Delegar la agrupación a la Base de Datos (Ahorro de CPU y RAM)
+    categorias = Producto.objects.filter(empresa=empresa).exclude(categoria='').values_list('categoria', flat=True).distinct().order_by('categoria')
     
     context = {'empresa': empresa, 'productos': productos, 'categorias': categorias, 'suspendida': False}
     return render(request, 'dashboard/tienda_publica.html', context)

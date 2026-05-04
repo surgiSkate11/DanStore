@@ -37,7 +37,7 @@
                     <p class="mb-0 opacity-75">Completa los datos requeridos para registrar la información en el sistema.</p>
                 </div>
                 
-                <form method="POST" enctype="multipart/form-data" class="p-4 p-md-5">
+                <form method="POST" enctype="multipart/form-data" class="p-4 p-md-5" novalidate id="genericForm">
                     {% csrf_token %}
                     <div class="row g-4">
                         {% for field in form %}
@@ -61,4 +61,41 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('genericForm');
+    
+    form.addEventListener('submit', function(e) {
+        if (!this.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let primerError = null;
+            Array.from(this.elements).forEach(input => {
+                if (!input.checkValidity()) {
+                    input.classList.add('is-invalid');
+                    input.style.borderColor = '#ef4444';
+                    input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                    
+                    if (!primerError) primerError = input;
+                    
+                    input.addEventListener('input', function() {
+                        if (this.checkValidity()) {
+                            this.classList.remove('is-invalid');
+                            this.style.borderColor = '';
+                            this.style.boxShadow = '';
+                        }
+                    }, { once: true });
+                }
+            });
+            
+            showDjangoToast('Por favor, completa correctamente todos los campos obligatorios marcados en rojo.', 'warning');
+            if (primerError) primerError.focus();
+        }
+    });
+});
+</script>
 {% endblock %}

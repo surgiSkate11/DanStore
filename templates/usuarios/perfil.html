@@ -43,8 +43,8 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Nombre de Usuario (Login)</label>
-                        <input type="text" class="form-control bg-light" value="{{ usuario.username }}" disabled readonly>
-                        <small class="text-muted">El usuario no se puede cambiar.</small>
+                        <input type="text" name="username" class="form-control" value="{{ usuario.username }}">
+                        <small class="text-muted">Solo letras, números, guiones y guiones bajos. Requerirá iniciar sesión nuevamente.</small>
                     </div>
                     
                     <div class="row">
@@ -61,6 +61,7 @@
                     <div class="mb-4">
                         <label class="form-label">Correo Electrónico</label>
                         <input type="email" name="email" class="form-control" value="{{ usuario.email }}">
+                        <small class="text-muted">Se te enviará un enlace de verificación a tu nuevo correo antes de aplicar el cambio.</small>
                     </div>
                     
                     {% if perfil.rol != 'DUEÑO' %}

@@ -103,9 +103,14 @@ class Venta(models.Model):
     
     def calcular_total(self):
         """Calcula el total de la venta"""
-        self.subtotal = sum(detalle.precio_unitario for detalle in self.detalles.all())
+        # OPTIMIZACIÓN 1: Delegar la suma al motor SQL en lugar de usar RAM en Python
+        resultado = self.detalles.aggregate(suma_total=models.Sum('precio_unitario'))
+        self.subtotal = resultado['suma_total'] or 0
+        
         self.total = self.subtotal - self.descuento + self.envio + self.otros_gastos
-        self.save()
+        
+        # OPTIMIZACIÓN 2: Solo escribir las columnas que cambiaron (update_fields)
+        self.save(update_fields=['subtotal', 'total', 'actualizado_en'])
     
     
     def cantidad_productos(self):
@@ -164,8 +169,11 @@ class ConfiguracionFactura(models.Model):
         config, created = cls.objects.get_or_create(empresa_id=empresa_id)
         
         # Sincronizar automáticamente si NO ha sido personalizado y es distinto al de la BD principal
-        if config.empresa and not config.nombre_personalizado and config.nombre_empresa != config.empresa.nombre:
-            config.nombre_empresa = config.empresa.nombre
-            config.save(update_fields=['nombre_empresa'])
+        if not config.nombre_personalizado:
+            # OPTIMIZACIÓN 3: Consultar solo el nombre de la empresa para evitar un objeto completo
+            empresa_nombre = Empresa.objects.filter(id=empresa_id).values_list('nombre', flat=True).first()
+            if empresa_nombre and config.nombre_empresa != empresa_nombre:
+                config.nombre_empresa = empresa_nombre
+                config.save(update_fields=['nombre_empresa', 'actualizado_en'])
             
         return config
