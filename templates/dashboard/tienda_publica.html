@@ -15,16 +15,22 @@
            DESIGN TOKENS & RESET
         ============================================================ */
         :root {
-            --brand: {{ empresa.color_primario|default:'#c8a96e' }};
+            --brand: {{ empresa.color_primario|default:'#0d6efd' }};
             --brand-dark: color-mix(in srgb, var(--brand) 70%, #000);
             --brand-light: color-mix(in srgb, var(--brand) 15%, #fff);
-            --ink: #1a1611;
-            --ink-muted: #6b6460;
-            --ink-faint: #b5b0aa;
-            --surface: #faf9f7;
-            --surface-alt: #f2ede6;
-            --white: #ffffff;
-            --border: #e8e2d9;
+            --brand-ink: #ffffff; /* Override por JS */
+            
+            --ink: {{ empresa.color_texto|default:'#1a1611' }};
+            --ink-muted: color-mix(in srgb, var(--ink) 65%, transparent);
+            --ink-faint: color-mix(in srgb, var(--ink) 30%, transparent);
+            
+            --surface: {{ empresa.color_fondo|default:'#faf9f7' }};
+            --surface-alt: color-mix(in srgb, var(--ink) 4%, var(--surface));
+            
+            --header-bg: {{ empresa.color_cabecera|default:'#ffffff' }};
+            --header-ink: var(--ink);
+            
+            --border: color-mix(in srgb, var(--ink) 10%, transparent);
             --radius-sm: 8px;
             --radius-md: 16px;
             --radius-lg: 24px;
@@ -61,7 +67,7 @@
         ============================================================ */
         .promo-banner {
             background: var(--brand);
-            color: var(--white);
+            color: var(--brand-ink);
             text-align: center;
             padding: 10px 20px;
             font-size: 0.82rem;
@@ -89,9 +95,7 @@
             position: sticky;
             top: 0;
             z-index: 90;
-            background: rgba(250, 249, 247, 0.92);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: var(--header-bg);
             border-bottom: 1px solid var(--border);
             transition: box-shadow 0.3s var(--easing);
         }
@@ -124,7 +128,7 @@
             font-family: var(--font-display);
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--ink);
+            color: var(--header-ink);
             letter-spacing: -0.3px;
             line-height: 1.2;
         }
@@ -133,7 +137,7 @@
             font-family: var(--font-body);
             font-size: 0.68rem;
             font-weight: 400;
-            color: var(--ink-muted);
+            color: color-mix(in srgb, var(--header-ink) 70%, transparent);
             letter-spacing: 1px;
             text-transform: uppercase;
         }
@@ -146,28 +150,28 @@
         }
         .header-search input {
             width: 100%;
-            background: var(--surface-alt);
+            background: color-mix(in srgb, var(--header-ink) 8%, var(--header-bg));
             border: 1.5px solid transparent;
             border-radius: 40px;
             padding: 10px 20px 10px 44px;
             font-family: var(--font-body);
             font-size: 0.9rem;
-            color: var(--ink);
+            color: var(--header-ink);
             transition: all 0.25s var(--easing);
             outline: none;
         }
         .header-search input:focus {
-            background: var(--white);
+            background: var(--header-bg);
             border-color: var(--brand);
             box-shadow: 0 0 0 4px var(--brand-light);
         }
-        .header-search input::placeholder { color: var(--ink-faint); }
+        .header-search input::placeholder { color: color-mix(in srgb, var(--header-ink) 40%, transparent); }
         .header-search .search-icon {
             position: absolute;
             left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: var(--ink-muted);
+            color: color-mix(in srgb, var(--header-ink) 60%, transparent);
             font-size: 1rem;
             pointer-events: none;
             transition: color 0.2s;
@@ -194,13 +198,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--ink-muted);
+            color: color-mix(in srgb, var(--header-ink) 70%, transparent);
             font-size: 0.95rem;
             transition: all 0.2s var(--easing);
         }
         .header-social a:hover {
-            background: var(--brand-light);
-            color: var(--brand-dark);
+            background: color-mix(in srgb, var(--header-ink) 10%, transparent);
+            color: var(--header-ink);
             transform: translateY(-1px);
         }
 
@@ -212,11 +216,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--ink);
-            color: var(--white);
+            background: var(--brand);
+            color: var(--brand-ink);
             font-size: 1.1rem;
             transition: all 0.25s var(--easing);
             flex-shrink: 0;
+            box-shadow: 0 4px 10px color-mix(in srgb, var(--brand) 30%, transparent);
         }
         .cart-trigger:hover {
             background: var(--brand);
@@ -226,8 +231,8 @@
             position: absolute;
             top: -4px;
             right: -4px;
-            background: var(--brand);
-            color: white;
+            background: var(--header-ink);
+            color: var(--surface);
             width: 20px;
             height: 20px;
             border-radius: 50%;
@@ -236,7 +241,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid var(--surface);
+            border: 2px solid var(--header-bg);
             transform: scale(0);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -250,8 +255,8 @@
             border-radius: 50%;
             align-items: center;
             justify-content: center;
-            background: var(--surface-alt);
-            color: var(--ink-muted);
+            background: color-mix(in srgb, var(--header-ink) 8%, var(--header-bg));
+            color: color-mix(in srgb, var(--header-ink) 70%, transparent);
             font-size: 1rem;
             transition: all 0.2s;
         }
@@ -262,26 +267,17 @@
         .hero-section {
             position: relative;
             overflow: hidden;
-            background: var(--ink);
+            background: var(--brand);
             min-height: 480px;
             display: flex;
             flex-direction: column;
             justify-content: center;
         }
 
-        .hero-bg {
-            position: absolute;
-            inset: 0;
-            background-size: cover;
-            background-position: center;
-            opacity: 0.35;
-            {% if empresa.hero_image %}background-image: url('{{ empresa.hero_image.url }}');{% endif %}
-        }
-
         .hero-grain {
             position: absolute;
             inset: 0;
-            opacity: 0.04;
+            opacity: 0.08;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
             pointer-events: none;
         }
@@ -289,12 +285,7 @@
         .hero-overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(
-                to bottom right,
-                rgba(26,22,17,0.85) 0%,
-                rgba(26,22,17,0.6) 50%,
-                color-mix(in srgb, var(--brand) 40%, rgba(26,22,17,0.7)) 100%
-            );
+            background: linear-gradient(135deg, transparent 0%, color-mix(in srgb, #000 30%, transparent) 100%);
         }
 
         .hero-content {
@@ -313,19 +304,19 @@
             font-family: var(--font-display);
             font-size: clamp(2.2rem, 5vw, 4rem);
             font-weight: 900;
-            color: white;
+            color: var(--brand-ink);
             line-height: 1.1;
             letter-spacing: -1px;
             margin-bottom: 16px;
         }
         .hero-title em {
             font-style: italic;
-            color: var(--brand);
+            color: color-mix(in srgb, var(--brand-ink) 80%, transparent);
         }
 
         .hero-desc {
             font-size: 1.05rem;
-            color: rgba(255,255,255,0.7);
+            color: color-mix(in srgb, var(--brand-ink) 80%, transparent);
             max-width: 520px;
             font-weight: 300;
             line-height: 1.7;
@@ -337,19 +328,19 @@
             gap: 32px;
         }
         .hero-stat {
-            color: white;
+            color: var(--brand-ink);
         }
         .hero-stat strong {
             display: block;
             font-family: var(--font-display);
             font-size: 1.8rem;
             font-weight: 700;
-            color: var(--brand);
+            color: var(--brand-ink);
             line-height: 1;
         }
         .hero-stat small {
             font-size: 0.75rem;
-            color: rgba(255,255,255,0.55);
+            color: color-mix(in srgb, var(--brand-ink) 65%, transparent);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -374,7 +365,7 @@
            CATEGORY STRIP
         ============================================================ */
         .category-strip-wrap {
-            background: var(--white);
+            background: var(--header-bg);
             border-bottom: 1px solid var(--border);
             position: sticky;
             top: 72px;
@@ -400,7 +391,7 @@
             border-radius: 40px;
             font-size: 0.82rem;
             font-weight: 500;
-            color: var(--ink-muted);
+            color: color-mix(in srgb, var(--header-ink) 70%, transparent);
             background: transparent;
             border: 1.5px solid transparent;
             cursor: pointer;
@@ -409,27 +400,30 @@
             letter-spacing: 0.2px;
         }
         .cat-pill:hover {
-            background: var(--surface-alt);
-            color: var(--ink);
+            background: color-mix(in srgb, var(--header-ink) 8%, var(--header-bg));
+            color: var(--header-ink);
         }
         .cat-pill.active {
-            background: var(--ink);
-            color: var(--white);
-            border-color: var(--ink);
+            background: var(--brand);
+            color: var(--brand-ink);
+            border-color: var(--brand);
         }
         .cat-count {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: rgba(255,255,255,0.2);
             border-radius: 40px;
             padding: 1px 7px;
             font-size: 0.72rem;
             margin-left: 4px;
         }
         .cat-pill:not(.active) .cat-count {
-            background: var(--surface-alt);
-            color: var(--ink-muted);
+            background: color-mix(in srgb, var(--header-ink) 8%, var(--header-bg));
+            color: color-mix(in srgb, var(--header-ink) 60%, transparent);
+        }
+        .cat-pill.active .cat-count {
+            background: color-mix(in srgb, var(--brand-ink) 25%, transparent);
+            color: var(--brand-ink);
         }
 
         /* ============================================================
@@ -475,7 +469,7 @@
         }
 
         .product-card {
-            background: var(--white);
+            background: var(--surface);
             border-radius: var(--radius-lg);
             overflow: hidden;
             border: 1px solid var(--border);
@@ -551,8 +545,8 @@
 
         .btn-quick-add {
             width: 100%;
-            background: var(--white);
-            color: var(--ink);
+            background: var(--brand);
+            color: var(--brand-ink);
             border-radius: var(--radius-sm);
             padding: 9px 16px;
             font-size: 0.82rem;
@@ -562,9 +556,10 @@
             justify-content: center;
             gap: 8px;
             transition: all 0.2s var(--easing);
+            border: none;
         }
-        .btn-quick-add:hover { background: var(--brand); color: white; }
-        .btn-quick-add.added { background: var(--brand); color: white; }
+        .btn-quick-add:hover { background: var(--brand-dark); transform: translateY(-2px); }
+        .btn-quick-add.added { background: var(--brand-dark); }
         .btn-quick-add:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Info */
@@ -603,15 +598,15 @@
             font-family: var(--font-display);
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--ink);
+            color: var(--brand);
             letter-spacing: -0.3px;
         }
         .btn-add-mobile {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: var(--ink);
-            color: var(--white);
+            background: var(--brand);
+            color: var(--brand-ink);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -619,8 +614,8 @@
             transition: all 0.2s var(--easing);
             flex-shrink: 0;
         }
-        .btn-add-mobile:hover { background: var(--brand); transform: scale(1.1); }
-        .btn-add-mobile.added { background: var(--brand); }
+        .btn-add-mobile:hover { background: var(--brand-dark); transform: scale(1.1); }
+        .btn-add-mobile.added { background: var(--brand-dark); }
         .btn-add-mobile:disabled { background: var(--ink-faint); cursor: not-allowed; }
 
         /* Empty state */
@@ -659,7 +654,7 @@
             bottom: 0;
             width: var(--cart-width);
             max-width: 95vw;
-            background: var(--white);
+            background: var(--surface);
             z-index: 210;
             display: flex;
             flex-direction: column;
@@ -686,7 +681,7 @@
         }
         .cart-title-count {
             background: var(--brand);
-            color: white;
+            color: var(--brand-ink);
             font-family: var(--font-body);
             font-size: 0.72rem;
             font-weight: 700;
@@ -789,7 +784,7 @@
         .qty-btn {
             width: 26px; height: 26px;
             border-radius: 50%;
-            background: var(--white);
+            background: var(--surface-alt);
             border: 1px solid var(--border);
             display: flex; align-items: center; justify-content: center;
             font-size: 0.85rem;
@@ -797,7 +792,7 @@
             color: var(--ink);
             transition: all 0.15s;
         }
-        .qty-btn:hover { background: var(--ink); color: white; border-color: var(--ink); }
+        .qty-btn:hover { background: var(--ink); color: var(--surface); border-color: var(--ink); }
         .qty-value {
             font-weight: 700;
             font-size: 0.88rem;
@@ -845,7 +840,7 @@
         .btn-checkout {
             width: 100%;
             background: var(--brand);
-            color: white;
+            color: var(--brand-ink);
             border-radius: var(--radius-sm);
             padding: 15px 24px;
             font-size: 0.95rem;
@@ -934,7 +929,7 @@
         .store-footer {
             border-top: 1px solid var(--border);
             padding: 32px 24px;
-            background: var(--white);
+            background: var(--surface-alt);
         }
         .footer-inner {
             max-width: 1280px;
@@ -1003,28 +998,28 @@
         /* Mobile Search Bar expanded */
         .mobile-search-bar {
             display: none;
-            background: var(--white);
+            background: var(--header-bg);
             border-bottom: 1px solid var(--border);
             padding: 12px 16px;
         }
         .mobile-search-bar.open { display: block; }
         .mobile-search-bar input {
             width: 100%;
-            background: var(--surface-alt);
+            background: color-mix(in srgb, var(--header-ink) 8%, var(--header-bg));
             border: 1.5px solid transparent;
             border-radius: 40px;
             padding: 10px 20px 10px 44px;
             font-family: var(--font-body);
             font-size: 0.9rem;
-            color: var(--ink);
+            color: var(--header-ink);
             outline: none;
         }
         .mobile-search-bar input:focus {
-            background: var(--white);
+            background: var(--header-bg);
             border-color: var(--brand);
         }
         .mobile-search-bar { position: relative; }
-        .mobile-search-bar .si { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+        .mobile-search-bar .si { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: color-mix(in srgb, var(--header-ink) 60%, transparent); pointer-events: none; }
 
         /* Animations */
         .product-card { animation: fadeInUp 0.4s var(--easing) both; }
@@ -1048,6 +1043,18 @@
         }
         .cart-badge.pulse { animation: pulse 0.4s var(--easing); }
     </style>
+    <script>
+        // Auto-calculador de Contraste Inteligente
+        function getContrastColor(hexcolor){
+            if(!hexcolor) return '#1a1611';
+            hexcolor = hexcolor.replace("#", "");
+            if(hexcolor.length === 3) hexcolor = hexcolor.split('').map(function(h){return h+h;}).join('');
+            var r = parseInt(hexcolor.substr(0,2),16) || 255, g = parseInt(hexcolor.substr(2,2),16) || 255, b = parseInt(hexcolor.substr(4,2),16) || 255;
+            return (((r*299)+(g*587)+(b*114))/1000 >= 128) ? '#1a1611' : '#ffffff';
+        }
+        document.documentElement.style.setProperty('--header-ink', getContrastColor('{{ empresa.color_cabecera|default:"#ffffff" }}'));
+        document.documentElement.style.setProperty('--brand-ink', getContrastColor('{{ empresa.color_primario|default:"#0d6efd" }}'));
+    </script>
 </head>
 <body>
 
@@ -1065,9 +1072,7 @@
 {% else %}
 <!-- ===================== ACTIVE STORE ===================== -->
 
-{% if empresa.mensaje_promocional %}
-<div class="promo-banner">{{ empresa.mensaje_promocional }}</div>
-{% endif %}
+<div class="promo-banner" id="promoBanner" style="{% if not empresa.mensaje_promocional %}display: none;{% endif %}">{{ empresa.mensaje_promocional }}</div>
 
 <!-- STICKY HEADER -->
 <header class="site-header" id="siteHeader">
@@ -1078,7 +1083,7 @@
                 <img src="{{ empresa.logo.url }}" alt="{{ empresa.nombre }}">
             {% endif %}
             <div class="logo-text">
-                {{ empresa.nombre }}
+                <b id="headerStoreName" style="font-weight: inherit;">{{ empresa.nombre }}</b>
                 <span>Tienda Oficial</span>
             </div>
         </a>
@@ -1118,7 +1123,6 @@
 
 <!-- HERO -->
 <section class="hero-section">
-    <div class="hero-bg"></div>
     <div class="hero-grain"></div>
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -1150,11 +1154,6 @@
                 {% endif %}
             </div>
         </div>
-        {% if empresa.logo %}
-        <div class="hero-logo-wrap">
-            <img src="{{ empresa.logo.url }}" alt="{{ empresa.nombre }} logo">
-        </div>
-        {% endif %}
     </div>
 </section>
 
@@ -1590,6 +1589,70 @@
             }
         });
     }
+
+    // ─── LIVE PREVIEW LISTENER (SaaS Builder) ──────────────────
+    window.addEventListener('message', function(event) {
+        const data = event.data;
+        if (data && data.type === 'live_preview_update') {
+            
+            // Actualizar color primario
+            if (data.color_primario) {
+                document.documentElement.style.setProperty('--brand', data.color_primario);
+                // Recalcular colores oscuros/claros automáticos
+                document.documentElement.style.setProperty('--brand-dark', `color-mix(in srgb, ${data.color_primario} 70%, #000)`);
+                document.documentElement.style.setProperty('--brand-light', `color-mix(in srgb, ${data.color_primario} 15%, #fff)`);
+                document.documentElement.style.setProperty('--brand-ink', getContrastColor(data.color_primario));
+            }
+            
+            if (data.color_fondo) {
+                document.documentElement.style.setProperty('--surface', data.color_fondo);
+            }
+            if (data.color_cabecera) {
+                document.documentElement.style.setProperty('--header-bg', data.color_cabecera);
+                document.documentElement.style.setProperty('--header-ink', getContrastColor(data.color_cabecera));
+            }
+            if (data.color_texto) {
+                document.documentElement.style.setProperty('--ink', data.color_texto);
+                document.documentElement.style.setProperty('--ink-muted', `color-mix(in srgb, ${data.color_texto} 65%, transparent)`);
+                document.documentElement.style.setProperty('--ink-faint', `color-mix(in srgb, ${data.color_texto} 30%, transparent)`);
+                document.documentElement.style.setProperty('--surface-alt', `color-mix(in srgb, ${data.color_texto} 4%, var(--surface))`);
+                document.documentElement.style.setProperty('--border', `color-mix(in srgb, ${data.color_texto} 10%, transparent)`);
+            }
+            
+            // Actualizar Título
+            if (data.landing_titulo) {
+                const titleEl = document.querySelector('.hero-title');
+                if (titleEl) titleEl.textContent = data.landing_titulo;
+            }
+            
+            // Actualizar Descripción
+            if (data.landing_descripcion !== undefined) {
+                const descEl = document.querySelector('.hero-desc');
+                if (descEl) descEl.textContent = data.landing_descripcion;
+            }
+            
+            // Actualizar Nombre de la Tienda
+            if (data.nombre_empresa !== undefined) {
+                const storeNameEl = document.getElementById('headerStoreName');
+                if (storeNameEl) storeNameEl.textContent = data.nombre_empresa || 'Tienda';
+                
+                // Si no hay un título hero escrito, usa el nombre por defecto
+                const titleEl = document.querySelector('.hero-title');
+                if (titleEl && !data.landing_titulo && "{{ empresa.landing_titulo }}" === "") {
+                    titleEl.textContent = data.nombre_empresa || 'Tienda';
+                }
+            }
+            
+            // Actualizar Mensaje Promocional
+            if (data.mensaje_promocional !== undefined) {
+                const promoEl = document.getElementById('promoBanner');
+                if (promoEl) {
+                    promoEl.textContent = data.mensaje_promocional;
+                    promoEl.style.display = data.mensaje_promocional ? 'block' : 'none';
+                }
+            }
+        }
+    });
 
 })();
 </script>

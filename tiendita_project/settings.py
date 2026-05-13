@@ -213,3 +213,6 @@ if platform.system() == 'Windows':
     WKHTMLTOPDF_CMD = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
 else:
     WKHTMLTOPDF_CMD = '/usr/bin/wkhtmltopdf'
+
+# Permitir iframes desde el mismo dominio (Para el Live Preview del Editor de Tienda)
+X_FRAME_OPTIONS = 'SAMEORIGIN'

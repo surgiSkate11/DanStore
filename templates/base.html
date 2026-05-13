@@ -8,7 +8,7 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <!-- Premium Fonts (Plus Jakarta Sans) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -305,8 +305,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link fw-semibold px-3 text-primary" href="{% url 'saas_control_panel' %}">
-                            <i class="bi bi-database-fill-gear me-1"></i> Base de Datos
+                        <a class="nav-link fw-semibold px-3" href="{% url 'saas_control_panel' %}">
+                            <i class="bi bi-database me-1"></i> Base de Datos
                         </a>
                     </li>
                     <li class="nav-item">
@@ -378,7 +378,7 @@
                     {% if 'clientes' in modulos_permitidos %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'lista_clientes' %}">
-                            <i class="bi bi-star-fill"></i> Clientes 
+                            <i class="bi bi-star"></i> Clientes 
                         </a>
                     </li>
                     {% endif %}
@@ -419,6 +419,21 @@
                                 <i class="bi bi-plus-circle"></i> Nuevo Sorteo
                             </a></li>
                         {% endif %}
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
+                    {% if 'tienda' in modulos_permitidos %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="tiendaDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-shop-window text-dark"></i> Tienda Online
+                        </a>
+                        <ul class="dropdown-menu">
+                        {% if 'editar' in permisos.tienda %}
+                            <li><a class="dropdown-item" href="{% url 'configuracion_tienda' %}"><i class="bi bi-layout-wtf text-info me-2"></i> Editor Visual (Live)</a></li>
+                        {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'tienda_publica' empresa.slug %}" target="_blank"><i class="bi bi-box-arrow-up-right text-success me-2"></i> Ver Tienda Pública</a></li>
                         </ul>
                     </li>
                     {% endif %}
@@ -465,16 +480,6 @@
                                 <a class="dropdown-item dropdown-item-premium rounded" href="{% url 'lista_empleados' %}"><i class="bi bi-people text-success"></i> Mi Equipo</a>
                                 {% endif %}
                                 
-                                {% if 'tienda' in modulos_permitidos %}
-                                <li><hr class="dropdown-divider my-2"></li>
-                                <li><h6 class="dropdown-header fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.5px;">MI TIENDA</h6></li>
-                                {% if 'editar' in permisos.tienda %}
-                                <li><a class="dropdown-item dropdown-item-premium rounded" href="{% url 'configuracion_tienda' %}"><i class="bi bi-palette-fill text-info"></i> Personalizar Tienda</a></li>
-                                {% endif %}
-                                <li><a class="dropdown-item dropdown-item-premium rounded" href="{% url 'tienda_publica' empresa.slug %}" target="_blank">
-                                    <i class="bi bi-shop text-success"></i> Ver mi Tienda <i class="bi bi-box-arrow-up-right small ms-auto text-muted"></i>
-                                </a></li>
-                                {% endif %}
                                 
                                 {% if rol_usuario == 'owner' or rol_usuario == 'employee' %}
                                 <a class="dropdown-item dropdown-item-premium rounded" href="#" data-bs-toggle="modal" data-bs-target="#supportModal"><i class="bi bi-headset text-info"></i> Soporte Técnico</a>

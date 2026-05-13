@@ -184,9 +184,13 @@
                     <tr class="tenant-row" data-name="{{ emp.nombre|lower }}" data-slug="{{ emp.slug|lower }}" data-id="{{ emp.id }}" data-status="{% if emp.activa %}activa{% else %}suspendida{% endif %}">
                         <td class="ps-4">
                             <div class="d-flex align-items-center">
-                                <div class="tenant-avatar me-3">
-                                    {{ emp.nombre|make_list|first|upper }}
+                                {% if emp.logo %}
+                                <img src="{{ emp.logo.url }}" alt="{{ emp.nombre }}" class="me-3" style="width: 42px; height: 42px; border-radius: 10px; object-fit: cover; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" onerror="this.outerHTML='<div class=\'tenant-avatar me-3 shadow-sm\'><i class=\'bi bi-buildings\'></i></div>'">
+                                {% else %}
+                                <div class="tenant-avatar me-3 shadow-sm">
+                                    <i class="bi bi-buildings"></i>
                                 </div>
+                                {% endif %}
                                 <div>
                                     <div class="fw-bold text-dark">{{ emp.nombre }}</div>
                                     <div class="small text-muted">ID: #{{ emp.id }}</div>

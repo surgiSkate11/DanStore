@@ -1,151 +1,252 @@
 {% extends 'base.html' %}
-{% load static %}
 
-{% block title %}Configuración de Tienda | {{ empresa.nombre }}{% endblock %}
+{% block title %}Editor Visual de Tienda | {{ empresa.nombre }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .page-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 2rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3); color: white; margin-bottom: 2rem; }
-    .config-card {
-        background: white;
-        border-radius: 20px;
+    body { background-color: #f8fafc; overflow: hidden; }
+    /* Layout Split Screen */
+    .editor-container {
+        display: flex;
+        height: calc(100vh - 65px); /* Resta el alto del Navbar */
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+    }
+
+    .editor-sidebar {
+        width: 450px;
+        background: #ffffff;
+        border-right: 1px solid #e2e8f0;
+        overflow-y: auto;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .editor-preview {
+        flex-grow: 1;
+        background: #f1f5f9;
+        display: flex;
+        flex-direction: column;
         padding: 2rem;
-        box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
-        border: 1px solid rgba(226,232,240,0.8);
     }
-    .form-label-custom {
-        font-weight: 700;
-        color: #475569;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .input-group-text-icon {
-        background-color: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        border-right: none;
-        padding: 0 1rem;
-        border-radius: 12px 0 0 12px;
-    }
-    .form-control-custom {
-        border-radius: 0 12px 12px 0 !important;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-left: none;
-        padding: 0.75rem 1rem;
-    }
-    .form-control-custom:focus {
+
+    .preview-frame-wrapper {
+        width: 100%;
+        flex-grow: 1;
         background: white;
-        border-color: var(--primary-color);
-        box-shadow: none;
-        z-index: 2;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
     }
+
+    .preview-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    /* Sidebar Styling */
+    .sidebar-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .sidebar-body { padding: 1.5rem; }
+
+    .form-section {
+        margin-bottom: 2rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.25rem;
+    }
+
+    .form-section-title {
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #475569;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .form-label { font-size: 0.85rem; font-weight: 700; color: #334155; }
+    .form-control { border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc;}
+    .form-control:focus { background: #ffffff; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+    /* Ocultar header/footer del base.html en esta vista para ocupar toda la pantalla */
+    main.container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    footer { display: none !important; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-9">
-            <div class="page-header">
-                <h1 class="mb-2 fw-bold"><i class="bi bi-palette-fill"></i> Personalizar Tienda</h1>
-                <p class="mb-0 opacity-75"><i class="bi bi-info-circle"></i> Ajusta la apariencia, información de contacto y redes sociales de tu tienda pública.</p>
+<div class="editor-container">
+    <!-- Panel Izquierdo: Formularios de Edición -->
+    <div class="editor-sidebar shadow-sm">
+        <form method="POST" action="{% url 'configuracion_tienda' %}" enctype="multipart/form-data" id="storefrontForm" novalidate>
+            {% csrf_token %}
+            <div class="sidebar-header d-flex justify-content-between align-items-center shadow-sm">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-palette-fill text-primary me-2"></i>Editor Visual</h5>
+                </div>
+                <button type="submit" class="btn btn-primary fw-bold shadow-sm rounded-pill px-4">Guardar</button>
             </div>
 
-            <form method="post" class="config-card" enctype="multipart/form-data" novalidate>
-                {% csrf_token %}
-                
-                <h5 class="fw-bolder text-dark mb-4 pb-3 border-bottom">Diseño y Marca</h5>
-                <div class="row g-4 mb-5">
-                    <div class="col-md-8">
-                        <label class="form-label-custom mb-2">Título Principal de la Tienda</label>
-                        <input type="text" name="landing_titulo" class="form-control form-control-lg bg-light border-0" value="{{ empresa.landing_titulo }}" placeholder="Ej: Bienvenidos a mi Tienda" style="border-radius: 12px;">
+            <div class="sidebar-body">
+                <!-- Identidad Visual -->
+                <div class="form-section">
+                    <div class="form-section-title"><i class="bi bi-palette"></i> Colores y Temas</div>
+                    
+                    <p class="text-muted small mb-4">Personaliza las secciones de tu tienda con colores profesionales para darle identidad a tu negocio.</p>
+
+                    <div class="row g-4 mb-4">
+                        <!-- Color Primario -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <label class="form-label fw-bold mb-1"><i class="bi bi-cursor-fill text-primary"></i> Marca y Botones</label>
+                                <p class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.2;">Modifica botones, llamadas a la acción, íconos y contadores.</p>
+                                <div class="d-flex align-items-center gap-3 mt-auto">
+                                    <input type="color" name="color_primario" id="colorPrimario" class="form-control form-control-color border-0 p-0 shadow-sm" value="{{ empresa.color_primario|default:'#0d6efd' }}" style="width: 36px; height: 36px; border-radius: 8px; cursor: pointer;">
+                                    <span class="fw-bold text-muted font-monospace" style="font-size:0.85rem;" id="hexPrimario">{{ empresa.color_primario|default:'#0d6efd' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color Cabecera -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <label class="form-label fw-bold mb-1"><i class="bi bi-layout-text-window-reverse text-primary"></i> Barra Superior</label>
+                                <p class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.2;">Fondo del encabezado superior (logo, buscador y carrito).</p>
+                                <div class="d-flex align-items-center gap-3 mt-auto">
+                                    <input type="color" name="color_cabecera" id="colorCabecera" class="form-control form-control-color border-0 p-0 shadow-sm" value="{{ empresa.color_cabecera|default:'#ffffff' }}" style="width: 36px; height: 36px; border-radius: 8px; cursor: pointer;">
+                                    <span class="fw-bold text-muted font-monospace" style="font-size:0.85rem;" id="hexCabecera">{{ empresa.color_cabecera|default:'#ffffff' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color Fondo -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <label class="form-label fw-bold mb-1"><i class="bi bi-square-fill text-primary"></i> Fondo de Tienda</label>
+                                <p class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.2;">Color de fondo general que cubre todo el catálogo.</p>
+                                <div class="d-flex align-items-center gap-3 mt-auto">
+                                    <input type="color" name="color_fondo" id="colorFondo" class="form-control form-control-color border-0 p-0 shadow-sm" value="{{ empresa.color_fondo|default:'#faf9f7' }}" style="width: 36px; height: 36px; border-radius: 8px; cursor: pointer;">
+                                    <span class="fw-bold text-muted font-monospace" style="font-size:0.85rem;" id="hexFondo">{{ empresa.color_fondo|default:'#faf9f7' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color Texto -->
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <label class="form-label fw-bold mb-1"><i class="bi bi-fonts text-primary"></i> Textos Principales</label>
+                                <p class="small text-muted mb-2" style="font-size: 0.75rem; line-height: 1.2;">Títulos, subtítulos, nombres de productos y precios.</p>
+                                <div class="d-flex align-items-center gap-3 mt-auto">
+                                    <input type="color" name="color_texto" id="colorTexto" class="form-control form-control-color border-0 p-0 shadow-sm" value="{{ empresa.color_texto|default:'#1a1611' }}" style="width: 36px; height: 36px; border-radius: 8px; cursor: pointer;">
+                                    <span class="fw-bold text-muted font-monospace" style="font-size:0.85rem;" id="hexTexto">{{ empresa.color_texto|default:'#1a1611' }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label-custom mb-2">Color de Acento</label>
-                        <input type="color" name="color_primario" class="form-control form-control-color w-100 border-0 shadow-sm" value="{{ empresa.color_primario|default:'#6366f1' }}" title="Elige el color de tu marca" style="height: 50px; border-radius: 12px; cursor: pointer;">
+                    
+                    <!-- Paletas Rápidas -->
+                    <div class="mb-4 mt-2">
+                        <label class="form-label d-block text-muted small text-uppercase fw-bold mb-2">Sugerencias de Combinación</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm border rounded-3 fw-bold shadow-sm" style="background:#f8fafc; color:#0f172a; border-color:#cbd5e1;" onclick="aplicarPaleta('#1e3a8a', '#f8fafc', '#0b1220', '#0f172a')">
+                                <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#1e3a8a;"></span> Luxury Tech
+                            </button>
+                            <button type="button" class="btn btn-sm border rounded-3 fw-bold shadow-sm" style="background:#f1f5f9; color:#1e293b; border-color:#cbd5e1;" onclick="aplicarPaleta('#4f46e5', '#f1f5f9', '#ffffff', '#1e293b')">
+                                <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#6366f1;"></span> Soft Premium
+                            </button>
+                            <button type="button" class="btn btn-sm border rounded-3 fw-bold shadow-sm" style="background:#0f172a; color:#f8fafc; border-color:#1e293b;" onclick="aplicarPaleta('#3b82f6', '#0f172a', '#020617', '#f8fafc')">
+                                <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#3b82f6;"></span> Dark Premium
+                            </button>
+                            <button type="button" class="btn btn-sm border rounded-3 fw-bold shadow-sm" style="background:#fff7ed; color:#431407; border-color:#fed7aa;" onclick="aplicarPaleta('#ea580c', '#fff7ed', '#ffffff', '#431407')">
+                                <span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#ea580c;"></span> Warm Premium
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">Logotipo (Recomendado PNG transparente)</label>
-                        <input type="file" name="logo" class="form-control bg-light border-0" accept="image/*" style="border-radius: 12px;">
-                        {% if empresa.logo %}<small class="text-success mt-1 d-block"><i class="bi bi-check-circle"></i> Logo actual cargado.</small>{% endif %}
+                    
+                    <div class="mb-3 mt-4">
+                        <label class="form-label text-primary"><i class="bi bi-shop me-1"></i> Nombre de la Tienda</label>
+                        <input type="text" name="nombre_empresa" id="nombreEmpresa" class="form-control fw-bold text-dark" value="{{ empresa.nombre }}" required>
+                        <small class="text-muted" style="font-size: 0.75rem;">Aparecerá en la barra superior junto al logo.</small>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">Imagen de Portada (Hero Banner)</label>
-                        <input type="file" name="hero_image" class="form-control bg-light border-0" accept="image/*" style="border-radius: 12px;">
-                        {% if empresa.hero_image %}<small class="text-success mt-1 d-block"><i class="bi bi-check-circle"></i> Portada actual cargada.</small>{% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Título de la Tienda (Hero)</label>
+                        <input type="text" name="landing_titulo" id="landingTitulo" class="form-control" value="{{ empresa.landing_titulo|default:empresa.nombre }}" placeholder="Ej: {{ empresa.nombre }}">
                     </div>
-                    <div class="col-12">
-                        <label class="form-label-custom mb-2">Mensaje de Bienvenida (Subtítulo)</label>
-                        <textarea name="landing_descripcion" class="form-control bg-light border-0" rows="2" style="border-radius: 12px;">{{ empresa.landing_descripcion }}</textarea>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label-custom mb-2">Banner Promocional (Opcional)</label>
-                        <input type="text" name="mensaje_promocional" class="form-control bg-light border-0" value="{{ empresa.mensaje_promocional }}" placeholder="Ej: ¡Envío gratis a todo el país!" style="border-radius: 12px;">
+                    <div class="mb-0">
+                        <label class="form-label">Descripción o Lema Corto</label>
+                        <textarea name="landing_descripcion" id="landingDescripcion" class="form-control" rows="3" placeholder="Ej: Descubre nuestros mejores productos al mejor precio.">{{ empresa.landing_descripcion }}</textarea>
                     </div>
                 </div>
 
-                <h5 class="fw-bolder text-dark mb-4 pb-3 border-bottom">Redes Sociales y Contacto</h5>
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">WhatsApp</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-whatsapp fs-5" style="color: #25D366;"></i></span>
-                            <input type="text" name="telefono_whatsapp" class="form-control form-control-custom" value="{{ empresa.telefono_whatsapp }}" placeholder="593991234567">
-                        </div>
-                        <small class="text-muted mt-1 d-block">Sin el símbolo +, solo números con código de país.</small>
+                <!-- Imágenes y Anuncios -->
+                <div class="form-section">
+                    <div class="form-section-title"><i class="bi bi-image"></i> Imágenes y Anuncios</div>
+                    <div class="mb-3">
+                        <label class="form-label">Logo de la Tienda</label>
+                        <input type="file" name="logo" class="form-control bg-white" accept="image/*">
+                        {% if empresa.logo %}
+                        <small class="text-success fw-bold d-block mt-1"><i class="bi bi-check-circle"></i> Logo actual guardado.</small>
+                        {% endif %}
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">Instagram</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-instagram fs-5" style="color: #E1306C;"></i></span>
-                            <input type="url" name="instagram_url" class="form-control form-control-custom" value="{{ empresa.instagram_url }}" placeholder="https://instagram.com/tu_tienda">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">Facebook</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-facebook fs-5" style="color: #1877F2;"></i></span>
-                            <input type="url" name="facebook_url" class="form-control form-control-custom" value="{{ empresa.facebook_url }}" placeholder="https://facebook.com/tu_tienda">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">YouTube</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-youtube fs-5" style="color: #FF0000;"></i></span>
-                            <input type="url" name="youtube_url" class="form-control form-control-custom" value="{{ empresa.youtube_url }}" placeholder="https://youtube.com/c/tu_canal">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">Sitio Web (Web Oficial)</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-globe fs-5" style="color: #64748b;"></i></span>
-                            <input type="url" name="sitio_web" class="form-control form-control-custom" value="{{ empresa.sitio_web }}" placeholder="https://www.tutienda.com">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">TikTok</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-tiktok fs-5" style="color: #000000;"></i></span>
-                            <input type="url" name="tiktok_url" class="form-control form-control-custom" value="{{ empresa.tiktok_url }}" placeholder="https://tiktok.com/@tu_tienda">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label-custom mb-2">X (Twitter)</label>
-                        <div class="input-group">
-                            <span class="input-group-text-icon d-flex align-items-center"><i class="bi bi-twitter-x fs-5" style="color: #000000;"></i></span>
-                            <input type="url" name="x_url" class="form-control form-control-custom" value="{{ empresa.x_url }}" placeholder="https://x.com/tu_tienda">
-                        </div>
+                    <div class="mb-0">
+                        <label class="form-label">Mensaje Promocional (Banner Superior)</label>
+                        <input type="text" name="mensaje_promocional" id="mensajePromocional" class="form-control" value="{{ empresa.mensaje_promocional }}" placeholder="Ej: ¡Envío gratis en compras mayores a $50!">
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-3 mt-5 border-top pt-4">
-                    <a href="javascript:history.back()" class="btn btn-light bg-white border shadow-sm rounded-pill fw-bold text-secondary px-4 py-2 d-inline-flex align-items-center">
-                        <i class="bi bi-arrow-left me-2"></i> Volver
-                    </a>
-                    <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm">Guardar Preferencias</button>
+                <!-- Redes y Contacto -->
+                <div class="form-section">
+                    <div class="form-section-title"><i class="bi bi-share"></i> Redes y Contacto</div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-whatsapp text-success"></i> WhatsApp</label>
+                        <input type="text" name="telefono_whatsapp" class="form-control" value="{{ empresa.telefono_whatsapp }}" placeholder="Ej: 593991234567">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-instagram text-danger"></i> Instagram</label>
+                        <input type="url" name="instagram_url" class="form-control" value="{{ empresa.instagram_url }}" placeholder="https://instagram.com/...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-facebook text-primary"></i> Facebook</label>
+                        <input type="url" name="facebook_url" class="form-control" value="{{ empresa.facebook_url }}" placeholder="https://facebook.com/...">
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"><i class="bi bi-tiktok text-dark"></i> TikTok</label>
+                        <input type="url" name="tiktok_url" class="form-control" value="{{ empresa.tiktok_url }}" placeholder="https://tiktok.com/@...">
+                    </div>
                 </div>
-            </form>
+            </div>
+        </form>
+    </div>
+
+    <!-- Panel Derecho: Live Preview iframe -->
+    <div class="editor-preview">
+        <div class="w-100 d-flex justify-content-between align-items-center mb-3 px-1">
+            <span class="text-muted fw-bold small text-uppercase"><i class="bi bi-display me-1"></i> Vista Previa en Vivo</span>
+            <button type="button" class="btn btn-sm btn-white bg-white border shadow-sm rounded-pill fw-bold text-primary px-3" onclick="document.getElementById('previewFrame').src = document.getElementById('previewFrame').src" title="Actualizar vista">
+                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+            </button>
+        </div>
+        <div class="preview-frame-wrapper">
+            <!-- Renderiza la vista de tu tienda_publica -->
+            <iframe src="{% url 'tienda_publica' empresa.slug %}" id="previewFrame" class="preview-iframe"></iframe>
         </div>
     </div>
 </div>
@@ -153,37 +254,67 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.config-card');
-    
-    form.addEventListener('submit', function(e) {
-        if (!this.checkValidity()) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            let primerError = null;
-            Array.from(this.elements).forEach(input => {
-                if (!input.checkValidity()) {
-                    input.classList.add('is-invalid');
-                    input.style.borderColor = '#ef4444';
-                    input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+    function updatePreview(key, val) {
+        document.getElementById('previewFrame').contentWindow.postMessage({ type: 'live_preview_update', [key]: val }, '*');
+    }
+
+    // Controladores individuales
+    ['Primario', 'Fondo', 'Cabecera', 'Texto'].forEach(tipo => {
+        document.getElementById('color' + tipo).addEventListener('input', function(e) {
+            document.getElementById('hex' + tipo).textContent = e.target.value;
+            updatePreview('color_' + tipo.toLowerCase(), e.target.value);
+        });
+    });
+
+    // Aplicar paletas mágicas de 1-click
+    function aplicarPaleta(primario, fondo, cabecera, texto) {
+        document.getElementById('colorPrimario').value = primario; document.getElementById('hexPrimario').textContent = primario;
+        document.getElementById('colorFondo').value = fondo; document.getElementById('hexFondo').textContent = fondo;
+        document.getElementById('colorCabecera').value = cabecera; document.getElementById('hexCabecera').textContent = cabecera;
+        document.getElementById('colorTexto').value = texto; document.getElementById('hexTexto').textContent = texto;
+        
+        updatePreview('color_primario', primario);
+        updatePreview('color_fondo', fondo);
+        updatePreview('color_cabecera', cabecera);
+        updatePreview('color_texto', texto);
+    }
+
+    document.getElementById('nombreEmpresa').addEventListener('input', e => document.getElementById('previewFrame').contentWindow.postMessage({ type: 'live_preview_update', nombre_empresa: e.target.value }, '*'));
+    document.getElementById('landingTitulo').addEventListener('input', e => document.getElementById('previewFrame').contentWindow.postMessage({ type: 'live_preview_update', landing_titulo: e.target.value || '{{ empresa.nombre|escapejs }}' }, '*'));
+    document.getElementById('landingDescripcion').addEventListener('input', e => document.getElementById('previewFrame').contentWindow.postMessage({ type: 'live_preview_update', landing_descripcion: e.target.value }, '*'));
+    document.getElementById('mensajePromocional').addEventListener('input', e => document.getElementById('previewFrame').contentWindow.postMessage({ type: 'live_preview_update', mensaje_promocional: e.target.value }, '*'));
+
+    // Validación de Formulario Estilo Premium (Sin alertas feas del navegador)
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('storefrontForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (!this.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     
-                    if (!primerError) primerError = input;
-                    
-                    input.addEventListener('input', function() {
-                        if (this.checkValidity()) {
-                            this.classList.remove('is-invalid');
-                            this.style.borderColor = '';
-                            this.style.boxShadow = '';
+                    let primerError = null;
+                    Array.from(this.elements).forEach(input => {
+                        if (!input.checkValidity()) {
+                            input.classList.add('is-invalid');
+                            input.style.borderColor = '#ef4444';
+                            input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
+                            if (!primerError) primerError = input;
+                            
+                            input.addEventListener('input', function() {
+                                if (this.checkValidity()) {
+                                    this.classList.remove('is-invalid');
+                                    this.style.borderColor = '';
+                                    this.style.boxShadow = '';
+                                }
+                            }, { once: true });
                         }
-                    }, { once: true });
+                    });
+                    showDjangoToast('Por favor, completa todos los campos obligatorios correctamente.', 'warning');
+                    if (primerError) primerError.focus();
                 }
             });
-            
-            showDjangoToast('Por favor, ingresa formatos válidos (ej: URLs correctas) y revisa los campos en rojo.', 'warning');
-            if (primerError) primerError.focus();
         }
     });
-});
 </script>
 {% endblock %}

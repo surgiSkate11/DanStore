@@ -101,7 +101,7 @@
                 <span class="fw-semibold text-dark text-truncate" style="font-size: 0.85rem;">{{ ticket.asunto }}</span>
             </div>
             <p class="text-muted small mb-0 text-truncate" style="opacity: 0.8;">
-                {% with ultimo_msj=ticket.mensajes.all|last %}
+                {% with ultimo_msj=ticket.mensajes.last %}
                 {{ ultimo_msj.mensaje|truncatechars:65|default:"Sin mensajes" }}
                 {% endwith %}
             </p>

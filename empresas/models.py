@@ -43,6 +43,9 @@ class Empresa(models.Model):
     landing_descripcion = models.TextField(blank=True, default="Descubre nuestros mejores productos al mejor precio.")
     mensaje_promocional = models.CharField(max_length=150, blank=True, help_text="Banner superior. Ej: ¡Envío gratis en compras mayores a $50!")
     color_primario = models.CharField(max_length=7, default="#0d6efd", help_text="Color Hexadecimal (Ej: #0d6efd)")
+    color_fondo = models.CharField(max_length=7, default="#faf9f7", help_text="Color de fondo de la tienda")
+    color_cabecera = models.CharField(max_length=7, default="#faf9f7", help_text="Color de la barra de navegación")
+    color_texto = models.CharField(max_length=7, default="#1a1611", help_text="Color principal de los textos")
     
     logo = models.ImageField(upload_to='empresas/logos/', null=True, blank=True, verbose_name="Logotipo de la Tienda")
     hero_image = models.ImageField(upload_to='empresas/hero/', null=True, blank=True, verbose_name="Imagen de Portada (Hero)")
@@ -197,3 +200,37 @@ class ConfiguracionSaaS(models.Model):
         
     def __str__(self):
         return "Credenciales de Pago Globales"
+
+
+class StorefrontConfig(models.Model):
+    """
+    Configuración individual y desacoplada de la tienda pública.
+    Reemplaza los campos que antes ensuciaban el modelo Empresa.
+    """
+    empresa = models.OneToOneField('empresas.Empresa', on_delete=models.CASCADE, related_name='storefront_config')
+    
+    # Textos
+    landing_titulo = models.CharField(max_length=150, blank=True)
+    landing_descripcion = models.TextField(blank=True)
+    mensaje_promocional = models.CharField(max_length=200, blank=True)
+    
+    # Recursos visuales
+    logo = models.ImageField(upload_to='tienda/logos/', null=True, blank=True)
+    hero_image = models.ImageField(upload_to='tienda/banners/', null=True, blank=True)
+    color_primario = models.CharField(max_length=20, default='#0d6efd')
+    
+    # Layout Builder (Para guardar el orden arrastrable en formato JSON)
+    layout_blocks = models.JSONField(default=list, blank=True, help_text="Configuración dinámica de bloques visuales")
+    
+    # Redes Sociales (Desacopladas)
+    instagram_url = models.URLField(blank=True)
+    facebook_url = models.URLField(blank=True)
+    tiktok_url = models.URLField(blank=True)
+    youtube_url = models.URLField(blank=True)
+    x_url = models.URLField(blank=True)
+    
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Storefront de {self.empresa.nombre}"

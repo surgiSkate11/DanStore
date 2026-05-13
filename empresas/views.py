@@ -196,6 +196,10 @@ def configuracion_tienda(request):
     """Módulo para que el dueño o empleado autorizado personalice la tienda pública"""
     empresa = request.empresa
     if request.method == 'POST':
+        nuevo_nombre = request.POST.get('nombre_empresa', '').strip()
+        if nuevo_nombre:
+            empresa.nombre = nuevo_nombre
+            
         empresa.telefono_whatsapp = request.POST.get('telefono_whatsapp', '').strip()
         empresa.instagram_url = request.POST.get('instagram_url', '').strip()
         empresa.facebook_url = request.POST.get('facebook_url', '').strip()
@@ -207,11 +211,12 @@ def configuracion_tienda(request):
         empresa.landing_descripcion = request.POST.get('landing_descripcion', '').strip()
         empresa.mensaje_promocional = request.POST.get('mensaje_promocional', '').strip()
         empresa.color_primario = request.POST.get('color_primario', '#0d6efd').strip()
+        empresa.color_fondo = request.POST.get('color_fondo', '#faf9f7').strip()
+        empresa.color_cabecera = request.POST.get('color_cabecera', '#faf9f7').strip()
+        empresa.color_texto = request.POST.get('color_texto', '#1a1611').strip()
         
         if 'logo' in request.FILES:
             empresa.logo = request.FILES['logo']
-        if 'hero_image' in request.FILES:
-            empresa.hero_image = request.FILES['hero_image']
         empresa.save()
         
         messages.success(request, 'Configuración de la tienda actualizada con éxito.')

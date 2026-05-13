@@ -101,30 +101,6 @@
                     </div>
                     {% endif %}
                 </div>
-
-                <div class="section-card">
-                    <h4 class="fw-bold mb-4" style="color: #1f2937;"><i class="bi bi-building text-success me-2"></i> Datos de la Empresa</h4>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Nombre de la Empresa Comercial</label>
-                        <input type="text" name="nombre_empresa" class="form-control fw-bold text-primary" value="{{ empresa.nombre|default:perfil.nombre_negocio }}">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Tipo de Negocio</label>
-                        <select name="negocio_tipo" class="form-select">
-                            {% for value, label in perfil.TIPO_NEGOCIO_CHOICES %}
-                            <option value="{{ value }}" {% if perfil.negocio_tipo == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">Esto adapta las palabras del sistema (Ej: "Prendas" vs "Productos")</small>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label">Descripción o Lema del Negocio</label>
-                        <textarea name="descripcion_negocio" class="form-control" rows="3">{{ perfil.descripcion_negocio }}</textarea>
-                    </div>
-                </div>
             </div>
             {% endif %}
         </div>
