@@ -5,104 +5,310 @@
 {% block extra_css %}
 <style>
     body { background-color: #f8fafc; }
-    .saas-header { background: #ffffff; border: 1px solid #e2e8f0; padding: 1.5rem 2rem; margin-bottom: 2rem; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
     .saas-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }
     .saas-card-body { padding: 2rem; }
-    .form-control, .form-select { border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.75rem 1rem; transition: all 0.2s; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-    .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    .btn-saas-primary { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: white; border: none; border-radius: 10px; padding: 0.8rem 1.5rem; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); transition: all 0.2s; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;}
-    .btn-saas-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); color: white; }
-    .btn-saas-outline { border: 2px solid #e2e8f0; color: #475569; background: white; border-radius: 10px; padding: 0.75rem 1.5rem; font-weight: 600; transition: all 0.2s; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;}
-    .btn-saas-outline:hover { border-color: #cbd5e1; background: #f8fafc; color: #1e293b; }
+
+    .form-control, .form-select {
+        border-radius: 10px; border: 1px solid #cbd5e1; padding: 0.75rem 1rem;
+        transition: all 0.2s; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+
+    /* Multi-selects (categorías, marcas, tipo de producto) */
+    select[multiple].form-control {
+        padding: 0.4rem;
+        background-image: none;
+    }
+    select[multiple].form-control option {
+        padding: 0.45rem 0.6rem;
+        border-radius: 6px;
+        margin-bottom: 2px;
+    }
+    select[multiple].form-control option:checked {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+    }
+
+    /* Checkboxes como "pills" en vez del checkbox suelto por defecto */
+    .toggle-pill {
+        display: flex; align-items: center; gap: 8px;
+        background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+        padding: 0.55rem 0.9rem; height: 100%;
+    }
+    .toggle-pill .form-check-input { margin: 0; cursor: pointer; }
+    .toggle-pill .form-check-input:checked { background-color: #667eea; border-color: #667eea; }
+    .toggle-pill label { font-size: 0.85rem; font-weight: 600; color: #334155; margin: 0; cursor: pointer; }
+
+    .btn-saas-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;
+        border-radius: 10px; padding: 0.8rem 1.5rem; font-weight: 600;
+        box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3); transition: all 0.2s;
+        width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;
+    }
+    .btn-saas-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.4); color: white; }
+    .btn-saas-outline {
+        border: 2px solid #e2e8f0; color: #475569; background: white; border-radius: 10px;
+        padding: 0.75rem 1.5rem; font-weight: 600; transition: all 0.2s;
+        width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;
+    }
+    .btn-saas-outline:hover { border-color: #667eea; background: #f8fafc; color: #667eea; }
+
     .feature-list li { margin-bottom: 12px; color: #475569; display: flex; align-items: center; gap: 10px; }
     .feature-list i { color: #10b981; font-size: 1.2rem; }
+
+    .section-label { font-weight: 700; color: #667eea; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.04em; margin-bottom: 0.75rem; }
+
+    /* Contador en vivo */
+    .live-count-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; }
+    .live-count-value { transition: opacity 0.15s ease; }
+    .live-count-value.updating { opacity: 0.45; }
+    .live-count-spinner { display: none; }
+    .live-count-spinner.show { display: inline-block; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4 pb-5">
-    <!-- Header de Página -->
-    <div class="saas-header d-flex flex-wrap justify-content-between align-items-center">
-        <div>
-            <h2 class="fw-bold text-dark mb-1"><i class="bi bi-file-earmark-pdf text-indigo"></i> Generar Catálogo PDF</h2>
-            <p class="text-muted mb-0">Configura los filtros para exportar tu catálogo de productos</p>
-        </div>
-        <div class="mt-3 mt-md-0">
-            <a href="{% url 'personalizar_catalogo' %}" class="btn btn-outline-secondary rounded-pill fw-semibold">
-                <i class="bi bi-palette"></i> Personalizar Diseño
-            </a>
+    <!-- Header -->
+    <div class="gradient-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-2">
+                        <i class="bi bi-file-earmark-pdf"></i> Generar Catálogo PDF
+                    </h1>
+                    <p class="mb-0 opacity-90">Configura los filtros para exportar tu catálogo de productos.</p>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'personalizar_catalogo' %}" class="btn btn-light btn-lg shadow-sm">
+                        <i class="bi bi-palette"></i> Personalizar Diseño
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
-    
-    <div class="row">
+
+    <div class="row g-4">
         <div class="col-lg-8">
             <div class="saas-card">
                 <div class="saas-card-body">
-                    <form method="get" action="{% url 'descargar_catalogo' %}" id="catalogoForm">
+                    <form method="get" id="catalogoForm">
                         <h4 class="fw-bold mb-4 text-dark"><i class="bi bi-funnel text-primary"></i> Filtros de Exportación</h4>
-                        
-                        <div class="row g-4 mb-4">
+
+                        <!-- Fila 1: Organización y Orden -->
+                        <div class="section-label">Organización y Orden</div>
+                        <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold text-secondary">Categoría</label>
-                                {{ filtro_form.categoria }}
-                                <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle"></i> Deja en blanco para incluir todas</small>
+                                <label for="{{ form.group_by.id_for_label }}" class="form-label fw-bold">Agrupar por</label>
+                                {{ form.group_by }}
                             </div>
-                            
                             <div class="col-md-6">
-                                <label class="form-label fw-bold text-secondary">Tipo de Producto</label>
-                                {{ filtro_form.tipo_producto }}
-                                <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle"></i> Opcional</small>
+                                <label for="{{ form.sort_by.id_for_label }}" class="form-label fw-bold">Ordenar por</label>
+                                {{ form.sort_by }}
                             </div>
                         </div>
-                        
-                        <div class="mb-4">
-                            <label class="form-label fw-bold text-secondary">Búsqueda en Descripción</label>
-                            {{ filtro_form.busqueda }}
-                        </div>
-                        
-                        <div class="alert bg-light border text-secondary rounded-3 d-flex gap-3 align-items-center mb-4">
-                            <i class="bi bi-shield-check fs-2 text-success"></i>
-                            <div>
-                                <strong class="d-block text-dark">Privacidad de Inventario</strong> 
-                                <small>Los productos en estado "Vendido" o "Reservado" se excluyen automáticamente del catálogo público.</small>
+
+                        <hr>
+
+                        <!-- Fila 2: Búsqueda + precio -->
+                        <div class="section-label mt-4">Filtros Principales</div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.busqueda.id_for_label }}" class="form-label fw-bold">
+                                    Búsqueda
+                                    <i class="bi bi-info-circle text-muted" title="Busca en nombre, descripción, marca, categoría y variante. El contador de la derecha se actualiza solo mientras escribís."></i>
+                                </label>
+                                {{ form.busqueda }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="{{ form.precio_min.id_for_label }}" class="form-label fw-bold">Precio Mínimo</label>
+                                {{ form.precio_min }}
+                            </div>
+                            <div class="col-md-3">
+                                <label for="{{ form.precio_max.id_for_label }}" class="form-label fw-bold">Precio Máximo</label>
+                                {{ form.precio_max }}
                             </div>
                         </div>
-                        
+
+                        <hr>
+
+                        <!-- Fila 3: Categoría / Marca / Tipo, lado a lado (mismo alto) -->
+                        <div class="section-label mt-4">Filtros Adicionales</div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label for="{{ form.categorias.id_for_label }}" class="form-label fw-bold">Categorías</label>
+                                {{ form.categorias }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.marcas.id_for_label }}" class="form-label fw-bold">Marcas / Proveedores</label>
+                                {{ form.marcas }}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.tipos_producto.id_for_label }}" class="form-label fw-bold">Tipo de producto</label>
+                                {{ form.tipos_producto }}
+                            </div>
+                        </div>
+
+                        <!-- Fila 4: Toggles, en fila ancha (no en columna angosta) -->
+                        <div class="row g-2 mb-2">
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.activos }}
+                                    <label for="{{ form.activos.id_for_label }}">Activos</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.con_stock }}
+                                    <label for="{{ form.con_stock.id_for_label }}">Con Stock</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.sin_stock }}
+                                    <label for="{{ form.sin_stock.id_for_label }}">Sin Stock</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.en_oferta }}
+                                    <label for="{{ form.en_oferta.id_for_label }}">En Oferta</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.destacados }}
+                                    <label for="{{ form.destacados.id_for_label }}">Destacados</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.nuevos }}
+                                    <label for="{{ form.nuevos.id_for_label }}">Nuevos</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.mas_vendidos }}
+                                    <label for="{{ form.mas_vendidos.id_for_label }}">Más vendidos</label>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="toggle-pill">
+                                    {{ form.mayor_rentabilidad }}
+                                    <label for="{{ form.mayor_rentabilidad.id_for_label }}">Mayor rentabilidad</label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-flex flex-column flex-sm-row gap-3 mt-5">
-                            <button type="submit" class="btn-saas-primary flex-grow-1">
+                            <button type="submit" formaction="{% url 'descargar_catalogo' %}" class="btn-saas-primary flex-grow-1">
                                 <i class="bi bi-file-earmark-pdf-fill"></i> Generar y Descargar PDF
                             </button>
-                            <button type="submit" formaction="{% url 'preview_catalogo' %}" class="btn-saas-outline flex-grow-1">
-                                <i class="bi bi-eye"></i> Ver Vista Previa Web
+                            <button type="submit" formaction="{% url 'preview_catalogo' %}" class="btn-saas-outline flex-grow-1" target="_blank">
+                                <i class="bi bi-eye"></i> Ver Vista Previa
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-        
+
         <div class="col-lg-4">
-            <div class="saas-card bg-primary text-white" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: none;">
+            <div class="saas-card live-count-card text-white">
                 <div class="saas-card-body text-center py-5">
-                    <div class="display-4 fw-bold mb-2">{{ total_productos }}</div>
-                    <p class="text-white-50 text-uppercase tracking-wider fw-semibold mb-0">Productos Disponibles</p>
+                    <div class="display-4 fw-bold mb-2">
+                        <span class="live-count-value" id="liveCount">{{ total_productos }}</span>
+                        <span class="spinner-border spinner-border-sm live-count-spinner" id="liveCountSpinner"></span>
+                    </div>
+                    <p class="text-white-50 text-uppercase fw-semibold mb-0" style="letter-spacing: 0.04em;">Productos en Selección</p>
+                    <p class="text-white-50 mb-0 mt-2" style="font-size: 0.75rem;"><i class="bi bi-lightning-charge-fill"></i> Actualización automática</p>
                 </div>
             </div>
-            
-            <div class="saas-card">
+
+            <div class="saas-card mt-4">
                 <div class="saas-card-body">
-                    <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-stars text-warning"></i> Características</h5>
-                    
+                    <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-stars text-warning"></i> Características del Catálogo</h5>
+
                     <ul class="list-unstyled feature-list mb-0">
                         <li><i class="bi bi-check-circle-fill"></i> Portada 100% personalizable</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Layout adaptativo (2, 3 o 4 imgs)</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Renderizado de alta calidad (300 DPI)</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Sin pérdida de resolución</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Agrupación por categoría, marca y más</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Múltiples opciones de ordenamiento</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Diseño profesional y moderno</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Exportación a PDF de alta calidad</li>
                     </ul>
                 </div>
             </div>
-            
+
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ── Contador en vivo ──────────────────────────────────────────────
+    // Antes: escribir en "Búsqueda" o tocar cualquier filtro no hacía
+    // nada hasta apretar "Generar PDF" o "Ver Vista Previa" (el form es
+    // GET y esos botones navegan a otra página). Ahora: cada cambio
+    // dispara (con debounce) una consulta liviana a /contar/ que
+    // reutiliza EXACTAMENTE los mismos filtros que el PDF real, así el
+    // número que ves siempre coincide con lo que se va a exportar.
+    const form = document.getElementById('catalogoForm');
+    const countEl = document.getElementById('liveCount');
+    const spinnerEl = document.getElementById('liveCountSpinner');
+    if (!form || !countEl) return;
+
+    const countUrl = "{% url 'contar_productos_catalogo' %}";
+    let debounceTimer = null;
+    let currentController = null;
+
+    function actualizarContador() {
+        countEl.classList.add('updating');
+        spinnerEl.classList.add('show');
+
+        // Cancela una consulta anterior todavía en vuelo, para que una
+        // respuesta vieja no pise a una más nueva si el usuario escribe rápido.
+        if (currentController) currentController.abort();
+        currentController = new AbortController();
+
+        const params = new URLSearchParams(new FormData(form));
+        fetch(`${countUrl}?${params.toString()}`, { signal: currentController.signal })
+            .then(function (resp) { return resp.json(); })
+            .then(function (data) {
+                countEl.textContent = data.total;
+            })
+            .catch(function (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('No se pudo actualizar el contador de productos', err);
+                }
+            })
+            .finally(function () {
+                countEl.classList.remove('updating');
+                spinnerEl.classList.remove('show');
+            });
+    }
+
+    function programarActualizacion() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(actualizarContador, 350);
+    }
+
+    // Texto/número: reacciona mientras se escribe. Selects/checkboxes:
+    // reacciona apenas se elige/marca (no hace falta esperar).
+    form.addEventListener('input', programarActualizacion);
+    form.addEventListener('change', programarActualizacion);
+});
+</script>
 {% endblock %}

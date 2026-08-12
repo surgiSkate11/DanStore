@@ -59,7 +59,6 @@ class Producto(models.Model):
     nombre = models.CharField(
         max_length=200,
         verbose_name='Nombre del producto',
-        blank=True,
         help_text='Nombre o título del producto. Ej: Vestido floral, iPhone 15, Torta de chocolate'
     )
 
@@ -101,8 +100,6 @@ class Producto(models.Model):
     precio = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        null=True,
-        blank=True,
         verbose_name='Precio de venta',
         db_index=True
     )
@@ -116,6 +113,15 @@ class Producto(models.Model):
         help_text='Costo del producto (opcional, para calcular margen)'
     )
 
+    precio_oferta = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Precio de oferta',
+        help_text='Precio especial de oferta (opcional)'
+    )
+
     # ── ESTADO ────────────────────────────────────────────────────────────────
     estado = models.CharField(
         max_length=20,
@@ -123,6 +129,12 @@ class Producto(models.Model):
         default='disponible',
         verbose_name='Estado',
         db_index=True
+    )
+
+    destacado = models.BooleanField(
+        default=False,
+        verbose_name='Producto destacado',
+        help_text='Marcar para que aparezca en secciones de destacados'
     )
 
     # ── CLIENTE ASIGNADO (para separados/reservados) ──────────────────────────

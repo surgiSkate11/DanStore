@@ -41,7 +41,7 @@
         background: var(--color-surface);
         border: 1px solid rgba(255,255,255,0.8);
         border-radius: 24px;
-        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);
+        box-shadow: 0 8px 22px -8px rgba(15,23,42,0.10);
         transition: all 0.3s ease;
     }
 
@@ -53,10 +53,10 @@
 
     /* Welcome Banner */
     .ui-v2 .welcome-banner {
-        background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
-        border: 1px solid #bae6fd;
-        color: #0c4a6e;
-        padding: 3rem 4rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: #ffffff;
+        padding: 2.5rem 3rem;
         border-radius: 28px;
         display: flex;
         justify-content: space-between;
@@ -64,7 +64,7 @@
         position: relative;
         overflow: hidden;
         margin-bottom: 2rem;
-        box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.15);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
 
     .ui-v2 .welcome-banner::after {
@@ -74,7 +74,7 @@
         top: 0;
         width: 50%;
         height: 100%;
-        background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.1) 0%, transparent 60%);
+        background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.12) 0%, transparent 60%);
         pointer-events: none;
     }
 
@@ -86,14 +86,14 @@
         display: flex;
         align-items: center;
         gap: 1rem;
-        color: #0f172a;
+        color: #ffffff;
     }
 
     .ui-v2 .welcome-avatar {
         width: 56px;
         height: 56px;
         background: #ffffff;
-        color: #0ea5e9;
+        color: #667eea;
         border: none;
         border-radius: 16px;
         display: flex;
@@ -101,11 +101,11 @@
         justify-content: center;
         font-size: 1.8rem;
         font-weight: 700;
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .ui-v2 .welcome-subtitle {
-        color: #0284c7;
+        color: rgba(255, 255, 255, 0.85);
         font-size: 1.1rem;
         margin: 0;
         padding-left: 4.5rem;
@@ -113,7 +113,7 @@
 
     .ui-v2 .btn-premium {
         background: #ffffff;
-        color: #0ea5e9;
+        color: #667eea;
         padding: 0.75rem 1.5rem;
         border-radius: var(--radius-btn);
         font-weight: 600;
@@ -126,14 +126,14 @@
         text-decoration: none;
         position: relative;
         z-index: 1;
-        border: 1px solid #bae6fd;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .ui-v2 .btn-premium:hover {
         background: #f8fafc;
-        color: #0284c7;
+        color: #4f46e5;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
 
     /* KPIs */
@@ -152,6 +152,7 @@
     .ui-v2 .kpi-sales::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
     .ui-v2 .kpi-products::before { background: linear-gradient(90deg, #10b981, #34d399); }
     .ui-v2 .kpi-clients::before { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    .ui-v2 .kpi-profit::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
 
     .ui-v2 .kpi-header {
         display: flex;
@@ -164,7 +165,7 @@
 
     .ui-v2 .kpi-title {
         color: var(--color-text-secondary);
-        font-size: 0.875rem;
+        font-size: 0.78rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -183,10 +184,11 @@
     .ui-v2 .icon-brand { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; box-shadow: 0 8px 15px rgba(59,130,246,0.3); }
     .ui-v2 .icon-success { background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 8px 15px rgba(16,185,129,0.3); }
     .ui-v2 .icon-indigo { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; box-shadow: 0 8px 15px rgba(139,92,246,0.3); }
+    .ui-v2 .icon-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 8px 15px rgba(245,158,11,0.3); }
 
     .ui-v2 .kpi-value {
-        font-size: 2.75rem;
-        font-weight: 900;
+        font-size: 2.35rem;
+        font-weight: 800;
         color: var(--color-text-primary);
         letter-spacing: -0.04em;
         line-height: 1;
@@ -240,7 +242,7 @@
 
     .ui-v2 .action-content h4 {
         color: var(--color-text-primary);
-        font-weight: 700;
+        font-weight: 600;
         font-size: 1.125rem;
         margin-bottom: 0.25rem;
         letter-spacing: -0.01em;
@@ -255,14 +257,39 @@
 
     /* Section Labels */
     .ui-v2 .section-title {
-        font-size: 1.25rem;
-        font-weight: 700;
+        font-size: 1.1rem;
+        font-weight: 600;
         color: var(--color-text-primary);
         letter-spacing: -0.02em;
         margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
         gap: 0.75rem;
+    }
+
+    .ui-v2 .chart-shell {
+        position: relative;
+        min-height: 300px;
+    }
+
+    .ui-v2 .chart-empty-state {
+        min-height: 300px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        color: #475569;
+    }
+
+    .ui-v2 .chart-empty-state h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: #0f172a;
     }
 </style>
 {% endblock %}
@@ -323,13 +350,111 @@
         </div>
     </div>
 
+    {% if es_dueno %}
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="premium-card kpi-wrapper kpi-profit">
+                <div class="kpi-header">
+                    <span class="kpi-title">Rentabilidad Promedio</span>
+                    <div class="kpi-icon icon-warning"><i class="bi bi-graph-up-arrow"></i></div>
+                </div>
+                <div class="kpi-value">{{ metricas_rentabilidad.resumen.rentabilidad_promedio|default:0|floatformat:1 }}%</div>
+                <div class="text-muted small fw-semibold">Tendencia estable según ventas del período</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="premium-card kpi-wrapper kpi-profit">
+                <div class="kpi-header">
+                    <span class="kpi-title">Mayor Rentabilidad</span>
+                    <div class="kpi-icon icon-warning"><i class="bi bi-trophy-fill"></i></div>
+                </div>
+                <div class="kpi-value" style="font-size: 1.8rem;">{{ metricas_rentabilidad.producto_mayor_rentabilidad.producto__nombre|default:"Sin datos" }}</div>
+                <div class="text-muted small fw-semibold">
+                    {{ metricas_rentabilidad.producto_mayor_rentabilidad.margen_promedio|default:0|floatformat:1 }}% | Utilidad promedio ${{ metricas_rentabilidad.producto_mayor_rentabilidad.utilidad_promedio|default:0|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="premium-card kpi-wrapper kpi-profit">
+                <div class="kpi-header">
+                    <span class="kpi-title">Alta Rotación</span>
+                    <div class="kpi-icon icon-warning"><i class="bi bi-lightning-charge-fill"></i></div>
+                </div>
+                <div class="kpi-value">{{ metricas_rentabilidad.alta_rotacion_count|default:0 }}</div>
+                <div class="text-muted small fw-semibold">Productos con mayor frecuencia de venta en el período</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Chart -->
     <div class="premium-card mb-5" style="padding: 2rem;">
         <h3 class="section-title">
             <i class="bi bi-graph-up-arrow text-primary"></i> Mis Ingresos Recientes
         </h3>
-        <div id="ventasChart" style="min-height: 300px;"></div>
+        <div class="chart-shell">
+            <div id="ventasChart" style="min-height: 300px;"></div>
+            <div id="ventasChartEmpty" class="chart-empty-state d-none">
+                <div>
+                    <i class="bi bi-graph-up-arrow text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
+                    <h4 class="mt-3 mb-1">Aún no hay ventas para mostrar</h4>
+                    <p class="mb-0 text-muted">Cuando existan ventas, aquí verás la evolución reciente de ingresos.</p>
+                </div>
+            </div>
+        </div>
     </div>
+
+    {% if es_dueno %}
+    <div class="row g-4 mb-5">
+        <div class="col-lg-6">
+            <div class="premium-card" style="padding: 2rem;">
+                <h3 class="section-title"><i class="bi bi-bar-chart-fill text-warning"></i> Top Productos con Mayor Rentabilidad</h3>
+                <div class="chart-shell">
+                    <div id="rentabilidadChart" style="min-height: 320px;"></div>
+                    <div id="rentabilidadChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
+                        <div>
+                            <i class="bi bi-bar-chart-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
+                            <h4 class="mt-3 mb-1">Sin datos de rentabilidad</h4>
+                            <p class="mb-0 text-muted">Se mostrará aquí el ranking cuando existan costos registrados y ventas en el período.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="premium-card" style="padding: 2rem;">
+                <h3 class="section-title"><i class="bi bi-lightning-charge-fill text-warning"></i> Top Productos de Alta Rotación</h3>
+                <div class="chart-shell">
+                    <div id="rotacionChart" style="min-height: 320px;"></div>
+                    <div id="rotacionChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
+                        <div>
+                            <i class="bi bi-lightning-charge-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
+                            <h4 class="mt-3 mb-1">Sin datos de rotación</h4>
+                            <p class="mb-0 text-muted">Cuando existan ventas, aquí aparecerán los productos con mayor velocidad de salida.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-4 mb-5">
+        <div class="col-12">
+            <div class="premium-card" style="padding: 2rem;">
+                <h3 class="section-title"><i class="bi bi-pie-chart-fill text-success"></i> Categorías Más Rentables</h3>
+                <div class="chart-shell">
+                    <div id="categoriasRentablesChart" style="min-height: 320px;"></div>
+                    <div id="categoriasRentablesChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
+                        <div>
+                            <i class="bi bi-pie-chart-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
+                            <h4 class="mt-3 mb-1">Sin datos por categoría</h4>
+                            <p class="mb-0 text-muted">Se activará automáticamente cuando el sistema pueda agrupar utilidades por categoría.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Quick Actions -->
     <h3 class="section-title">
@@ -377,21 +502,27 @@ document.addEventListener("DOMContentLoaded", function () {
     const fontFamily = 'Inter, sans-serif';
     const muted = '#64748b';
     const gridColor = '#f1f5f9';
+    const ventasData = {{ totales_chart|safe }};
+    const ventasHasData = ventasData.some(value => Number(value) > 0);
 
-    new ApexCharts(document.querySelector("#ventasChart"), {
-        series: [{ name: 'Ingresos por Ventas', data: {{ totales_chart|safe }} }],
+    if (!ventasHasData) {
+        document.getElementById('ventasChart').classList.add('d-none');
+        document.getElementById('ventasChartEmpty').classList.remove('d-none');
+    } else {
+        new ApexCharts(document.querySelector("#ventasChart"), {
+        series: [{ name: 'Ingresos por Ventas', data: ventasData }],
         chart: {
             type: 'area', height: 300,
             fontFamily, toolbar: { show: false }, parentHeightOffset: 0,
             animations: { enabled: true, easing: 'easeinout', speed: 600 }
         },
-        colors: ['#3b82f6'],
+        colors: ['#2563eb'],
         fill: {
             type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0.0, stops: [0, 100] }
+            gradient: { shadeIntensity: 1, opacityFrom: 0.18, opacityTo: 0.0, stops: [0, 100] }
         },
         dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 3 },
+        stroke: { curve: 'smooth', width: 2.5 },
         xaxis: {
             categories: {{ fechas_chart|safe }},
             tooltip: { enabled: false },
@@ -399,6 +530,7 @@ document.addEventListener("DOMContentLoaded", function () {
             labels: { style: { colors: muted, fontSize: '13px', fontWeight: 500 } }
         },
         yaxis: {
+            min: 0,
             labels: {
                 formatter: v => "$" + v.toFixed(0),
                 style: { colors: muted, fontSize: '13px', fontWeight: 500 }
@@ -410,7 +542,77 @@ document.addEventListener("DOMContentLoaded", function () {
             y: { formatter: val => "$" + val.toFixed(2) },
             style: { fontFamily }
         }
-    }).render();
+        }).render();
+    }
+
+    {% if es_dueno %}
+    const rentabilidadSeries = {{ metricas_rentabilidad.top_rentabilidad|default:"[]"|safe }};
+    const rotacionSeries = {{ metricas_rentabilidad.top_rotacion|default:"[]"|safe }};
+    const categoriasSeries = {{ metricas_rentabilidad.categorias_rentables|default:"[]"|safe }};
+
+    const hasRentabilidad = rentabilidadSeries.length > 0;
+    const hasRotacion = rotacionSeries.length > 0;
+    const hasCategorias = categoriasSeries.length > 0;
+
+    if (!hasRentabilidad) {
+        document.getElementById('rentabilidadChart').classList.add('d-none');
+        document.getElementById('rentabilidadChartEmpty').classList.remove('d-none');
+    } else {
+        new ApexCharts(document.querySelector("#rentabilidadChart"), {
+            series: [{ name: 'Margen %', data: rentabilidadSeries.map(item => Number(item.margen_promedio || 0)) }],
+            chart: { type: 'bar', height: 320, fontFamily, toolbar: { show: false } },
+            colors: ['#d97706'],
+            plotOptions: { bar: { borderRadius: 8, horizontal: true, columnWidth: '55%' } },
+            dataLabels: { enabled: false },
+            xaxis: { categories: rentabilidadSeries.map(item => item.producto__nombre), labels: { style: { colors: muted } } },
+            yaxis: { labels: { style: { colors: muted } } },
+            tooltip: {
+                y: { formatter: val => val.toFixed(1) + '%' },
+                custom: function({ dataPointIndex }) {
+                    const item = rentabilidadSeries[dataPointIndex];
+                    return `<div style="padding:10px 12px"><strong>${item.producto__nombre}</strong><br>Margen: ${Number(item.margen_promedio || 0).toFixed(1)}%<br>Utilidad total: $${Number(item.utilidad_total || 0).toFixed(2)}</div>`;
+                }
+            }
+        }).render();
+    }
+
+    if (!hasRotacion) {
+        document.getElementById('rotacionChart').classList.add('d-none');
+        document.getElementById('rotacionChartEmpty').classList.remove('d-none');
+    } else {
+        new ApexCharts(document.querySelector("#rotacionChart"), {
+            series: [{ name: 'Rotación', data: rotacionSeries.map(item => Number(item.rotacion_score || 0)) }],
+            chart: { type: 'bar', height: 320, fontFamily, toolbar: { show: false } },
+            colors: ['#059669'],
+            plotOptions: { bar: { borderRadius: 8, horizontal: true, columnWidth: '55%' } },
+            dataLabels: { enabled: false },
+            xaxis: { categories: rotacionSeries.map(item => item.producto__nombre), labels: { style: { colors: muted } } },
+            yaxis: { labels: { style: { colors: muted } } },
+            tooltip: {
+                y: { formatter: val => val.toFixed(2) },
+                custom: function({ dataPointIndex }) {
+                    const item = rotacionSeries[dataPointIndex];
+                    return `<div style="padding:10px 12px"><strong>${item.producto__nombre}</strong><br>Ventas: ${Number(item.ventas_count || 0)}<br>Rotación: ${Number(item.rotacion_score || 0).toFixed(2)}</div>`;
+                }
+            }
+        }).render();
+    }
+
+    if (!hasCategorias) {
+        document.getElementById('categoriasRentablesChart').classList.add('d-none');
+        document.getElementById('categoriasRentablesChartEmpty').classList.remove('d-none');
+    } else {
+        new ApexCharts(document.querySelector("#categoriasRentablesChart"), {
+            series: [{ name: 'Utilidad total', data: categoriasSeries.map(item => Number(item.utilidad_total || 0)) }],
+            chart: { type: 'donut', height: 320, fontFamily, toolbar: { show: false } },
+            labels: categoriasSeries.map(item => item.producto__categoria || 'Sin categoría'),
+            colors: ['#2563eb', '#10b981', '#d97706', '#8b5cf6', '#ef4444', '#14b8a6'],
+            legend: { position: 'bottom' },
+            dataLabels: { enabled: true },
+            tooltip: { y: { formatter: val => "$" + val.toFixed(2) } }
+        }).render();
+    }
+    {% endif %}
 });
 </script>
 {% endblock %}

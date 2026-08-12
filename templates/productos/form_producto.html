@@ -167,8 +167,8 @@
                             {% for field in form %}
                                 {% if field.name in 'nombre,descripcion,imagen' %}
                                     <div class="col-12">
-                                {% elif field.name in 'precio,precio_costo,stock' %}
-                                    <div class="col-12 col-md-4">
+                                {% elif field.name in 'precio,precio_costo,precio_oferta,stock' %}
+                                    <div class="col-12 col-md-3">
                                 {% elif field.name in 'categoria,tipo_producto,marca' %}
                                     <div class="col-12 col-md-4">
                                 {% elif field.name in 'variante,color,estado' %}

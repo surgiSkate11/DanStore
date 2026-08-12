@@ -27,6 +27,7 @@ def get_negocio_tipo(user):
 
 
 # ── VISTAS PRINCIPALES ────────────────────────────────────────────────────────
+# Lista productos 
 
 @login_required
 @requiere_modulo('productos', accion='ver')
@@ -38,6 +39,7 @@ def lista_productos(request):
     productos = Producto.objects.filter(empresa=request.empresa).select_related('tipo_producto').only(
         'id', 'imagen', 'nombre', 'marca', 'color', 'categoria',
         'variante', 'precio', 'estado', 'descripcion',
+        'variante', 'precio', 'precio_costo', 'estado', 'descripcion',
         'tipo_producto__nombre', 'stock'
     )
 
@@ -284,14 +286,16 @@ def importar_excel(request):
     Importa productos desde Excel (.xlsx) o CSV.
 
     Columnas del archivo (fila 1 = cabecera, se ignora):
-      A: Nombre del producto     (texto, obligatorio)
+      A: Nombre del producto     (texto, OBLIGATORIO)
       B: Categoría               (texto libre, opcional)
-      C: Precio                  (número, opcional)
+      C: Precio                  (número, OBLIGATORIO)
       D: Estado                  (disponible / separado / vendido)
       E: Descripción             (texto, opcional)
       F: Variante                (talla / modelo / sabor / etc., opcional)
       G: Marca                   (texto, opcional)
       H: Stock                   (número entero, opcional, default 1)
+      I: Precio de Oferta        (número, opcional — vacío = sin oferta)
+      J: Color                   (texto, opcional)
 
     Si el nombre ya existe → actualiza. Si es nuevo → crea.
     """
@@ -328,17 +332,27 @@ def importar_excel(request):
             for i, fila in enumerate(filas, start=2):
                 try:
                     # Extraer valores con defaults seguros
-                    nombre_prod = str(fila[0]).strip() if len(fila) > 0 and fila[0] else None
-                    categoria   = str(fila[1]).strip() if len(fila) > 1 and fila[1] else ''
-                    precio      = _parsear_decimal(fila[2]) if len(fila) > 2 else None
-                    estado      = str(fila[3]).strip().lower() if len(fila) > 3 and fila[3] else 'disponible'
-                    descripcion = str(fila[4]).strip() if len(fila) > 4 and fila[4] else ''
-                    variante    = str(fila[5]).strip() if len(fila) > 5 and fila[5] else ''
-                    marca       = str(fila[6]).strip() if len(fila) > 6 and fila[6] else ''
-                    stock       = int(float(str(fila[7]))) if len(fila) > 7 and fila[7] else 1
+                    nombre_prod   = str(fila[0]).strip() if len(fila) > 0 and fila[0] else None
+                    categoria     = str(fila[1]).strip() if len(fila) > 1 and fila[1] else ''
+                    precio        = _parsear_decimal(fila[2]) if len(fila) > 2 else None
+                    estado        = str(fila[3]).strip().lower() if len(fila) > 3 and fila[3] else 'disponible'
+                    descripcion   = str(fila[4]).strip() if len(fila) > 4 and fila[4] else ''
+                    variante      = str(fila[5]).strip() if len(fila) > 5 and fila[5] else ''
+                    marca         = str(fila[6]).strip() if len(fila) > 6 and fila[6] else ''
+                    stock         = int(float(str(fila[7]))) if len(fila) > 7 and fila[7] else 1
+                    precio_oferta = _parsear_decimal(fila[8]) if len(fila) > 8 else None
+                    color         = str(fila[9]).strip() if len(fila) > 9 and fila[9] else ''
 
                     # Fila completamente vacía — saltar silenciosamente
                     if not nombre_prod:
+                        continue
+
+                    # 'precio' ahora es obligatorio a nivel de base de datos
+                    # (ver migración 0005). Si la fila no trae un precio
+                    # válido, se reporta como error legible en vez de dejar
+                    # que reviente con un IntegrityError feo al guardar.
+                    if precio is None:
+                        errores.append(f'Fila {i}: falta el precio (es obligatorio) para "{nombre_prod}"')
                         continue
 
                     # Mapeo inteligente (Opción Flexible SaaS)
@@ -355,6 +369,13 @@ def importar_excel(request):
                             estado_final = valor_oficial
                             break
 
+                    # Precio de oferta: solo se guarda si es realmente menor al
+                    # precio normal (mismo criterio que valida el formulario
+                    # manual de productos) — evita "ofertas" más caras que el
+                    # precio normal coladas por error de tipeo en el Excel.
+                    if precio_oferta is not None and precio is not None and precio_oferta >= precio:
+                        precio_oferta = None
+
                     # update_or_create por nombre — evita duplicados
                     producto, creado = Producto.objects.update_or_create(
                         nombre=nombre_prod,
@@ -362,6 +383,7 @@ def importar_excel(request):
                         defaults={
                             'categoria': categoria,
                             'precio': precio,
+                            'precio_oferta': precio_oferta,
                             'estado': estado_final,
                             'descripcion': descripcion,
                             'variante': variante,
@@ -423,19 +445,19 @@ def descargar_plantilla(request):
     ws.title = "Productos"
 
     # ── CABECERAS ─────────────────────────────────────────────────────────────
-    cabeceras = ['Nombre', 'Categoría', 'Precio', 'Estado', 'Descripción', 'Variante', 'Marca', 'Stock']
+    cabeceras = ['Nombre', 'Categoría', 'Precio', 'Estado', 'Descripción', 'Variante', 'Marca', 'Stock', 'Precio de Oferta', 'Color']
     ws.append(cabeceras)
 
     # ── FILAS DE EJEMPLO por tipo de negocio ──────────────────────────────────
     ejemplos = [
-        # Ropa
-        ['Vestido floral', 'Mujer', '25.00', 'disponible', 'Talla M, color rojo', 'M', 'Zara', 1],
+        # Ropa (con oferta de ejemplo)
+        ['Vestido floral', 'Mujer', '25.00', 'disponible', 'Talla M, color rojo', 'M', 'Zara', 1, '19.99', 'Rojo'],
         # Tecnología
-        ['iPhone 15 Pro', 'Smartphones', '999.00', 'disponible', '128GB, color negro', '128GB', 'Apple', 2],
+        ['iPhone 15 Pro', 'Smartphones', '999.00', 'disponible', '128GB, color negro', '128GB', 'Apple', 2, '', 'Negro'],
         # Alimentos
-        ['Torta de chocolate', 'Postres', '15.00', 'disponible', 'Para 10 personas', '10 porciones', 'Casera', 1],
+        ['Torta de chocolate', 'Postres', '15.00', 'disponible', 'Para 10 personas', '10 porciones', 'Casera', 1, '', ''],
         # Servicios
-        ['Diseño de logo', 'Servicios', '80.00', 'reservado', 'Seña pagada por cliente', 'Paquete básico', '', 1],
+        ['Diseño de logo', 'Servicios', '80.00', 'reservado', 'Seña pagada por cliente', 'Paquete básico', '', 1, '', ''],
     ]
     for ejemplo in ejemplos:
         ws.append(ejemplo)
@@ -454,7 +476,7 @@ def descargar_plantilla(request):
             cell.fill = color_ejemplo
 
     # ── ANCHO DE COLUMNAS ─────────────────────────────────────────────────────
-    anchos = {'A': 30, 'B': 18, 'C': 12, 'D': 15, 'E': 35, 'F': 18, 'G': 15, 'H': 8}
+    anchos = {'A': 30, 'B': 18, 'C': 12, 'D': 15, 'E': 35, 'F': 18, 'G': 15, 'H': 8, 'I': 16, 'J': 12}
     for col, ancho in anchos.items():
         ws.column_dimensions[col].width = ancho
 

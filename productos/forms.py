@@ -8,7 +8,7 @@ class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
         fields = ['nombre', 'descripcion', 'imagen', 'categoria', 'tipo_producto', 
-                  'variante', 'precio', 'precio_costo', 'marca', 'color', 'stock', 'estado']
+                  'variante', 'precio', 'precio_costo', 'precio_oferta', 'stock', 'marca', 'color', 'estado']
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -40,6 +40,11 @@ class ProductoForm(forms.ModelForm):
                 'placeholder': '0.00'
             }),
             'precio_costo': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': '0.00 (opcional)'
+            }),
+            'precio_oferta': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'placeholder': '0.00 (opcional)'
@@ -85,6 +90,18 @@ class ProductoForm(forms.ModelForm):
         self.fields['precio'].error_messages = {'required': 'El precio de venta es obligatorio.'}
         self.fields['stock'].required = True
         self.fields['stock'].error_messages = {'required': 'Debes indicar el stock.'}
+
+    def clean(self):
+        cleaned_data = super().clean()
+        precio = cleaned_data.get('precio')
+        precio_oferta = cleaned_data.get('precio_oferta')
+
+        if precio_oferta is not None and precio is not None and precio_oferta >= precio:
+            self.add_error(
+                'precio_oferta',
+                'El precio de oferta debe ser menor al precio normal, o el catálogo no lo mostrará como oferta.'
+            )
+        return cleaned_data
 
 
 

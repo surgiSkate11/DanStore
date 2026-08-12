@@ -1,6 +1,7 @@
 import csv
 import json
 import threading
+from decimal import Decimal
 from datetime import timedelta
 
 import openpyxl
@@ -14,11 +15,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
-from django.core.mail import send_mail
-from django.db.models import Sum, Count, Q
-from django.db.models.functions import TruncMonth
+from django.db import transaction
+from django.db.models import Avg, Case, Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value, When
+from django.db.models.functions import Coalesce, TruncDate, TruncMonth
 from django.forms import modelform_factory
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -26,17 +27,132 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 
 from clientes.models import Cliente
+from empresas.mail_utils import enviar_correo_saas, obtener_config_smtp
 from empresas.mixins import requiere_modulo
 from empresas.models import Empresa, SuscripcionEmpresa, Plan, Ticket, MensajeTicket, ConfiguracionSaaS
 from productos.models import Producto
 from tiendita_project.utils import form_errors_to_messages
-from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
+from usuarios.models import AdminActionRequest, ModuloSaaS, RolEmpresa, UserProfile
 from ventas.models import Venta, DetalleVenta
 
 # Identificadores internos de roles (Mejor mantenibilidad)
 ROLE_SUPERADMIN = 'superadmin'
 ROLE_OWNER = 'owner'
 ROLE_EMPLOYEE = 'employee'
+
+
+DECIMAL_OUTPUT = DecimalField(max_digits=12, decimal_places=2)
+
+
+def _valor_decimal(cantidad=0):
+    return Value(Decimal(str(cantidad)), output_field=DECIMAL_OUTPUT)
+
+
+def _construir_queryset_rentabilidad(empresa, fecha_inicio):
+    """Base de detalles de venta para métricas de rentabilidad y rotación."""
+    return (
+        DetalleVenta.objects.filter(venta__empresa=empresa, venta__fecha__gte=fecha_inicio)
+        .exclude(venta__estado='anulada')
+        .annotate(fecha_venta=TruncDate('venta__fecha'))
+        .annotate(
+            utilidad_unitaria=Case(
+                When(
+                    producto__precio_costo__gt=0,
+                    then=ExpressionWrapper(
+                        F('precio_unitario') - F('producto__precio_costo'),
+                        output_field=DECIMAL_OUTPUT,
+                    ),
+                ),
+                default=Value(None, output_field=DECIMAL_OUTPUT),
+                output_field=DECIMAL_OUTPUT,
+            ),
+            margen_unitario_pct=Case(
+                When(
+                    producto__precio_costo__gt=0,
+                    then=ExpressionWrapper(
+                        (F('precio_unitario') - F('producto__precio_costo')) * _valor_decimal(100) / F('producto__precio_costo'),
+                        output_field=DECIMAL_OUTPUT,
+                    ),
+                ),
+                default=Value(None, output_field=DECIMAL_OUTPUT),
+                output_field=DECIMAL_OUTPUT,
+            ),
+        )
+    )
+
+
+def _calcular_metricas_rentabilidad(empresa, fecha_inicio, limite=10):
+    """Agrupa métricas de utilidad, margen y rotación usando ORM."""
+    detalles = _construir_queryset_rentabilidad(empresa, fecha_inicio)
+
+    resumen = detalles.aggregate(
+        rentabilidad_promedio=Coalesce(Avg('margen_unitario_pct'), _valor_decimal(0)),
+        utilidad_total=Coalesce(Sum('utilidad_unitaria'), _valor_decimal(0)),
+        unidades_vendidas=Count('id'),
+        ventas_registradas=Count('venta_id', distinct=True),
+    )
+
+    top_rentabilidad_qs = (
+        detalles.values('producto_id', 'producto__nombre', 'producto__tipo_producto__nombre')
+        .annotate(
+            margen_promedio=Avg('margen_unitario_pct'),
+            utilidad_promedio=Avg('utilidad_unitaria'),
+            utilidad_total=Sum('utilidad_unitaria'),
+            unidades_vendidas=Count('id'),
+        )
+        .filter(margen_promedio__isnull=False)
+        .order_by('-margen_promedio', '-utilidad_total', '-unidades_vendidas')[:limite]
+    )
+
+    rotacion_qs = (
+        detalles.values('producto_id', 'producto__nombre', 'producto__tipo_producto__nombre')
+        .annotate(
+            ventas_count=Count('id'),
+            dias_con_venta=Count('fecha_venta', distinct=True),
+            utilidad_total=Sum('utilidad_unitaria'),
+        )
+        .annotate(
+            rotacion_score=Case(
+                When(
+                    dias_con_venta__gt=0,
+                    then=ExpressionWrapper(
+                        F('ventas_count') * _valor_decimal(1) / F('dias_con_venta'),
+                        output_field=DECIMAL_OUTPUT,
+                    ),
+                ),
+                default=_valor_decimal(0),
+                output_field=DECIMAL_OUTPUT,
+            )
+        )
+        .filter(ventas_count__gt=0)
+        .order_by('-rotacion_score', '-ventas_count', '-utilidad_total')
+    )
+
+    rotacion_media = rotacion_qs.aggregate(media=Avg('rotacion_score'))['media'] or Decimal('0')
+    alta_rotacion_count = rotacion_qs.filter(rotacion_score__gte=rotacion_media).count()
+
+    producto_mayor_rentabilidad = top_rentabilidad_qs.first()
+    top_rotacion = list(rotacion_qs[:limite])
+
+    categorias_rentables = (
+        detalles.values('producto__categoria')
+        .annotate(
+            margen_promedio=Avg('margen_unitario_pct'),
+            utilidad_total=Sum('utilidad_unitaria'),
+            unidades_vendidas=Count('id'),
+        )
+        .filter(margen_promedio__isnull=False)
+        .order_by('-utilidad_total', '-margen_promedio')[:limite]
+    )
+
+    return {
+        'resumen': resumen,
+        'producto_mayor_rentabilidad': producto_mayor_rentabilidad,
+        'alta_rotacion_count': alta_rotacion_count,
+        'top_rentabilidad': list(top_rentabilidad_qs),
+        'top_rotacion': top_rotacion,
+        'categorias_rentables': list(categorias_rentables),
+    }
 
 def home(request):
     """
@@ -175,50 +291,77 @@ def saas_configuracion(request):
     config, created = ConfiguracionSaaS.objects.get_or_create(id=1)
         
     if request.method == 'POST':
-        config.nombre_plataforma = request.POST.get('app_name', '')
-        config.support_email = request.POST.get('support_email', '')
-        config.theme_color = request.POST.get('theme_color', '')
-        
-        config.telefono_whatsapp = request.POST.get('telefono_whatsapp', '')
-        config.instagram_url = request.POST.get('instagram_url', '')
-        config.facebook_url = request.POST.get('facebook_url', '')
-        config.sitio_web = request.POST.get('sitio_web', '')
-        config.tiktok_url = request.POST.get('tiktok_url', '')
-        config.x_url = request.POST.get('x_url', '')
-        
+        # Branding y Contacto
+        config.nombre_plataforma = request.POST.get('app_name', config.nombre_plataforma)
+        config.support_email = request.POST.get('support_email', config.support_email)
+        config.telefono_whatsapp = request.POST.get('telefono_whatsapp', config.telefono_whatsapp)
+        config.instagram_url = request.POST.get('instagram_url', config.instagram_url)
+        config.facebook_url = request.POST.get('facebook_url', config.facebook_url)
+        config.sitio_web = request.POST.get('sitio_web', config.sitio_web)
+        config.tiktok_url = request.POST.get('tiktok_url', config.tiktok_url)
+        config.x_url = request.POST.get('x_url', config.x_url)
+
+        # Configuración SMTP
         config.smtp_host = request.POST.get('smtp_host', '')
         config.smtp_port = request.POST.get('smtp_port', 587) or 587
         config.smtp_user = request.POST.get('smtp_user', '')
         smtp_pass = request.POST.get('smtp_pass', '')
         if smtp_pass:
             config.smtp_password = smtp_pass
-        config.smtp_tls = request.POST.get('smtp_tls') == 'on'
+        config.smtp_encryption = request.POST.get('smtp_encryption', 'starttls')
+        config.smtp_from_name = request.POST.get('smtp_from_name', '')
+        config.smtp_from_email = request.POST.get('smtp_from_email', '')
+        config.smtp_test_mode = request.POST.get('smtp_test_mode') == 'on'
+        config.smtp_test_recipient = request.POST.get('smtp_test_recipient', '')
+        config.smtp_max_attachment_mb = request.POST.get('smtp_max_attachment_mb', 25) or 25
+        config.smtp_daily_limit = request.POST.get('smtp_daily_limit', 500) or 500
+        config.smtp_retry_attempts = request.POST.get('smtp_retry_attempts', 3) or 3
+        config.smtp_retry_delay_seconds = request.POST.get('smtp_retry_delay_seconds', 2) or 2
+        config.smtp_last_test_status = 'pending'
+        config.smtp_last_test_message = 'Configuración guardada. Pendiente de verificación.'
+        config.smtp_last_test_at = timezone.now()
         
-        config.stripe_active = request.POST.get('stripe_active') == 'on'
-        config.stripe_public_key = request.POST.get('stripe_public', '')
+        # Pasarelas de Pago
         stripe_secret = request.POST.get('stripe_secret', '')
         if stripe_secret:
             config.stripe_secret_key = stripe_secret
             
-        config.paypal_active = request.POST.get('paypal_active') == 'on'
         config.paypal_client_id = request.POST.get('paypal_client_id', '')
         paypal_secret = request.POST.get('paypal_secret', '')
         if paypal_secret:
             config.paypal_secret_key = paypal_secret
             
-        config.payphone_active = request.POST.get('payphone_active') == 'on'
         payphone_token = request.POST.get('payphone_token', '')
         if payphone_token:
             config.payphone_token = payphone_token
-            
+
+        config.mercadopago_active = request.POST.get('mercadopago_active') == 'on'
+        mercadopago_token = request.POST.get('mercadopago_token', '')
+        if mercadopago_token:
+            config.mercadopago_token = mercadopago_token
+
+        config.coinbase_active = request.POST.get('coinbase_active') == 'on'
+        coinbase_api_key = request.POST.get('coinbase_api_key', '')
+        if coinbase_api_key:
+            config.coinbase_api_key = coinbase_api_key
+
+        config.razorpay_active = request.POST.get('razorpay_active') == 'on'
+        config.razorpay_key_id = request.POST.get('razorpay_key_id', '')
+        razorpay_secret = request.POST.get('razorpay_key_secret', '')
+        if razorpay_secret:
+            config.razorpay_key_secret = razorpay_secret
+
+        # Transferencia Bancaria
         config.transferencia_active = request.POST.get('transferencia_active') == 'on'
         config.banco_pichincha = request.POST.get('banco_pichincha', '')
+        config.banco_pichincha_2 = request.POST.get('banco_pichincha_2', '')
         config.banco_guayaquil = request.POST.get('banco_guayaquil', '')
         config.banco_jep = request.POST.get('banco_jep', '')
-            
-        config.force_2fa = request.POST.get('force_2fa') == 'on'
-        config.session_timeout = request.POST.get('session_timeout', 120) or 120
-        
+
+        # NOTA: Los siguientes campos no existen en el modelo ConfiguracionSaaS y causarían un error.
+        # config.theme_color, config.stripe_active, config.stripe_public_key, config.paypal_active,
+        # config.payphone_active, config.force_2fa, config.session_timeout
+
         config.save()
         
         cache.delete('saas_app_name')
@@ -228,6 +371,99 @@ def saas_configuracion(request):
         return redirect(f"{reverse('saas_configuracion')}#{tab_activa}")
         
     return render(request, 'dashboard/saas_configuracion.html', {'config': config})
+
+
+@login_required
+def saas_configuracion_test_smtp(request):
+    """Prueba el SMTP actual o el SMTP capturado desde el formulario sin guardar."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'message': 'Método no permitido.'}, status=405)
+
+    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+        return JsonResponse({'ok': False, 'message': 'Acceso exclusivo para administradores globales.'}, status=403)
+
+    config, _ = ConfiguracionSaaS.objects.get_or_create(id=1)
+    overrides = {
+        'smtp_host': request.POST.get('smtp_host', '').strip(),
+        'smtp_port': request.POST.get('smtp_port', '').strip(),
+        'smtp_user': request.POST.get('smtp_user', '').strip(),
+        'smtp_password': request.POST.get('smtp_pass', '').strip(),
+        'smtp_encryption': request.POST.get('smtp_encryption', 'starttls').strip(),
+        'smtp_from_name': request.POST.get('smtp_from_name', '').strip(),
+        'smtp_from_email': request.POST.get('smtp_from_email', '').strip(),
+        'smtp_test_mode': request.POST.get('smtp_test_mode') == 'on',
+        'smtp_test_recipient': request.POST.get('smtp_test_recipient', '').strip(),
+        'smtp_retry_attempts': request.POST.get('smtp_retry_attempts', '').strip(),
+        'smtp_retry_delay_seconds': request.POST.get('smtp_retry_delay_seconds', '').strip(),
+        'smtp_max_attachment_mb': request.POST.get('smtp_max_attachment_mb', '').strip(),
+        'smtp_daily_limit': request.POST.get('smtp_daily_limit', '').strip(),
+    }
+
+    recipient = overrides['smtp_test_recipient'] or request.user.email or config.support_email
+    if not recipient:
+        return JsonResponse({'ok': False, 'message': 'Debes indicar un correo de prueba o tener un correo en tu usuario.'}, status=400)
+
+    subject = f"Prueba SMTP - {config.nombre_plataforma or 'Tiendita SaaS'}"
+    body = (
+        f"Esta es una prueba de correo desde {config.nombre_plataforma or 'Tiendita SaaS'}.\n\n"
+        f"Servidor: {overrides['smtp_host'] or config.smtp_host or '(sin definir)'}\n"
+        f"Puerto: {overrides['smtp_port'] or config.smtp_port or '(sin definir)'}\n"
+        f"Cifrado: {overrides['smtp_encryption'] or config.smtp_encryption or 'starttls'}\n"
+        f"Remitente: {overrides['smtp_from_email'] or config.smtp_from_email or '(sin definir)'}\n"
+    )
+
+    try:
+        smtp_config_used = obtener_config_smtp(config=config, overrides=overrides)
+
+        html_message = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; background:#f8fafc; padding:24px; color:#0f172a;">
+                <div style="max-width:560px; margin:0 auto; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:28px;">
+                    <h2 style="margin:0 0 12px; color:#2563eb;">{config.nombre_plataforma or 'Tiendita SaaS'}</h2>
+                    <h3 style="margin:0 0 16px; color:#111827;">Prueba SMTP exitosa</h3>
+                    <p style="margin:0 0 12px; color:#475569;">Este correo confirma que la configuración SMTP respondió correctamente.</p>
+                    <ul style="padding-left:20px; color:#334155;">
+                        <li>Servidor: {overrides['smtp_host'] or config.smtp_host or '(sin definir)'}</li>
+                        <li>Puerto: {overrides['smtp_port'] or config.smtp_port or '(sin definir)'}</li>
+                        <li>Cifrado: {overrides['smtp_encryption'] or config.smtp_encryption or 'starttls'}</li>
+                        <li>Remitente: {overrides['smtp_from_email'] or config.smtp_from_email or config.support_email or '(sin definir)'}</li>
+                        <li>Destino de prueba: {recipient}</li>
+                    </ul>
+                </div>
+            </body>
+        </html>
+        """
+        enviados = enviar_correo_saas(
+            subject,
+            body,
+            [recipient],
+            html_message=html_message,
+            config=config,
+            overrides=overrides,
+            fail_silently=False,
+        )
+        config.smtp_last_test_status = 'success'
+        success_message = f'¡Conexión exitosa! Se envió un correo de prueba a {recipient}.'
+        config.smtp_last_test_message = success_message
+        config.smtp_last_test_at = timezone.now()
+        config.save(update_fields=['smtp_last_test_status', 'smtp_last_test_message', 'smtp_last_test_at'])
+
+        debug_info = {
+            "host": smtp_config_used['host'],
+            "port": smtp_config_used['port'],
+            "user": smtp_config_used['username'],
+            "from": smtp_config_used['from_email'],
+            "to": recipient,
+            "encryption": smtp_config_used['encryption'],
+        }
+
+        return JsonResponse({'ok': True, 'message': success_message, 'debug_info': debug_info})
+    except Exception as exc:
+        config.smtp_last_test_status = 'error'
+        config.smtp_last_test_message = str(exc)
+        config.smtp_last_test_at = timezone.now()
+        config.save(update_fields=['smtp_last_test_status', 'smtp_last_test_message', 'smtp_last_test_at'])
+        return JsonResponse({'ok': False, 'message': f'No se pudo enviar el correo de prueba: {exc}'}, status=400)
 
 
 @login_required
@@ -277,12 +513,12 @@ def saas_tickets(request):
                         'app_name': app_name, 'ticket_id': ticket.id, 'usuario': ticket.usuario.username, 'asunto': ticket.asunto, 'respuesta': mensaje_texto
                     })
                     
-                    send_mail(
-                        f"Respuesta a tu ticket #{ticket.id}", 
-                        mensaje_txt, 
-                        getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com'), 
-                        [ticket.usuario.email], 
-                        html_message=mensaje_html, fail_silently=True
+                    enviar_correo_saas(
+                        f"Respuesta a tu ticket #{ticket.id}",
+                        mensaje_txt,
+                        [ticket.usuario.email],
+                        html_message=mensaje_html,
+                        fail_silently=True,
                     )
                 except Exception as e:
                     print(f"Error enviando respuesta de ticket: {e}")
@@ -486,6 +722,8 @@ def dashboard_tenant(request):
     empresa = getattr(request, 'empresa', None)
     if not empresa:
         return redirect('onboarding')
+
+    es_dueno = getattr(getattr(request.user, 'profile', None), 'rol', '') == ROLE_OWNER
         
     hoy = timezone.now()
     inicio_mes = hoy.replace(day=1, hour=0, minute=0, second=0)
@@ -515,6 +753,8 @@ def dashboard_tenant(request):
         totales_chart.append(ventas_dict.get(fecha_iter, 0.0))
     # -------------------------------------------------------------
 
+    metricas_rentabilidad = _calcular_metricas_rentabilidad(empresa, hoy - timedelta(days=29)) if es_dueno else {}
+
     context = {
         'empresa': empresa,
         'ventas_mes': ventas_mes,
@@ -522,6 +762,8 @@ def dashboard_tenant(request):
         'nuevos_clientes': nuevos_clientes,
         'fechas_chart': json.dumps(fechas_chart),
         'totales_chart': json.dumps(totales_chart),
+        'es_dueno': es_dueno,
+        'metricas_rentabilidad': metricas_rentabilidad,
     }
     return render(request, 'dashboard/tenant_dashboard.html', context)
 
@@ -533,6 +775,8 @@ def tenant_reportes(request):
     empresa = getattr(request, 'empresa', None)
     if not empresa:
         return redirect('onboarding')
+
+    es_dueno = getattr(getattr(request.user, 'profile', None), 'rol', '') == ROLE_OWNER
         
     # Filtro de días (Predeterminado a 30)
     try:
@@ -543,6 +787,7 @@ def tenant_reportes(request):
     fecha_inicio = timezone.now() - timedelta(days=dias)
     
     ventas_periodo = Venta.objects.filter(empresa=empresa, fecha__gte=fecha_inicio).select_related('cliente')
+    metricas_rentabilidad = _calcular_metricas_rentabilidad(empresa, fecha_inicio) if es_dueno else {}
     
     tipo_exportacion = request.GET.get('export')
     if tipo_exportacion in ['csv', 'excel']:
@@ -672,134 +917,6 @@ def tenant_reportes(request):
             ])
         return response
         
-    # 1.5 Exportación de Catálogo de Productos
-    if tipo_exportacion in ['productos_csv', 'productos_excel']:
-        estado_prod = request.GET.get('estado_prod', '')
-        categoria_prod = request.GET.get('categoria_prod', '')
-        precio_min = request.GET.get('precio_min', '')
-        precio_max = request.GET.get('precio_max', '')
-        
-        productos = Producto.objects.filter(empresa=empresa)
-        
-        if estado_prod:
-            productos = productos.filter(estado=estado_prod)
-        if categoria_prod:
-            productos = productos.filter(categoria__icontains=categoria_prod)
-        if precio_min:
-            try: productos = productos.filter(precio__gte=float(precio_min))
-            except ValueError: pass
-        if precio_max:
-            try: productos = productos.filter(precio__lte=float(precio_max))
-            except ValueError: pass
-            
-        productos = productos.select_related('tipo_producto').order_by('nombre')
-        
-        if tipo_exportacion == 'productos_excel':
-            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = f'attachment; filename="catalogo_productos.xlsx"'
-            
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            ws.title = "Productos"
-            
-            # --- TÍTULOS SUPERIORES ---
-            ws.append([f"CATÁLOGO DE PRODUCTOS - {empresa.nombre.upper()}"])
-            est_txt = estado_prod.title() if estado_prod else "Todos"
-            cat_txt = categoria_prod.title() if categoria_prod else "Todas"
-            ws.append([f"Filtros -> Estado: {est_txt} | Categoría: {cat_txt}"])
-            ws.append([])
-            
-            # --- CABECERAS DE TABLA ---
-            headers = ['ID', 'Nombre', 'Tipo', 'Categoría', 'Variante', 'Marca', 'Color', 'Precio Venta', 'Precio Costo', 'Stock', 'Estado']
-            ws.append(headers)
-            
-            # Estilos de Títulos y Cabeceras
-            ws['A1'].font = Font(size=14, bold=True, color="1F2937")
-            ws['A2'].font = Font(italic=True, color="6B7280")
-            
-            fill_header = PatternFill(start_color="10B981", end_color="10B981", fill_type="solid")
-            font_header = Font(color="FFFFFF", bold=True)
-            thin_border_prod = Border(left=Side(style='thin', color='10B981'), right=Side(style='thin', color='10B981'), top=Side(style='thin', color='10B981'), bottom=Side(style='thin', color='10B981'))
-            
-            for col_num in range(1, len(headers) + 1):
-                cell = ws.cell(row=4, column=col_num)
-                cell.fill = fill_header
-                cell.font = font_header
-                cell.alignment = Alignment(horizontal='center', vertical='center')
-                cell.border = thin_border_prod
-                
-            # Estilos estrictos para celdas de datos
-            fill_blanco = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-            fill_gris = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
-            borde_datos = Border(
-                left=Side(style='thin', color='E5E7EB'), right=Side(style='thin', color='E5E7EB'), 
-                top=Side(style='thin', color='E5E7EB'), bottom=Side(style='thin', color='E5E7EB')
-            )
-            align_datos = Alignment(horizontal='left', vertical='center', wrap_text=False)
-            align_centro = Alignment(horizontal='center', vertical='center', wrap_text=False)
-            
-            for row_idx, p in enumerate(productos, start=5):
-                tipo_nombre = p.tipo_producto.nombre if p.tipo_producto else 'General'
-                
-                try:
-                    estado_prod = p.get_estado_display()
-                except AttributeError:
-                    estado_prod = getattr(p, 'estado', 'Disponible')
-                    
-                data_row = [
-                    p.id, p.nombre, tipo_nombre, p.categoria, p.variante, p.marca, p.color, 
-                    float(p.precio) if p.precio else 0, 
-                    float(getattr(p, 'precio_costo', 0)) if getattr(p, 'precio_costo', 0) else 0, 
-                    p.stock, estado_prod
-                ]
-                
-                # Inyectamos una barrera invisible (espacio) al final de la fila
-                data_row.append(" ")
-                ws.append(data_row)
-                
-                # Aplicar color alternado (Zebra Striping)
-                current_fill = fill_blanco if row_idx % 2 == 1 else fill_gris
-                
-                # Aplicar estilos, bordes y alineación a TODAS las celdas de la fila
-                for col_num in range(1, len(headers) + 1):
-                    cell = ws.cell(row=row_idx, column=col_num)
-                    cell.fill = current_fill
-                    cell.border = borde_datos
-                    if col_num in [8, 9]:
-                        cell.number_format = '"$"#,##0.00'
-                        cell.alignment = align_centro
-                    elif col_num in [1, 10, 11]:
-                        cell.alignment = align_centro
-                    else:
-                        cell.alignment = align_datos
-                        
-            # Aplicar anchos estrictos y controlados para la tabla de Productos
-            anchos = {'A': 8, 'B': 22, 'C': 15, 'D': 15, 'E': 15, 'F': 15, 'G': 15, 'H': 12, 'I': 12, 'J': 10, 'K': 12}
-            for col, ancho in anchos.items():
-                ws.column_dimensions[col].width = ancho
-                
-            wb.save(response)
-            return response
-        else:
-            response = HttpResponse(content_type='text/csv; charset=utf-8')
-            response['Content-Disposition'] = f'attachment; filename="catalogo_productos.csv"'
-            response.write(u'\ufeff'.encode('utf8'))  # BOM para tildes
-            writer = csv.writer(response)
-            
-            # --- TÍTULOS SUPERIORES CSV ---
-            est_txt = estado_prod.title() if estado_prod else "Todos"
-            cat_txt = categoria_prod.title() if categoria_prod else "Todas"
-            writer.writerow([f"CATÁLOGO DE PRODUCTOS - {empresa.nombre.upper()}"])
-            writer.writerow([f"Filtros -> Estado: {est_txt} | Categoría: {cat_txt}"])
-            writer.writerow([])
-            writer.writerow(['ID', 'Nombre', 'Tipo', 'Categoría', 'Variante', 'Marca', 'Color', 'Precio Venta', 'Precio Costo', 'Stock', 'Estado'])
-        
-        for p in productos:
-            tipo_nombre = p.tipo_producto.nombre if p.tipo_producto else 'General'
-            writer.writerow([p.id, p.nombre, tipo_nombre, p.categoria, p.variante, p.marca, p.color, p.precio, getattr(p, 'precio_costo', 0), p.stock, p.get_estado_display() if hasattr(p, 'get_estado_display') else p.estado])
-            
-        return response
-        
     # Filtrar ventas anuladas para los cálculos financieros
     ventas_validas = ventas_periodo.exclude(estado='anulada')
 
@@ -847,14 +964,23 @@ def tenant_reportes(request):
         .values('cliente__nombre', 'cliente__ruc_cedula')\
         .annotate(num_compras=Count('id'), total_comprado=Sum('total')).order_by('-total_comprado')[:10]
 
-    # 6. Categorías existentes para el autocompletado en el formulario de exportación
-    categorias_existentes = list(Producto.objects.filter(empresa=empresa).exclude(categoria='').values_list('categoria', flat=True).distinct().order_by('categoria'))
+    top_rentabilidad = metricas_rentabilidad.get('top_rentabilidad', [])
+    top_rotacion = metricas_rentabilidad.get('top_rotacion', [])
+    categorias_rentables = metricas_rentabilidad.get('categorias_rentables', [])
 
     context = {
         'empresa': empresa, 'dias': dias, 'total_ingresos': total_ingresos, 'total_ventas': total_ventas,
         'ticket_promedio': ticket_promedio, 'top_productos': top_productos, 'top_clientes': top_clientes,
         'fechas_chart': json.dumps(fechas_chart), 'totales_chart': json.dumps(totales_chart),
-        'categorias_existentes': json.dumps(categorias_existentes),
+        'es_dueno': es_dueno,
+        'metricas_rentabilidad': metricas_rentabilidad,
+        'rentabilidad_promedio': metricas_rentabilidad.get('resumen', {}).get('rentabilidad_promedio', 0),
+        'utilidad_total': metricas_rentabilidad.get('resumen', {}).get('utilidad_total', 0),
+        'producto_mayor_rentabilidad': metricas_rentabilidad.get('producto_mayor_rentabilidad'),
+        'alta_rotacion_count': metricas_rentabilidad.get('alta_rotacion_count', 0),
+        'top_productos_rentables': top_rentabilidad,
+        'top_productos_rotacion': top_rotacion,
+        'categorias_mas_rentables': categorias_rentables,
     }
     return render(request, 'dashboard/tenant_reportes.html', context)
 

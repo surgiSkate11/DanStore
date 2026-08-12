@@ -111,33 +111,111 @@
 
                     <!-- TAB: SMTP -->
                     <div id="tab-smtp" class="tab-content d-none fade-in">
-                        <h4 class="fw-bold text-dark border-bottom pb-3 mb-4">Servidor de Correos (SMTP)</h4>
-                        <p class="text-muted mb-4">Configura las credenciales para enviar correos de facturas y contraseñas.</p>
-                        
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 border-bottom pb-3 mb-4">
+                            <div class="pe-2">
+                                <div class="d-inline-flex align-items-center gap-2 mb-2">
+                                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-2">SMTP</span>
+                                    <span class="small text-muted">Proveedor agnóstico</span>
+                                </div>
+                                <h4 class="fw-bold text-dark mb-1">Servidor de Correos</h4>
+                            </div>
+                            <div class="ms-auto d-flex align-items-center justify-content-end gap-3 bg-light border rounded-4 px-3 py-2 shadow-sm">
+                                <div class="small text-muted text-uppercase fw-semibold mb-0" style="letter-spacing: .08em; white-space: nowrap;">Estado actual</div>
+                                {% if config.smtp_last_test_status == 'success' %}
+                                    <span id="smtpStatusBadge" class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-2 fw-semibold">Conectado</span>
+                                {% elif config.smtp_last_test_status == 'error' %}
+                                    <span id="smtpStatusBadge" class="badge rounded-pill bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-2 fw-semibold">Error de autenticación</span>
+                                {% elif config.smtp_last_test_status == 'pending' %}
+                                    <span id="smtpStatusBadge" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 fw-semibold">Sin verificar</span>
+                                {% else %}
+                                    <span id="smtpStatusBadge" class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-3 py-2 fw-semibold">Sin verificar</span>
+                                {% endif %}
+                            </div>
+                            <div class="w-100 text-end pe-1" id="smtpStatusMeta">
+                                {% if config.smtp_last_test_at %}<span class="small text-muted">Última prueba: {{ config.smtp_last_test_at|date:"d/m/Y H:i" }}</span>{% endif %}
+                            </div>
+                        </div>
+
                         <div class="row g-4 mb-3">
                             <div class="col-md-8">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Servidor (Host)</label>
-                                <input type="text" name="smtp_host" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_host|default:'smtp.mailgun.org' }}" style="border-radius: 12px;">
+                                <input type="text" name="smtp_host" id="smtpHost" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_host|default:'' }}" placeholder="smtp.gmail.com" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Puerto</label>
-                                <input type="number" name="smtp_port" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_port|default:'587' }}" style="border-radius: 12px;">
+                                <input type="number" name="smtp_port" id="smtpPort" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_port|default:'587' }}" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Usuario</label>
-                                <input type="text" name="smtp_user" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_user|default:'postmaster@tiendita.com' }}" style="border-radius: 12px;">
+                                <input type="text" name="smtp_user" id="smtpUser" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_user|default:'' }}" placeholder="usuario@dominio.com" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Contraseña</label>
-                                <input type="password" name="smtp_pass" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_password|default:'' }}" placeholder="********" style="border-radius: 12px;">
-                            </div>
-                            <div class="col-12 mt-4">
-                                <div class="form-check custom-switch d-flex align-items-center ps-0">
-                                    <input class="form-check-input ms-0 me-3" type="checkbox" id="useTls" name="smtp_tls" {% if config.smtp_tls or config.smtp_tls is None %}checked{% endif %}>
-                                    <label class="form-check-label fw-bold text-dark mb-0" for="useTls">Usar cifrado seguro (TLS/SSL)</label>
+                                <div class="input-group">
+                                    <input type="password" name="smtp_pass" id="smtpPass" class="form-control form-control-lg bg-light border-0" placeholder="Dejar en blanco para no cambiar" style="border-radius: 12px 0 0 12px;">
+                                    {% if config.smtp_password %}
+                                    <span class="input-group-text bg-light border-0" style="border-radius: 0 12px 12px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                        <i class="bi bi-key-fill text-success"></i>
+                                    </span>
+                                    {% endif %}
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Cifrado</label>
+                                <select name="smtp_encryption" id="smtpEncryption" class="form-select form-select-lg bg-light border-0" style="border-radius: 12px;">
+                                    <option value="none" {% if config.smtp_encryption == 'none' %}selected{% endif %}>Sin cifrado</option>
+                                    <option value="starttls" {% if config.smtp_encryption == 'starttls' or not config.smtp_encryption %}selected{% endif %}>STARTTLS</option>
+                                    <option value="ssl" {% if config.smtp_encryption == 'ssl' %}selected{% endif %}>SSL implícito</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Correo remitente visible</label>
+                                <input type="email" name="smtp_from_email" id="smtpFromEmail" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_from_email|default:config.support_email|default:'' }}" placeholder="soporte@tiendita.com" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Nombre del remitente</label>
+                                <input type="text" name="smtp_from_name" id="smtpFromName" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_from_name|default:'Tiendita SaaS' }}" placeholder="Soporte Tiendita" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Correo de prueba</label>
+                                <input type="email" name="smtp_test_recipient" id="smtpTestRecipient" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_test_recipient|default:user.email|default:'' }}" placeholder="correo@dominio.com" style="border-radius: 12px;" aria-describedby="testRecipientHelp">
+                                <div id="testRecipientHelp" class="form-text mt-2">Esta dirección se usa para el botón "Enviar correo de prueba" y como destino cuando el modo de prueba está activo.</div>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="form-check custom-switch d-flex align-items-center ps-0">
+                                    <input class="form-check-input ms-0 me-3" type="checkbox" id="smtpTestMode" name="smtp_test_mode" {% if config.smtp_test_mode %}checked{% endif %} aria-describedby="testModeHelp">
+                                    <label class="form-check-label fw-bold text-dark mb-0" for="smtpTestMode">Modo prueba: redirigir todos los correos al correo de prueba</label>
+                                </div>
+                                <p id="testModeHelp" class="form-text text-muted ps-1 mt-1" style="max-width: 80%;">Si se activa, <strong>TODOS</strong> los correos del sistema (tickets, notificaciones, etc.) se enviarán únicamente al "Correo de prueba", ignorando al destinatario real.</p>
+                            </div>
                         </div>
+
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Límite adjuntos (MB)</label>
+                                <input type="number" name="smtp_max_attachment_mb" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_max_attachment_mb|default:'25' }}" min="1" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Límite diario</label>
+                                <input type="number" name="smtp_daily_limit" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_daily_limit|default:'500' }}" min="1" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Reintentos</label>
+                                <input type="number" name="smtp_retry_attempts" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_retry_attempts|default:'3' }}" min="1" max="10" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Espera (s)</label>
+                                <input type="number" name="smtp_retry_delay_seconds" class="form-control form-control-lg bg-light border-0" value="{{ config.smtp_retry_delay_seconds|default:'2' }}" min="0" max="30" style="border-radius: 12px;">
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                            <button type="button" id="btnTestSmtp" class="btn btn-outline-primary px-4 py-2 fw-bold rounded-pill" data-url="{% url 'saas_configuracion_test_smtp' %}">
+                                <i class="bi bi-envelope-check me-2"></i> Enviar correo de prueba
+                            </button>
+                            <div id="smtpTestResult" class="small text-muted"></div>
+                        </div>
+                        <p class="text-muted small mb-0">La validación de tamaños limita adjuntos futuros y el helper SMTP reintenta errores transitorios antes de fallar.</p>
                     </div>
 
                     <!-- TAB: PAGOS -->
@@ -160,7 +238,15 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Clave Secreta (Secret Key)</label>
-                                        <input type="password" name="stripe_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.stripe_secret_key|default:'' }}" placeholder="sk_test_51Nx..." style="border-radius: 10px;">
+                                        <input type="password" name="stripe_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="" placeholder="sk_test_51Nx..." style="border-radius: 10px;">
+                                        <div class="input-group">
+                                            <input type="password" name="stripe_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Dejar en blanco para no cambiar" style="border-radius: 10px 0 0 10px;">
+                                            {% if config.stripe_secret_key %}
+                                            <span class="input-group-text bg-white border-0 shadow-sm" style="border-radius: 0 10px 10px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                                <i class="bi bi-key-fill text-success"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -181,7 +267,14 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Secret Key</label>
-                                        <input type="password" name="paypal_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.paypal_secret_key|default:'' }}" placeholder="E_J3k..." style="border-radius: 10px;">
+                                        <div class="input-group">
+                                            <input type="password" name="paypal_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Dejar en blanco para no cambiar" style="border-radius: 10px 0 0 10px;">
+                                            {% if config.paypal_secret_key %}
+                                            <span class="input-group-text bg-white border-0 shadow-sm" style="border-radius: 0 10px 10px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                                <i class="bi bi-key-fill text-success"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -200,7 +293,14 @@
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Token de Autenticación (Bearer)</label>
-                                        <input type="password" name="payphone_token" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.payphone_token|default:'' }}" placeholder="eyJhbGciOiJIUzI1NiIs..." style="border-radius: 10px;">
+                                        <div class="input-group">
+                                            <input type="password" name="payphone_token" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Dejar en blanco para no cambiar" style="border-radius: 10px 0 0 10px;">
+                                            {% if config.payphone_token %}
+                                            <span class="input-group-text bg-white border-0 shadow-sm" style="border-radius: 0 10px 10px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                                <i class="bi bi-key-fill text-success"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -217,7 +317,14 @@
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Access Token</label>
-                                        <input type="password" name="mercadopago_token" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.mercadopago_token|default:'' }}" placeholder="APP_USR-..." style="border-radius: 10px;">
+                                        <div class="input-group">
+                                            <input type="password" name="mercadopago_token" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Dejar en blanco para no cambiar" style="border-radius: 10px 0 0 10px;">
+                                            {% if config.mercadopago_token %}
+                                            <span class="input-group-text bg-white border-0 shadow-sm" style="border-radius: 0 10px 10px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                                <i class="bi bi-key-fill text-success"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -234,7 +341,14 @@
                                 <div class="row g-3">
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">API Key</label>
-                                        <input type="password" name="coinbase_api_key" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.coinbase_api_key|default:'' }}" placeholder="Tu API Key de Coinbase..." style="border-radius: 10px;">
+                                        <div class="input-group">
+                                            <input type="password" name="coinbase_api_key" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Dejar en blanco para no cambiar" style="border-radius: 10px 0 0 10px;">
+                                            {% if config.coinbase_api_key %}
+                                            <span class="input-group-text bg-white border-0 shadow-sm" style="border-radius: 0 10px 10px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                                <i class="bi bi-key-fill text-success"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -255,7 +369,14 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Key Secret</label>
-                                        <input type="password" name="razorpay_key_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" value="{{ config.razorpay_key_secret|default:'' }}" placeholder="Tu Secret Key..." style="border-radius: 10px;">
+                                        <div class="input-group">
+                                            <input type="password" name="razorpay_key_secret" class="form-control form-control-lg bg-white border-0 shadow-sm" placeholder="Dejar en blanco para no cambiar" style="border-radius: 10px 0 0 10px;">
+                                            {% if config.razorpay_key_secret %}
+                                            <span class="input-group-text bg-white border-0 shadow-sm" style="border-radius: 0 10px 10px 0;" data-bs-toggle="tooltip" title="Ya hay una clave guardada">
+                                                <i class="bi bi-key-fill text-success"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -341,6 +462,20 @@
         const links = document.querySelectorAll('.settings-link');
         const tabs = document.querySelectorAll('.tab-content');
         const hiddenInput = document.getElementById('activeTabInput');
+        const smtpEncryption = document.getElementById('smtpEncryption');
+        const smtpPort = document.getElementById('smtpPort');
+        const smtpTestButton = document.getElementById('btnTestSmtp');
+        const smtpTestResult = document.getElementById('smtpTestResult');
+        const smtpStatusBadge = document.getElementById('smtpStatusBadge');
+        const smtpStatusMeta = document.getElementById('smtpStatusMeta');
+        const smtpTestMode = document.getElementById('smtpTestMode');
+        const smtpTestRecipient = document.getElementById('smtpTestRecipient');
+
+        const defaultPorts = {
+            none: '25',
+            starttls: '587',
+            ssl: '465'
+        };
         
         // 1. Leer de la URL si el usuario acaba de guardar o entrar
         const currentHash = window.location.hash.replace('#', '') || 'branding';
@@ -357,6 +492,100 @@
                 history.pushState(null, null, '#' + tabId);
             });
         });
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+
+        function setStatusBadge(status, message) {
+            if (!smtpStatusBadge) return;
+
+            smtpStatusBadge.className = 'badge rounded-pill px-3 py-2';
+            if (status === 'success') {
+                smtpStatusBadge.classList.add('bg-success-subtle', 'text-success-emphasis', 'border', 'border-success-subtle');
+                smtpStatusBadge.textContent = 'Conectado';
+            } else if (status === 'error') {
+                smtpStatusBadge.classList.add('bg-danger-subtle', 'text-danger-emphasis', 'border', 'border-danger-subtle');
+                smtpStatusBadge.textContent = 'Error de autenticación';
+            } else if (status === 'pending') {
+                smtpStatusBadge.classList.add('bg-warning-subtle', 'text-warning-emphasis', 'border', 'border-warning-subtle');
+                smtpStatusBadge.textContent = 'Sin verificar';
+            } else {
+                smtpStatusBadge.classList.add('bg-secondary-subtle', 'text-secondary-emphasis', 'border', 'border-secondary-subtle');
+                smtpStatusBadge.textContent = 'Sin verificar';
+            }
+
+            if (smtpStatusMeta && message) {
+                smtpStatusMeta.textContent = message;
+            }
+        }
+
+        if (smtpEncryption && smtpPort) {
+            smtpEncryption.addEventListener('change', function() {
+                smtpPort.value = defaultPorts[this.value] || smtpPort.value;
+            });
+        }
+
+        if (smtpTestButton) {
+            smtpTestButton.addEventListener('click', async function() {
+                const url = this.dataset.url;
+                const form = document.querySelector('form');
+                const originalText = this.innerHTML;
+
+                smtpTestResult.textContent = 'Enviando correo de prueba...';
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Probando...';
+
+                try {
+                    const formData = new FormData(form);
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+                    const payload = await response.json();
+                    setStatusBadge(payload.ok ? 'success' : 'error', payload.ok ? `Última prueba: ${new Date().toLocaleString()}` : payload.message);
+
+                    if (payload.ok && payload.debug_info) {
+                        let debugHtml = `<details class="mt-2">
+                            <summary class="small text-muted" style="cursor: pointer;">Ver detalles técnicos del envío</summary>
+                            <div class="mt-2 p-3 bg-light-subtle border rounded-3 small font-monospace">
+                                <div><span class="text-muted">Servidor:</span> ${payload.debug_info.host}:${payload.debug_info.port}</div>
+                                <div><span class="text-muted">Usuario:</span> ${payload.debug_info.user}</div>
+                                <div><span class="text-muted">De:</span> ${payload.debug_info.from}</div>
+                                <div><span class="text-muted">Para:</span> ${payload.debug_info.to}</div>
+                                <div><span class="text-muted">Cifrado:</span> ${payload.debug_info.encryption.toUpperCase()}</div>
+                            </div>
+                            <p class="small mt-2 text-muted">Si el correo no llega, verifica que "De" sea un dominio que controlas (no gmail.com/hotmail.com) y revisa la carpeta de SPAM.</p>
+                        </details>`;
+                        smtpTestResult.innerHTML = `<span class="text-success fw-semibold">${payload.message}</span>` + debugHtml;
+                    } else {
+                        smtpTestResult.innerHTML = `<span class="text-danger fw-semibold">${payload.message}</span>`;
+                    }
+                } catch (error) {
+                    smtpTestResult.textContent = 'No se pudo completar la prueba SMTP.';
+                    smtpTestResult.className = 'small text-danger fw-semibold';
+                    setStatusBadge('error', 'No se pudo completar la prueba SMTP.');
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = originalText;
+                }
+            });
+        }
+
+        if (smtpTestMode && smtpTestRecipient) {
+            smtpTestMode.addEventListener('change', function() {
+                if (this.checked && !smtpTestRecipient.value) {
+                    smtpTestRecipient.focus();
+                }
+            });
+        }
 
         function activateTab(tabId) {
             // Ocultar todo

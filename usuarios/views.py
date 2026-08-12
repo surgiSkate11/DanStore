@@ -6,19 +6,24 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.password_validation import validate_password, ValidationError
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.core.cache import cache
-from django.core.mail import send_mail
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 from django.contrib.sessions.models import Session
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from empresas.models import SuscripcionEmpresa, Plan
+from empresas.mail_utils import enviar_correo_saas
 from productos.models import Producto, TipoProducto
 from tiendita_project.utils import form_errors_to_messages
 from .models import UserProfile
@@ -58,35 +63,35 @@ def perfil(request):
         )
 
     if request.method == 'POST':
-        try:
-            with transaction.atomic():
+        with transaction.atomic():
+            try:
                 # 1. Actualizar datos personales básicos (Todos los roles)
                 usuario.first_name = request.POST.get('first_name', '').strip()
                 usuario.last_name = request.POST.get('last_name', '').strip()
                 
                 cambios_especiales = False
                 requiere_relogin = False
+                error_presente = False
                 
-                # --- 🔒 VALIDACIÓN Y ACTUALIZACIÓN DE USERNAME (Estilo GitHub) ---
+                # --- VALIDACIÓN Y ACTUALIZACIÓN DE USERNAME  ---
                 nuevo_username = request.POST.get('username', '').strip()
                 if nuevo_username and nuevo_username != usuario.username:
                     if not re.match(r'^[a-zA-Z0-9_-]+$', nuevo_username):
                         messages.error(request, "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos.")
-                        return redirect('perfil')
-                    if User.objects.filter(username__iexact=nuevo_username).exists():
-                        messages.error(request, f"El nombre de usuario '{nuevo_username}' no está disponible.")
-                        return redirect('perfil')
-                    usuario.username = nuevo_username
-                    cambios_especiales = True
-                    requiere_relogin = True
+                        error_presente = True
+                    else:
+                        # No se comprueba aquí, se deja que IntegrityError lo capture al guardar.
+                        usuario.username = nuevo_username
+                        cambios_especiales = True
+                        requiere_relogin = True
+                
+                if error_presente:
+                    return redirect('perfil')
 
-                # --- 📧 VALIDACIÓN DE EMAIL CON CONFIRMACIÓN ---
+                # --- VALIDACIÓN DE EMAIL CON CONFIRMACIÓN ---
                 nuevo_email = request.POST.get('email', '').strip()
                 if nuevo_email and nuevo_email != usuario.email:
-                    if User.objects.filter(email__iexact=nuevo_email).exists():
-                        messages.error(request, f"El correo '{nuevo_email}' ya está registrado en otra cuenta.")
-                        return redirect('perfil')
-                    
+                    # Se elimina la comprobación previa. La unicidad se valida en el enlace de confirmación.
                     signer = TimestampSigner()
                     token = signer.sign_object({'user_id': usuario.id, 'new_email': nuevo_email})
                     verification_url = f"{request.scheme}://{request.get_host()}/usuarios/verificar-email/{token}/"
@@ -94,7 +99,6 @@ def perfil(request):
                     app_name = cache.get('saas_app_name', 'Tiendita SaaS')
                     mensaje_txt = f"Hola {usuario.username},\n\nHas solicitado cambiar tu correo a {nuevo_email}.\nPor favor visita este enlace para confirmar (válido por 24 horas): {verification_url}\n\nSi no fuiste tú, ignora este correo."
                     
-                    # Renderizar plantilla HTML
                     contexto_email = {
                         'username': usuario.username,
                         'nuevo_email': nuevo_email,
@@ -104,14 +108,13 @@ def perfil(request):
                     mensaje_html = render_to_string('security/email_change_verification.html', contexto_email)
 
                     def enviar_verificacion_email_async():
-                        try:
-                            send_mail(
-                                f'Confirma tu nuevo correo - {app_name}', mensaje_txt,
-                                getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com'),
-                                [nuevo_email], html_message=mensaje_html, fail_silently=True
-                            )
-                        except Exception as e:
-                            print(f"Error enviando correo de confirmación de email: {e}")
+                        enviar_correo_saas(
+                            f'Confirma tu nuevo correo - {app_name}',
+                            mensaje_txt,
+                            [nuevo_email],
+                            html_message=mensaje_html,
+                            fail_silently=True,
+                        )
                             
                     threading.Thread(target=enviar_verificacion_email_async).start()
                     messages.info(request, f"Por seguridad, hemos enviado un enlace a {nuevo_email}. Ábrelo para confirmar el cambio.")
@@ -139,8 +142,9 @@ def perfil(request):
                 if not cambios_especiales:
                     messages.success(request, 'Tu perfil se ha actualizado correctamente.')
                 return redirect('perfil')
-        except Exception as e:
-            messages.error(request, f'Ocurrió un error al actualizar: {str(e)}')
+            except IntegrityError:
+                messages.error(request, "No se pudo actualizar el perfil. El nombre de usuario o correo electrónico ya está en uso por otra cuenta.")
+                return redirect('perfil')
 
     context = {'usuario': usuario, 'perfil': perfil, 'empresa': empresa, 'suscripcion': suscripcion}
     return render(request, 'usuarios/perfil.html', context)
@@ -172,6 +176,42 @@ def verificar_cambio_email(request, token):
         messages.error(request, "El enlace de verificación es inválido o está corrupto.")
         
     return redirect('perfil')
+
+@login_required
+def forzar_cambio_password(request):
+    """
+    Vista para que los empleados cambien su contraseña temporal obligatoriamente.
+    """
+    perfil = request.user.profile
+    # Si el usuario no necesita cambiar la contraseña, lo sacamos de aquí.
+    if not perfil.debe_cambiar_password:
+        return redirect('dashboard_router')
+
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        password2 = request.POST.get('password2')
+
+        if password != password2:
+            messages.error(request, "Las contraseñas no coinciden.")
+            return redirect('forzar_cambio_password')
+
+        try:
+            validate_password(password, request.user)
+            request.user.set_password(password)
+            request.user.save()
+
+            perfil.debe_cambiar_password = False
+            perfil.save()
+
+            cerrar_todas_las_sesiones(request.user)
+            logout(request)
+            messages.success(request, "Tu contraseña ha sido actualizada. Por favor, inicia sesión de nuevo.")
+            return redirect(getattr(settings, 'LOGIN_URL', '/'))
+        except ValidationError as e:
+            messages.error(request, f"La contraseña no es válida: {' '.join(e.messages)}")
+            return redirect('forzar_cambio_password')
+
+    return render(request, 'usuarios/forzar_cambio_password.html')
 
 
 @login_required
@@ -238,11 +278,12 @@ def cargar_demo(request):
 
 
 # ====================================================================
-# FLUJO PROFESIONAL DE RECUPERACIÓN DE USUARIO (CORREO OCULTO)
+# FLUJO DE RECUPERACIÓN DE USUARIO (CORREO OCULTO)
 # ====================================================================
 
 def username_reset_request_view(request):
     """Paso 1: Solicita el correo para buscar el/los usuarios"""
+    error_message = None
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         if email:
@@ -252,8 +293,8 @@ def username_reset_request_view(request):
                 request.session['reset_email'] = email
                 return redirect('username_reset_masked')
             else:
-                messages.error(request, "No encontramos ninguna cuenta asociada a este correo.")
-    return render(request, 'security/username_reset_form.html')
+                error_message = "No encontramos ninguna cuenta asociada a este correo."
+    return render(request, 'security/username_reset_form.html', {'error_message': error_message})
 
 
 def username_reset_masked_view(request):
@@ -280,10 +321,12 @@ def username_reset_masked_view(request):
             
             def enviar_recuperacion_async():
                 try:
-                    send_mail(
-                        'Recuperación de Usuario - Tiendita', mensaje_txt,
-                        getattr(settings, 'DEFAULT_FROM_EMAIL', 'soporte@tiendita.com'),
-                        [email], html_message=mensaje_html, fail_silently=True
+                    enviar_correo_saas(
+                        'Recuperación de Usuario - Tiendita',
+                        mensaje_txt,
+                        [email],
+                        html_message=mensaje_html,
+                        fail_silently=True,
                     )
                 except Exception as e:
                     print(f"Error enviando correo en segundo plano: {e}")
@@ -302,11 +345,12 @@ def recuperar_usuario_done(request):
 
 
 # ====================================================================
-# FLUJO PROFESIONAL DE RECUPERACIÓN DE CONTRASEÑA (CORREO OCULTO)
+# FLUJO DE RECUPERACIÓN DE CONTRASEÑA (CORREO OCULTO)
 # ====================================================================
 
 def password_reset_request_view(request):
     """Paso 1: Solicita el nombre de usuario para buscar su correo"""
+    error_message = None
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         try:
@@ -316,11 +360,11 @@ def password_reset_request_view(request):
                 request.session['reset_uid'] = user.id
                 return redirect('password_reset_masked')
             else:
-                messages.error(request, "Este usuario no tiene un correo registrado.")
+                error_message = "Este usuario no tiene un correo registrado."
         except User.DoesNotExist:
-            messages.error(request, "No encontramos ningún usuario con ese nombre.")
+            error_message = "No encontramos ningún usuario con ese nombre."
             
-    return render(request, 'security/password_reset_form.html')
+    return render(request, 'security/password_reset_form.html', {'error_message': error_message})
 
 
 def password_reset_masked_view(request):
@@ -348,16 +392,32 @@ def password_reset_masked_view(request):
             # Extraer variables necesarias antes de abrir el hilo para evitar errores WSGI de petición cerrada
             host_actual = request.get_host()
             es_seguro = request.is_secure()
+            protocolo = 'https' if es_seguro else 'http'
+            uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_url = f"{protocolo}://{host_actual}{reverse('password_reset_confirm', kwargs={'uidb64': uidb64, 'token': token})}"
+            mensaje_html = render_to_string('security/password_reset_email.html', {
+                'protocol': protocolo,
+                'domain': host_actual,
+                'uid': uidb64,
+                'token': token,
+                'app_name': app_name,
+            })
+            mensaje_txt = (
+                f"Hola {user.username},\n\n"
+                f"Hemos recibido una solicitud para restablecer tu contraseña.\n\n"
+                f"Abre este enlace para crear una nueva contraseña:\n{reset_url}\n\n"
+                f"Si no solicitaste este cambio, puedes ignorar este correo."
+            )
             
             def enviar_password_async():
                 try:
-                    form.save(
-                        request=None, # Importante: desvincular de la petición activa
-                        domain_override=host_actual, 
-                        use_https=es_seguro,
-                        email_template_name='security/password_reset_email.html',
-                        subject_template_name='security/password_reset_subject.txt',
-                        extra_email_context={'app_name': app_name},
+                    enviar_correo_saas(
+                        f'Restablecer tu contraseña - {app_name}',
+                        mensaje_txt,
+                        [user.email],
+                        html_message=mensaje_html,
+                        fail_silently=True,
                     )
                 except Exception as e:
                     print(f"Error enviando correo de password: {e}")

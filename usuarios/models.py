@@ -25,16 +25,16 @@ class RolEmpresa(models.Model):
     """Roles personalizados creados por el Dueño para SU empresa (Tenant RBAC)"""
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='roles_personalizados')
     nombre = models.CharField(max_length=100, help_text="Ej: Cajero, Gerente de Ventas")
-    
+
     # Módulos enteros a los que este rol tiene acceso
     modulos_permitidos = models.ManyToManyField(ModuloSaaS, blank=True)
-    
+
     # Permisos granulares (JSON) ej: {"ventas": {"crear": true, "eliminar": false}}
     permisos_detallados = models.JSONField(default=dict, blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ['empresa', 'nombre'] # No pueden haber dos "Cajeros" en la misma empresa
+        unique_together = ['empresa', 'nombre']  # No pueden haber dos "Cajeros" en la misma empresa
 
     def __str__(self):
         return f"{self.nombre} - {self.empresa.nombre}"
@@ -42,7 +42,7 @@ class RolEmpresa(models.Model):
 
 class UserProfile(models.Model):
     """Perfil extendido del usuario con información del negocio"""
-    
+
     TIPO_NEGOCIO_CHOICES = [
         ('ropa', 'Ropa'),
         ('tecnologia', 'Tecnología'),
@@ -57,16 +57,16 @@ class UserProfile(models.Model):
         ('employee', 'Empleado de Empresa'),
         ('cliente', 'Cliente Final'),
     )
-    
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    
+
     # Sistema Multi-tenant
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='empleados')
     rol = models.CharField(max_length=20, choices=ROLES, default='owner')
-    
+
     # Si el usuario es EMPLEADO, aquí se asigna qué rol tiene dentro de la empresa
     rol_empresa = models.ForeignKey(RolEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
-    
+
     # Tipo de negocio (define vocabulario dinámico)
     negocio_tipo = models.CharField(
         max_length=20,
@@ -75,40 +75,48 @@ class UserProfile(models.Model):
         verbose_name="Tipo de negocio"
     )
 
-    
     # Nombre del negocio
     nombre_negocio = models.CharField(
         max_length=200,
         blank=True,
         verbose_name="Nombre del negocio"
     )
-    
+
     # Información adicional
     descripcion_negocio = models.TextField(blank=True, verbose_name="Descripción del negocio")
-    
+
     # Configuración de onboarding
     onboarding_completado = models.BooleanField(
         default=False,
         verbose_name="Onboarding completado"
     )
-    
+
+    # --- CORRECCIÓN DE SEGURIDAD ---
+    # Fuerza al empleado a cambiar su contraseña temporal en su primer login,
+    # para que el dueño que la creó deje de tener acceso permanente a la contraseña real.
+    debe_cambiar_password = models.BooleanField(
+        default=False,
+        verbose_name="Debe cambiar contraseña",
+        help_text="Se activa al crear un empleado con contraseña temporal; se desactiva cuando el usuario la cambia."
+    )
+
     # Demo data
     usa_demo_data = models.BooleanField(
         default=False,
         verbose_name="Usando datos de demostración"
     )
-    
+
     # Auditoría
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name = "Perfil de Usuario"
         verbose_name_plural = "Perfiles de Usuario"
-    
+
     def __str__(self):
         return f"Perfil de {self.user.username}"
-    
+
     def get_vocabulario(self):
         """Retorna diccionario de términos según el tipo de negocio"""
         vocabularios = {
@@ -163,15 +171,15 @@ class AdminActionRequest(models.Model):
         ('rejected', 'Rechazado'),
         ('expired', 'Expirado por tiempo'),
     )
-    
+
     target_admin = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='targeted_actions')
     requester = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='requested_actions')
     action_type = models.CharField(max_length=30, choices=ACTION_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
-    
+
     votes_approve = models.ManyToManyField(UserProfile, related_name='approved_actions', blank=True)
     votes_reject = models.ManyToManyField(UserProfile, related_name='rejected_actions', blank=True)
 
@@ -179,20 +187,20 @@ class AdminActionRequest(models.Model):
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(hours=48)
         super().save(*args, **kwargs)
-        
+
     def check_and_execute(self):
-        if self.status != 'pending': 
+        if self.status != 'pending':
             return
-            
+
         # 1. Expiración: Si pasaron las 48 horas sin decisión unánime, expira y no se ejecuta.
         if timezone.now() > self.expires_at:
             self.status = 'expired'
             self.save()
             return
-            
+
         total_admins = UserProfile.objects.filter(rol='superadmin').exclude(id=self.target_admin.id).count()
         total_votes = self.votes_approve.count() + self.votes_reject.count()
-        
+
         # 2. Si todos los administradores elegibles ya votaron
         if total_votes >= total_admins:
             if self.votes_approve.count() > self.votes_reject.count():

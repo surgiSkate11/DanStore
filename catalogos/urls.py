@@ -6,4 +6,5 @@ urlpatterns = [
     path('preview/', views.preview_catalogo, name='preview_catalogo'),
     path('descargar/', views.descargar_catalogo, name='descargar_catalogo'),
     path('personalizar/', views.personalizar_catalogo, name='personalizar_catalogo'),
+    path('contar/', views.contar_productos_catalogo, name='contar_productos_catalogo'),
 ]

@@ -213,6 +213,7 @@ def sincronizar_sheets(request):
             idx_observacion = next((i for i, h in enumerate(headers) if 'observación' in h.lower() or 'observacion' in h.lower() or 'descripción' in h.lower() or 'descripcion' in h.lower()), None)
             idx_vendido_a = next((i for i, h in enumerate(headers) if 'vendido' in h.lower() or 'cliente' in h.lower()), None)  # Columna "Vendido a"
             idx_precio_real = next((i for i, h in enumerate(headers) if 'precio real' in h.lower()), None)  # Columna "Precio Real"
+            idx_precio_oferta = next((i for i, h in enumerate(headers) if 'oferta' in h.lower() or 'descuento' in h.lower()), None)  # Columna "Precio de Oferta"
             idx_estado = next((i for i, h in enumerate(headers) if 'estado' in h.lower()), None)  # Columna "Estado"
             
             if (idx_nombre is None and idx_tipo is None) or idx_categoria is None or idx_talla is None or idx_precio is None:
@@ -263,6 +264,7 @@ def sincronizar_sheets(request):
                     observacion = str(fila[idx_observacion]).strip() if idx_observacion is not None and len(fila) > idx_observacion and fila[idx_observacion] else ''
                     vendido_a = str(fila[idx_vendido_a]).strip() if idx_vendido_a is not None and len(fila) > idx_vendido_a and fila[idx_vendido_a] else ''
                     precio_real = limpiar_precio(fila[idx_precio_real]) if idx_precio_real is not None and len(fila) > idx_precio_real else None
+                    precio_oferta = limpiar_precio(fila[idx_precio_oferta]) if idx_precio_oferta is not None and len(fila) > idx_precio_oferta and fila[idx_precio_oferta] else None
                     estado_sheets = str(fila[idx_estado]).strip().lower() if idx_estado is not None and len(fila) > idx_estado and fila[idx_estado] else ''
                     
                     # Inteligencia: Si no hay "nombre" pero hay "tipo", usamos tipo como nombre
@@ -288,7 +290,9 @@ def sincronizar_sheets(request):
                     # Guardar la categoría exactamente como viene del Sheets
                     categoria_nueva = categoria_str.strip()
 
-                    # Rango de edad es el mismo valor de talla
+                    # 'variante' es 100% libre: talla para ropa, capacidad para
+                    # tecnología, sabor para alimentos, etc. — lo que sea que
+                    # el negocio haya puesto en esa columna del Sheet.
                     variante_nueva = talla
                     
                     # Determinar estado desde la columna "Estado" del Sheet
@@ -318,7 +322,12 @@ def sincronizar_sheets(request):
                     if observacion:
                         descripcion_partes.append(observacion)
                     descripcion = " | ".join(descripcion_partes)
-                    
+
+                    # Mismo criterio que el resto del sistema: una "oferta"
+                    # que no es más barata que el precio normal, no cuenta.
+                    if precio_oferta is not None and precio_venta is not None and precio_oferta >= precio_venta:
+                        precio_oferta = None
+
                     # Buscar si ya existe producto con este número de fila
                     producto_existente = productos_existentes.get(idx)
                     
@@ -332,6 +341,7 @@ def sincronizar_sheets(request):
                             producto_existente.variante != variante_nueva or
                             producto_existente.precio != precio_venta or
                             producto_existente.precio_real != precio_real or
+                            producto_existente.precio_oferta != precio_oferta or
                             producto_existente.descripcion != descripcion or
                             producto_existente.vendido_a != vendido_a or
                             producto_existente.estado != estado or
@@ -373,6 +383,7 @@ def sincronizar_sheets(request):
                             producto_existente.variante = variante_nueva
                             producto_existente.precio = precio_venta
                             producto_existente.precio_real = precio_real
+                            producto_existente.precio_oferta = precio_oferta
                             producto_existente.descripcion = descripcion
                             producto_existente.vendido_a = vendido_a
                             producto_existente.estado = estado
@@ -391,6 +402,7 @@ def sincronizar_sheets(request):
                                 variante=variante_nueva,
                                 precio=precio_venta,
                                 precio_real=precio_real,
+                                precio_oferta=precio_oferta,
                                 descripcion=descripcion,
                                 vendido_a=vendido_a,
                                 estado=estado,
@@ -410,7 +422,7 @@ def sincronizar_sheets(request):
                 Producto.objects.bulk_update(
                     productos_a_actualizar,
                     ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante', 
-                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'origen'],
+                     'precio', 'precio_real', 'precio_oferta', 'descripcion', 'vendido_a', 'estado', 'origen'],
                     batch_size=500
                 )
                 productos_actualizados = len(productos_a_actualizar)
@@ -538,70 +550,6 @@ def sincronizar_sheets(request):
     }
     
     return render(request, 'productos/sincronizar_sheets.html', context)
-
-
-def determinar_categoria(tipo_str, talla, observacion=''):
-    """Determina la categoría según tipo, talla y observación"""
-    tipo_lower = tipo_str.lower()
-    talla_lower = str(talla).lower()
-    obs_lower = observacion.lower()
-    
-    # Buscar palabras clave
-    if 'bebé' in obs_lower or 'bebe' in obs_lower or 'meses' in talla_lower:
-        return 'bebe'
-    elif 'niño' in obs_lower or 'niña' in obs_lower or any(f'{i} año' in obs_lower for i in range(1, 12)):
-        if 'niña' in obs_lower:
-            return 'nina'
-        return 'nino'
-    elif 'joven' in obs_lower or 'adolescente' in obs_lower or any(str(i) in talla_lower for i in range(12, 18)):
-        return 'joven'
-    elif 'mujer' in obs_lower or 'dama' in obs_lower:
-        return 'adulto_mujer'
-    elif 'hombre' in obs_lower or 'caballero' in obs_lower:
-        return 'adulto_hombre'
-    else:
-        # Por defecto según talla
-        if talla_lower in ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl']:
-            return 'adulto_mujer'  # Por defecto
-        return 'adulto_hombre'
-
-
-def mapear_talla(talla, categoria):
-    """Mapea la talla según la categoría"""
-    talla_str = str(talla).strip()
-    
-    if categoria == 'bebe':
-        # Buscar patrones de meses
-        if '0-3' in talla_str or '0_3' in talla_str:
-            return '0-3'
-        elif '3-6' in talla_str or '3_6' in talla_str:
-            return '3-6'
-        elif '6-9' in talla_str or '6_9' in talla_str:
-            return '6-9'
-        elif '9-12' in talla_str or '9_12' in talla_str:
-            return '9-12'
-    
-    elif categoria in ['nino', 'nina']:
-        # Buscar número de años (1-11)
-        for i in range(1, 12):
-            if str(i) in talla_str:
-                return str(i)
-    
-    elif categoria == 'joven':
-        # Buscar número de años (12-17)
-        for i in range(12, 18):
-            if str(i) in talla_str:
-                return str(i)
-    
-    elif categoria in ['adulto_hombre', 'adulto_mujer']:
-        # Tallas estándar
-        talla_upper = talla_str.upper()
-        tallas_validas = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
-        for talla_valida in tallas_validas:
-            if talla_valida in talla_upper:
-                return talla_valida
-    
-    return talla_str  # Devolver como está si no se puede mapear
 
 
 @login_required

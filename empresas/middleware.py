@@ -23,6 +23,13 @@ class TenantMiddleware(MiddlewareMixin):
             from usuarios.models import UserProfile
             perfil = UserProfile.objects.select_related('empresa', 'empresa__suscripcion').filter(user=request.user).first()
             
+            # Si el empleado tiene este flag, no puede navegar por el sistema hasta que la cambie.
+            if perfil and perfil.debe_cambiar_password:
+                # El usuario solo puede ir a la página de cambio de pass o desloguearse.
+                allowed_paths = [reverse('logout'), reverse('forzar_cambio_password')]
+                if request.path not in allowed_paths:
+                    return redirect('forzar_cambio_password')
+
             if perfil and perfil.empresa:
                 empresa = perfil.empresa
                 

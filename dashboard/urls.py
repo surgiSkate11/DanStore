@@ -14,6 +14,7 @@ urlpatterns = [
     path('saas/tickets/', views.saas_tickets, name='saas_tickets'),
     path('saas/equipo/', views.saas_equipo, name='saas_equipo'),
     path('saas/configuracion/', views.saas_configuracion, name='saas_configuracion'),
+    path('saas/configuracion/probar-smtp/', views.saas_configuracion_test_smtp, name='saas_configuracion_test_smtp'),
     path('saas/control-panel/', views.saas_control_panel, name='saas_control_panel'),
     path('saas/control-panel/crear/<str:app_label>/<str:model_name>/', views.saas_crear_registro, name='saas_crear_registro'),
     path('saas/control-panel/ver/<str:app_label>/<str:model_name>/', views.saas_listar_registros, name='saas_listar_registros'),

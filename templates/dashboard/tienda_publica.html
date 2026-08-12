@@ -365,8 +365,14 @@
            CATEGORY STRIP
         ============================================================ */
         .category-strip-wrap {
-            background: var(--header-bg);
+            /* Antes: background idéntico al header (var(--header-bg) a secas),
+               lo que hacía que header + franja de categorías se vieran como
+               un solo bloque plano repetido. Ahora se mezcla con un toque
+               del color de marca: sigue siendo parte de la misma "familia"
+               visual que el header, pero se distingue como su propia capa. */
+            background: color-mix(in srgb, var(--header-bg) 94%, var(--brand) 6%);
             border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 0 var(--border), 0 6px 16px -12px rgba(0,0,0,0.18);
             position: sticky;
             top: 72px;
             z-index: 80;
@@ -1079,9 +1085,7 @@
     <div class="header-inner">
         <!-- Logo -->
         <a href="#" class="header-logo">
-            {% if empresa.logo %}
-                <img src="{{ empresa.logo.url }}" alt="{{ empresa.nombre }}">
-            {% endif %}
+            <img id="headerLogoImg" src="{% if empresa.logo %}{{ empresa.logo.url }}{% endif %}" alt="{{ empresa.nombre }}" style="{% if not empresa.logo %}display:none;{% endif %}">
             <div class="logo-text">
                 <b id="headerStoreName" style="font-weight: inherit;">{{ empresa.nombre }}</b>
                 <span>Tienda Oficial</span>
@@ -1101,10 +1105,10 @@
             </button>
 
             <div class="header-social">
-                {% if empresa.instagram_url %}<a href="{{ empresa.instagram_url }}" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}
-                {% if empresa.facebook_url %}<a href="{{ empresa.facebook_url }}" target="_blank" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}
-                {% if empresa.tiktok_url %}<a href="{{ empresa.tiktok_url }}" target="_blank" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>{% endif %}
-                {% if empresa.x_url %}<a href="{{ empresa.x_url }}" target="_blank" aria-label="X / Twitter"><i class="bi bi-twitter-x"></i></a>{% endif %}
+                <a href="{{ empresa.instagram_url }}" id="socialInstagramHeader" target="_blank" aria-label="Instagram" style="{% if not empresa.instagram_url %}display:none;{% endif %}"><i class="bi bi-instagram"></i></a>
+                <a href="{{ empresa.facebook_url }}" id="socialFacebookHeader" target="_blank" aria-label="Facebook" style="{% if not empresa.facebook_url %}display:none;{% endif %}"><i class="bi bi-facebook"></i></a>
+                <a href="{{ empresa.tiktok_url }}" id="socialTiktokHeader" target="_blank" aria-label="TikTok" style="{% if not empresa.tiktok_url %}display:none;{% endif %}"><i class="bi bi-tiktok"></i></a>
+                <a href="{{ empresa.x_url }}" id="socialXHeader" target="_blank" aria-label="X / Twitter" style="{% if not empresa.x_url %}display:none;{% endif %}"><i class="bi bi-twitter-x"></i></a>
             </div>
 
             <button class="cart-trigger" id="cartTrigger" aria-label="Ver carrito">
@@ -1144,14 +1148,12 @@
                     <small>Categorías</small>
                 </div>
                 {% endif %}
-                {% if empresa.telefono_whatsapp %}
-                <div class="hero-stat">
-                    <a href="https://wa.me/{{ empresa.telefono_whatsapp }}" target="_blank" style="text-decoration:none">
+                <div class="hero-stat" id="heroWhatsappStat" style="{% if not empresa.telefono_whatsapp %}display:none;{% endif %}">
+                    <a href="https://wa.me/{{ empresa.telefono_whatsapp }}" id="heroWhatsappLink" target="_blank" style="text-decoration:none">
                         <strong style="color:#25D366"><i class="bi bi-whatsapp" style="font-size:1.4rem"></i></strong>
                         <small>WhatsApp</small>
                     </a>
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -1261,11 +1263,13 @@
     <div class="footer-inner">
         <div class="footer-brand">{{ empresa.nombre }}</div>
         <div class="footer-social">
-            {% if empresa.telefono_whatsapp %}<a href="https://wa.me/{{ empresa.telefono_whatsapp }}" target="_blank" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>{% endif %}
-            {% if empresa.instagram_url %}<a href="{{ empresa.instagram_url }}" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>{% endif %}
-            {% if empresa.facebook_url %}<a href="{{ empresa.facebook_url }}" target="_blank" aria-label="Facebook"><i class="bi bi-facebook"></i></a>{% endif %}
-            {% if empresa.youtube_url %}<a href="{{ empresa.youtube_url }}" target="_blank" aria-label="YouTube"><i class="bi bi-youtube"></i></a>{% endif %}
-            {% if empresa.sitio_web %}<a href="{{ empresa.sitio_web }}" target="_blank" aria-label="Sitio web"><i class="bi bi-globe"></i></a>{% endif %}
+            <a href="https://wa.me/{{ empresa.telefono_whatsapp }}" id="socialWhatsappFooter" target="_blank" aria-label="WhatsApp" style="{% if not empresa.telefono_whatsapp %}display:none;{% endif %}"><i class="bi bi-whatsapp"></i></a>
+            <a href="{{ empresa.instagram_url }}" id="socialInstagramFooter" target="_blank" aria-label="Instagram" style="{% if not empresa.instagram_url %}display:none;{% endif %}"><i class="bi bi-instagram"></i></a>
+            <a href="{{ empresa.facebook_url }}" id="socialFacebookFooter" target="_blank" aria-label="Facebook" style="{% if not empresa.facebook_url %}display:none;{% endif %}"><i class="bi bi-facebook"></i></a>
+            <a href="{{ empresa.tiktok_url }}" id="socialTiktokFooter" target="_blank" aria-label="TikTok" style="{% if not empresa.tiktok_url %}display:none;{% endif %}"><i class="bi bi-tiktok"></i></a>
+            <a href="{{ empresa.x_url }}" id="socialXFooter" target="_blank" aria-label="X / Twitter" style="{% if not empresa.x_url %}display:none;{% endif %}"><i class="bi bi-twitter-x"></i></a>
+            <a href="{{ empresa.youtube_url }}" id="socialYoutubeFooter" target="_blank" aria-label="YouTube" style="{% if not empresa.youtube_url %}display:none;{% endif %}"><i class="bi bi-youtube"></i></a>
+            <a href="{{ empresa.sitio_web }}" id="socialWebFooter" target="_blank" aria-label="Sitio web" style="{% if not empresa.sitio_web %}display:none;{% endif %}"><i class="bi bi-globe"></i></a>
         </div>
         <div class="footer-powered">
             Impulsado por <a href="/">{{ app_name|default:"Tiendita SaaS" }}</a>
@@ -1651,6 +1655,58 @@
                     promoEl.style.display = data.mensaje_promocional ? 'block' : 'none';
                 }
             }
+
+            // Actualizar Logo (llega como Data URL en base64 desde el editor)
+            if (data.logo_data_url !== undefined) {
+                const logoImg = document.getElementById('headerLogoImg');
+                if (logoImg) {
+                    if (data.logo_data_url) {
+                        logoImg.src = data.logo_data_url;
+                        logoImg.style.display = '';
+                    } else {
+                        logoImg.style.display = 'none';
+                    }
+                }
+            }
+
+            // Actualizar WhatsApp (aparece en el hero, el header flotante y el footer)
+            if (data.telefono_whatsapp !== undefined) {
+                const tieneWhatsapp = !!data.telefono_whatsapp;
+                const url = 'https://wa.me/' + data.telefono_whatsapp;
+
+                const heroStat = document.getElementById('heroWhatsappStat');
+                const heroLink = document.getElementById('heroWhatsappLink');
+                if (heroStat) heroStat.style.display = tieneWhatsapp ? '' : 'none';
+                if (heroLink) heroLink.href = url;
+
+                const footerWhatsapp = document.getElementById('socialWhatsappFooter');
+                if (footerWhatsapp) {
+                    footerWhatsapp.href = url;
+                    footerWhatsapp.style.display = tieneWhatsapp ? '' : 'none';
+                }
+            }
+
+            // Actualizar redes sociales / enlaces (Instagram, Facebook, TikTok, X,
+            // YouTube, sitio web). Cada una puede aparecer en el header y/o el
+            // footer, así que se actualizan ambas ubicaciones si existen.
+            const REDES = {
+                instagram_url: ['socialInstagramHeader', 'socialInstagramFooter'],
+                facebook_url: ['socialFacebookHeader', 'socialFacebookFooter'],
+                tiktok_url: ['socialTiktokHeader', 'socialTiktokFooter'],
+                x_url: ['socialXHeader', 'socialXFooter'],
+                youtube_url: ['socialYoutubeFooter'],
+                sitio_web: ['socialWebFooter'],
+            };
+            Object.keys(REDES).forEach(function (campo) {
+                if (data[campo] === undefined) return;
+                const tieneValor = !!data[campo];
+                REDES[campo].forEach(function (id) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.href = data[campo] || '#';
+                    el.style.display = tieneValor ? '' : 'none';
+                });
+            });
         }
     });
 

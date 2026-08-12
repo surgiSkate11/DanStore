@@ -2,14 +2,41 @@
 
 {% block title %}Importar Productos - Tiendita{% endblock %}
 
+{% block extra_css %}
+<style>
+    .gradient-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid px-4 mt-4">
     <div class="row">
         <div class="col-lg-10">
-            <h1 class="mb-1">
-                <i class="bi bi-file-earmark-spreadsheet"></i> Importar Productos
-            </h1>
-            <p class="text-muted mb-4">Sube un archivo Excel o CSV con tu inventario</p>
+            <!-- Header -->
+            <div class="gradient-header">
+                <div class="container-fluid">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h1 class="mb-2">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> Importar Productos
+                            </h1>
+                            <p class="mb-0 opacity-90">Sube un archivo Excel o CSV con tu inventario.</p>
+                        </div>
+                        <div class="col-auto">
+                            <a href="{% url 'descargar_plantilla' %}" class="btn btn-light btn-lg shadow-sm">
+                                <i class="bi bi-file-earmark-excel-fill"></i> Descargar Plantilla
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {% if messages %}
                 {% for message in messages %}
@@ -64,10 +91,10 @@
                                     <td>
                                         <div class="d-flex flex-column">
                                             <strong style="color: #0f172a;">Precio</strong>
-                                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill mt-1" style="width: max-content; font-size: 0.70rem;">Opcional</span>
+                                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill mt-1" style="width: max-content; font-size: 0.70rem;">Obligatorio</span>
                                         </div>
                                     </td>
-                                    <td class="small text-muted">Valor para venta al público (usa números, con punto o coma según tu país).</td>
+                                    <td class="small text-muted">Valor para venta al público (usa números, con punto o coma según tu país). Si falta, esa fila se salta y se te avisa.</td>
                                     <td class="small text-secondary">3.50</td>
                                 </tr>
                                 <tr>
@@ -125,19 +152,30 @@
                                     <td class="small text-muted">Número entero que indica las unidades que tienes (si lo dejas vacío, será 1).</td>
                                     <td class="small text-secondary">15</td>
                                 </tr>
+                                <tr>
+                                    <td class="text-center fw-bold" style="color: #64748b; background-color: #f8fafc;">I</td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <strong style="color: #0f172a;">Precio de Oferta</strong>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill mt-1" style="width: max-content; font-size: 0.70rem;">Opcional</span>
+                                        </div>
+                                    </td>
+                                    <td class="small text-muted">Precio especial de descuento. <span class="text-primary">Debe ser menor al precio normal</span> o se ignora automáticamente. Si lo dejas vacío, el producto no aparece como "en oferta".</td>
+                                    <td class="small text-secondary">19.99</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-center fw-bold" style="color: #64748b; background-color: #f8fafc;">J</td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <strong style="color: #0f172a;">Color</strong>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill mt-1" style="width: max-content; font-size: 0.70rem;">Opcional</span>
+                                        </div>
+                                    </td>
+                                    <td class="small text-muted">Color del producto, si aplica a tu negocio.</td>
+                                    <td class="small text-secondary">Rojo</td>
+                                </tr>
                             </tbody>
                         </table>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <div class="p-3 rounded" style="background-color: #f8fafc; border-left: 4px solid #667eea;">
-                                <h6 class="mb-2" style="color: #475569; font-weight: 700;"><i class="bi bi-pencil-square" style="color: #667eea;"></i> El poder de las Categorías Libres</h6>
-                                <p class="text-muted small mb-0">
-                                    No estás limitado a un menú de opciones. Escribe lo que prefieras en tu archivo Excel (*Bebidas, Licores, Abarrotes, Limpieza, Tecnología, Ropa...*). El sistema detectará las nuevas palabras y organizará tu inventario por ti automáticamente.
-                                </p>
-                            </div>
-                        </div>
                     </div>
                     
                     <div class="alert mt-4 mb-0 alert-custom d-flex align-items-center gap-3" style="border-radius: 8px; background-color: #fffbeb; color: #b45309; border: 1px solid #fde68a;">
