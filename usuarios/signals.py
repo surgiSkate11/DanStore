@@ -6,7 +6,11 @@ from .models import UserProfile
 
 @receiver(post_save, sender=User)
 def crear_perfil_usuario(sender, instance, created, **kwargs):
-    """Crea automáticamente un perfil cuando se crea un usuario"""
+    """
+    Crea automáticamente un perfil cuando se crea un usuario.
+    El rol inicial se basa en el campo nativo is_superuser de Django,
+    no en un valor de texto que pueda desincronizarse.
+    """
     if created:
         rol_inicial = 'superadmin' if instance.is_superuser else 'owner'
         UserProfile.objects.create(user=instance, rol=rol_inicial)

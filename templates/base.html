@@ -287,7 +287,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     
-                    {% if rol_usuario == 'superadmin' %}
+                    {% if es_superadmin %}
                     <!-- Menú Premium Exclusivo SaaS -->
                     <li class="nav-item">
                         <a class="nav-link fw-semibold px-3" href="{% url 'dashboard_saas' %}">
@@ -470,7 +470,7 @@
                             <li><div class="p-2">
                                 <a class="dropdown-item dropdown-item-premium rounded" href="{% url 'perfil' %}"><i class="bi bi-person-vcard text-primary"></i> Mi Perfil</a>
                             
-                                {% if rol_usuario == 'superadmin' %}
+                                {% if es_superadmin %}
                                 <!-- Opciones Rápidas exclusivas del Administrador SaaS -->
                                 <a class="dropdown-item dropdown-item-premium rounded" href="{% url 'saas_equipo' %}"><i class="bi bi-shield-fill-check text-success"></i> Equipo del Sistema</a>
                                 {% endif %}

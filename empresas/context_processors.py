@@ -1,5 +1,6 @@
 from django.core.cache import cache
 
+
 def empresa_actual(request):
     """
     Context Processor que inyecta la información de la empresa
@@ -8,13 +9,18 @@ def empresa_actual(request):
     context = {}
     if hasattr(request, 'empresa') and request.empresa:
         context['empresa'] = request.empresa
-        
+
     # OPTIMIZACIÓN: Reutilizar el rol ya cargado por el middleware en RAM
     if hasattr(request, 'rol') and request.rol:
         context['rol_usuario'] = request.rol
     elif hasattr(request, 'user') and hasattr(request.user, 'profile'):
         context['rol_usuario'] = request.user.profile.rol
-        
+
+    # Fuente de verdad robusta: is_superuser es un booleano nativo de Django,
+    # no depende de que el campo de texto 'rol' esté sincronizado.
+    if hasattr(request, 'user') and request.user.is_authenticated:
+        context['es_superadmin'] = request.user.is_superuser
+
     # OPTIMIZACIÓN EXTREMA: Leer el nombre de la app desde la memoria RAM (Caché)
     # en lugar de consultar la base de datos en cada recarga de página
     app_name = cache.get('saas_app_name')
@@ -26,7 +32,7 @@ def empresa_actual(request):
             cache.set('saas_app_name', app_name, 3600)  # Guardar en memoria por 1 hora
         except Exception:
             app_name = "Tiendita SaaS"
-            
+
     context['app_name'] = app_name
-        
+
     return context
