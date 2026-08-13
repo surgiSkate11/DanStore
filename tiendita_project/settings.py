@@ -36,7 +36,6 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 # ALLOWED_HOSTS
 # ==============================
 
-# Esta línea NO se cambia
 # Lee los hosts desde el archivo .env
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
@@ -142,7 +141,7 @@ WSGI_APPLICATION = 'tiendita_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Soporte para DATABASE_URL (Railway, Heroku)
+# Soporte para DATABASE_URL 
 import dj_database_url
 
 if DEBUG:

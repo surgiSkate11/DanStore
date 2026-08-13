@@ -8,7 +8,8 @@ from .models import UserProfile
 def crear_perfil_usuario(sender, instance, created, **kwargs):
     """Crea automáticamente un perfil cuando se crea un usuario"""
     if created:
-        UserProfile.objects.create(user=instance)
+        rol_inicial = 'superadmin' if instance.is_superuser else 'owner'
+        UserProfile.objects.create(user=instance, rol=rol_inicial)
 
 
 @receiver(post_save, sender=User)

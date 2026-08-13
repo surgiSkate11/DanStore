@@ -218,9 +218,12 @@ def forzar_cambio_password(request):
 def onboarding(request):
     """Vista para configurar la cuenta la primera vez que se inicia sesión"""
     usuario = request.user
+
+    if usuario.is_superuser:
+        return redirect('dashboard_router')
+
     perfil, _ = UserProfile.objects.get_or_create(user=usuario)
 
-    # REGLA: El onboarding SOLO aplica para Dueños de Empresa
     if perfil.rol != 'owner':
         return redirect('dashboard_router')
 
@@ -230,7 +233,7 @@ def onboarding(request):
         perfil.onboarding_completado = True
         perfil.save()
         return redirect('dashboard_router')
-        
+
     context = {
         'tipos_negocio': UserProfile.TIPO_NEGOCIO_CHOICES,
     }
