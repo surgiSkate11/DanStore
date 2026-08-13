@@ -618,6 +618,7 @@ def saas_crear_registro(request, app_label, model_name):
         'form': form,
         'titulo': f"Añadir {Modelo._meta.verbose_name.title()}",
         'es_modelo_user': es_modelo_user,
+        'es_creacion': True,
     }
     return render(request, 'dashboard/saas_generic_form.html', context)
 
@@ -728,6 +729,7 @@ def saas_editar_registro(request, app_label, model_name, object_id):
         'form': form,
         'titulo': f"Editar {Modelo._meta.verbose_name.title()} #{object_id}",
         'es_modelo_user': es_modelo_user,
+        'es_creacion': False,
     }
     return render(request, 'dashboard/saas_generic_form.html', context)
 

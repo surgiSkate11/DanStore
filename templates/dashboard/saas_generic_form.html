@@ -47,7 +47,7 @@
                         <div class="col-md-6 dynamic-field">
                             <label class="form-label fw-bold text-muted small text-uppercase mb-2">
                                 Contraseña
-                                {% if 'Añadir' in titulo %}<span class="text-danger">*</span>{% else %}<small class="text-muted normal-case fw-normal">(dejar en blanco para no cambiarla)</small>{% endif %}
+                                {% if es_creacion %}<span class="text-danger">*</span>{% else %}<small class="text-muted fw-normal text-lowercase">(dejar en blanco para no cambiarla)</small>{% endif %}
                             </label>
                             <input
                                 type="password"
@@ -55,7 +55,7 @@
                                 autocomplete="new-password"
                                 class="form-control form-control-lg bg-light border-0 shadow-sm"
                                 style="border-radius: 12px;"
-                                {% if 'Añadir' in titulo %}required{% endif %}
+                                {% if es_creacion %}required{% endif %}
                             >
                         </div>
                         {% endif %}

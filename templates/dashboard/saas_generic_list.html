@@ -85,7 +85,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="10" class="text-center py-5 text-muted fw-bold">No se encontraron registros.</td></tr>
+                    <tr><td colspan="{{ campos|length|add:1 }}" class="text-center py-5 text-muted fw-bold">No se encontraron registros.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
