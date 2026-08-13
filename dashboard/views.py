@@ -567,13 +567,33 @@ def saas_crear_registro(request, app_label, model_name):
         messages.error(request, "El módulo o tabla solicitada no existe.")
         return redirect('saas_control_panel')
 
-    # Creamos un ModelForm en el aire
-    FormularioDinamico = modelform_factory(Modelo, exclude=[])
+    es_modelo_user = Modelo is User
+
+    if es_modelo_user:
+        # CASO ESPECIAL: el modelo User de Django necesita tratamiento distinto.
+        # - 'password' no debe guardarse en texto plano: hay que usar set_password().
+        # - 'groups', 'user_permissions', 'last_login', 'date_joined' no aplican
+        #   a este SaaS (los permisos reales se gestionan vía UserProfile.rol).
+        campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
+        FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
+    else:
+        FormularioDinamico = modelform_factory(Modelo, exclude=[])
 
     if request.method == 'POST':
         form = FormularioDinamico(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
+        password_nueva = request.POST.get('password', '').strip() if es_modelo_user else None
+
+        if es_modelo_user and not password_nueva:
+            messages.error(request, "Debes asignar una contraseña para el nuevo usuario.")
+            form.add_error(None, "La contraseña es obligatoria.")
+
+        if form.is_valid() and not (es_modelo_user and not password_nueva):
+            instancia = form.save(commit=False)
+            if es_modelo_user:
+                instancia.set_password(password_nueva)
+            instancia.save()
+            if hasattr(form, 'save_m2m'):
+                form.save_m2m()
             messages.success(request, f"¡Registro creado exitosamente en {Modelo._meta.verbose_name.title()}!")
             return redirect('saas_control_panel')
         else:
@@ -597,6 +617,7 @@ def saas_crear_registro(request, app_label, model_name):
     context = {
         'form': form,
         'titulo': f"Añadir {Modelo._meta.verbose_name.title()}",
+        'es_modelo_user': es_modelo_user,
     }
     return render(request, 'dashboard/saas_generic_form.html', context)
 
@@ -667,12 +688,26 @@ def saas_editar_registro(request, app_label, model_name, object_id):
         return redirect('saas_control_panel')
 
     instancia = get_object_or_404(Modelo, id=object_id)
-    FormularioDinamico = modelform_factory(Modelo, exclude=[])
+    es_modelo_user = Modelo is User
+
+    if es_modelo_user:
+        campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
+        FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
+    else:
+        FormularioDinamico = modelform_factory(Modelo, exclude=[])
 
     if request.method == 'POST':
         form = FormularioDinamico(request.POST, request.FILES, instance=instancia)
+        password_nueva = request.POST.get('password', '').strip() if es_modelo_user else None
+
         if form.is_valid():
-            form.save()
+            instancia_guardada = form.save(commit=False)
+            if es_modelo_user and password_nueva:
+                # Solo se cambia la contraseña si el admin escribió algo en el campo.
+                instancia_guardada.set_password(password_nueva)
+            instancia_guardada.save()
+            if hasattr(form, 'save_m2m'):
+                form.save_m2m()
             messages.success(request, f"¡Registro actualizado exitosamente en {Modelo._meta.verbose_name.title()}!")
             return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
         else:
@@ -692,6 +727,7 @@ def saas_editar_registro(request, app_label, model_name, object_id):
     context = {
         'form': form,
         'titulo': f"Editar {Modelo._meta.verbose_name.title()} #{object_id}",
+        'es_modelo_user': es_modelo_user,
     }
     return render(request, 'dashboard/saas_generic_form.html', context)
 

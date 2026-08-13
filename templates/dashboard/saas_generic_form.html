@@ -40,6 +40,26 @@
                 <form method="POST" enctype="multipart/form-data" class="p-4 p-md-5" novalidate id="genericForm">
                     {% csrf_token %}
                     <div class="row g-4">
+
+                        {% if es_modelo_user %}
+                        <!-- Campo de contraseña especial: no viene del ModelForm porque
+                             necesita pasar por set_password() en la vista, nunca guardarse tal cual. -->
+                        <div class="col-md-6 dynamic-field">
+                            <label class="form-label fw-bold text-muted small text-uppercase mb-2">
+                                Contraseña
+                                {% if 'Añadir' in titulo %}<span class="text-danger">*</span>{% else %}<small class="text-muted normal-case fw-normal">(dejar en blanco para no cambiarla)</small>{% endif %}
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                autocomplete="new-password"
+                                class="form-control form-control-lg bg-light border-0 shadow-sm"
+                                style="border-radius: 12px;"
+                                {% if 'Añadir' in titulo %}required{% endif %}
+                            >
+                        </div>
+                        {% endif %}
+
                         {% for field in form %}
                             <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' %}12{% else %}6{% endif %} dynamic-field">
                                 <label class="form-label fw-bold text-muted small text-uppercase mb-2">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
