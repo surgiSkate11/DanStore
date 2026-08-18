@@ -437,3 +437,10 @@ class CustomLoginView(LoginView):
     def form_invalid(self, form):
         form_errors_to_messages(self.request, form)
         return super().form_invalid(form)
+    
+def error_403_view(request, exception=None):
+    """
+    Vista personalizada para errores 403 (Permission Denied).
+    Muestra una página amigable en vez de la genérica de Django.
+    """
+    return render(request, '403.html', status=403)

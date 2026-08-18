@@ -46,6 +46,17 @@ ALLOWED_HOSTS = config(
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
 
 # ==============================
+# CSRF_TRUSTED_ORIGINS
+# ==============================
+# Necesario para que Django acepte POSTs (login, formularios) en producción con HTTPS.
+# Deben incluir el esquema (https://) a diferencia de ALLOWED_HOSTS.
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://danstore-9vta.onrender.com'
+).split(',')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS if origin.strip()]
+
+# ==============================
 # VALIDACIONES DE SEGURIDAD
 # ==============================
 
@@ -130,7 +141,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'usuarios.context_processors.vocabulario',                'empresas.context_processors.empresa_actual',            ],
+                'usuarios.context_processors.vocabulario',
+                'empresas.context_processors.empresa_actual',
+            ],
         },
     },
 ]
@@ -141,7 +154,7 @@ WSGI_APPLICATION = 'tiendita_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Soporte para DATABASE_URL 
+# Soporte para DATABASE_URL
 import dj_database_url
 
 if DEBUG:
@@ -238,3 +251,9 @@ else:
 
 # Permitir iframes desde el mismo dominio (Para el Live Preview del Editor de Tienda)
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# ==============================
+# PÁGINA DE ERROR PERSONALIZADA
+# ==============================
+# Solo se activan cuando DEBUG=False (producción).
+handler403 = 'usuarios.views.error_403_view'

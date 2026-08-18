@@ -26,7 +26,12 @@ def obtener_config_smtp(config=None, overrides=None):
                 return value
         return getattr(settings, default, '') if isinstance(default, str) and default.isupper() else default
 
-    encryption = _normalizar_cifrado(overrides.get('smtp_encryption') if overrides else getattr(config, 'smtp_encryption', None))
+    # FIX: antes esto ignoraba el cifrado guardado en config si 'overrides'
+    # traía cualquier otra clave (aunque no incluyera 'smtp_encryption').
+    # Ahora usa la misma cadena de prioridad que el resto de los campos:
+    # overrides > config (ConfiguracionSaaS) > default.
+    encryption = _normalizar_cifrado(pick('smtp_encryption', None))
+
     port = overrides.get('smtp_port') if overrides else getattr(config, 'smtp_port', None)
     if port in (None, ''):
         port = {'none': 25, 'ssl': 465, 'starttls': 587}[encryption]
@@ -65,6 +70,14 @@ def construir_remitente(nombre, correo):
 
 
 def enviar_correo_saas(subject, body, recipients, *, html_message=None, config=None, overrides=None, attachments=None, fail_silently=False):
+    # FIX CRÍTICO: ninguna vista del proyecto (reseteo de contraseña, recuperación
+    # de usuario, verificación de email) pasaba 'config' explícitamente. Sin esto,
+    # obtener_config_smtp() nunca leía ConfiguracionSaaS y caía siempre a las
+    # variables EMAIL_* de settings.py, ignorando el SMTP configurado en el panel.
+    if config is None:
+        from .models import ConfiguracionSaaS
+        config = ConfiguracionSaaS.objects.first()
+
     smtp = obtener_config_smtp(config=config, overrides=overrides)
     final_recipients = list(recipients)
     if smtp['test_mode'] and smtp['test_recipient']:
