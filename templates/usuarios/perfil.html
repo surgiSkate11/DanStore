@@ -26,8 +26,8 @@
             <div>
                 <h1 class="mb-1 fw-bold">Hola, {{ usuario.first_name|default:usuario.username }}!</h1>
                 <p class="mb-2 opacity-90"><i class="bi bi-envelope"></i> {{ usuario.email|default:"Sin correo registrado" }}</p>
-                <span class="role-badge {% if perfil.rol == 'DUEÑO' %}role-dueno{% else %}role-empleado{% endif %}">
-                    <i class="bi {% if perfil.rol == 'DUEÑO' %}bi-star-fill{% else %}bi-person-badge{% endif %} me-1"></i> {{ perfil.get_rol_display }}
+                <span class="role-badge {% if perfil.rol == 'owner' %}role-dueno{% else %}role-empleado{% endif %}">
+                    <i class="bi {% if perfil.rol == 'owner' %}bi-star-fill{% else %}bi-person-badge{% endif %} me-1"></i> {{ perfil.get_rol_display }}
                 </span>
             </div>
         </div>
@@ -37,7 +37,7 @@
         {% csrf_token %}
         <div class="row g-4">
             <!-- Columna Izquierda: Datos Personales (Visible para todos) -->
-            <div class="col-lg-{% if perfil.rol == 'DUEÑO' or perfil.rol == 'SUPERADMIN' %}6{% else %}12{% endif %}">
+            <div class="col-lg-{% if perfil.rol == 'owner' or perfil.rol == 'superadmin' %}6{% else %}12{% endif %}">
                 <div class="section-card">
                     <h4 class="fw-bold mb-4" style="color: #1f2937;"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos Personales</h4>
                     
@@ -64,15 +64,47 @@
                         <small class="text-muted">Se te enviará un enlace de verificación a tu nuevo correo antes de aplicar el cambio.</small>
                     </div>
                     
-                    {% if perfil.rol != 'DUEÑO' %}
+                    {% if perfil.rol != 'owner' %}
                     <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm mt-3">Guardar Cambios</button>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Columna Derecha: Datos de la Empresa (SOLO PARA DUEÑOS) -->
-            {% if perfil.rol == 'DUEÑO' or perfil.rol == 'SUPERADMIN' %}
+            {% if perfil.rol == 'owner' or perfil.rol == 'superadmin' %}
             <div class="col-lg-6">
+                <!-- Datos del Negocio -->
+                <div class="section-card mb-4">
+                    <h4 class="fw-bold mb-4" style="color: #1f2937;"><i class="bi bi-shop text-primary me-2"></i> Datos del Negocio</h4>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre de la Empresa</label>
+                        <input type="text" name="nombre_empresa" class="form-control" value="{{ empresa.nombre|default:'' }}" {% if not empresa %}disabled placeholder="Todavía no tenés una empresa asignada"{% endif %}>
+                        <small class="text-muted">Este es el nombre oficial de tu negocio dentro del sistema.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre comercial / de fantasía</label>
+                        <input type="text" name="nombre_negocio" class="form-control" value="{{ perfil.nombre_negocio }}" placeholder="Ej: La Boutique de Sofía">
+                        <small class="text-muted">Puede ser distinto al nombre oficial — el que usás con tus clientes.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de negocio</label>
+                        <select name="negocio_tipo" class="form-select">
+                            {% for value, label in tipos_negocio %}
+                            <option value="{{ value }}" {% if perfil.negocio_tipo == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Define el vocabulario que usa la app (ej: "Prendas" para ropa, "Productos" para tecnología).</small>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label">Descripción del negocio</label>
+                        <textarea name="descripcion_negocio" class="form-control" rows="2" placeholder="Breve descripción de tu negocio (opcional)">{{ perfil.descripcion_negocio }}</textarea>
+                    </div>
+                </div>
+
                 <!-- Tarjeta de Suscripción SaaS -->
                 <div class="section-card mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white; border: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -106,7 +138,7 @@
         </div>
         
         <!-- Botón Guardar Global (Para Dueños) -->
-        {% if perfil.rol == 'DUEÑO' or perfil.rol == 'SUPERADMIN' %}
+        {% if perfil.rol == 'owner' or perfil.rol == 'superadmin' %}
         <div class="text-end mt-4">
             <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow-sm" style="border-radius: 12px;">
                 <i class="bi bi-check-circle-fill me-2"></i> Guardar Toda la Configuración

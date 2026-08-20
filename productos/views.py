@@ -2,9 +2,11 @@ import openpyxl
 import csv
 import io
 import json
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import IntegrityError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
@@ -15,6 +17,8 @@ from .models import Producto, TipoProducto
 from .forms import ProductoForm
 from empresas.mixins import requiere_modulo
 from tiendita_project.utils import form_errors_to_messages
+
+logger = logging.getLogger(__name__)
 
 # ── UTILIDAD ──────────────────────────────────────────────────────────────────
 
@@ -254,7 +258,8 @@ def subir_foto_producto(request, pk):
                 'imagen_url': producto.imagen.url if producto.imagen else None
             })
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)
+            logger.exception('Error al subir foto del producto %s (empresa %s)', pk, getattr(request.empresa, 'id', None))
+            return JsonResponse({'success': False, 'message': 'No se pudo guardar la foto. Intenta nuevamente.'}, status=400)
 
     return JsonResponse({'success': False, 'message': 'No se recibió imagen'}, status=400)
 
@@ -306,6 +311,23 @@ def importar_excel(request):
             messages.error(request, 'Debes seleccionar un archivo.')
             return redirect('importar_excel')
 
+        # VALIDACIÓN: usuario sin empresa asignada. Sin este guard, cualquier
+        # fila intenta guardarse con empresa=None y Postgres revienta con un
+        # IntegrityError crudo (null value in column "empresa_id"...) que
+        # antes se mostraba tal cual al usuario.
+        if not getattr(request, 'empresa', None):
+            logger.warning('Intento de importar Excel sin empresa asignada. Usuario: %s', request.user.id)
+            messages.error(request, 'No se encontró una empresa asociada a tu cuenta. Contacta al administrador.')
+            return redirect('importar_excel')
+
+        if not request.empresa.activa:
+            messages.error(request, 'Tu cuenta está suspendida. No puedes importar productos en este momento.')
+            return redirect('importar_excel')
+
+        if archivo.size == 0:
+            messages.error(request, 'El archivo está vacío.')
+            return redirect('importar_excel')
+
         nombre_archivo = archivo.name.lower()
         errores = []
         creados = 0
@@ -314,18 +336,36 @@ def importar_excel(request):
         try:
             # ── LEER ARCHIVO ──────────────────────────────────────────────────
             if nombre_archivo.endswith('.xlsx') or nombre_archivo.endswith('.xls'):
-                wb = openpyxl.load_workbook(archivo)
+                try:
+                    wb = openpyxl.load_workbook(archivo)
+                except Exception:
+                    logger.exception('Error al abrir el archivo Excel. Usuario: %s', request.user.id)
+                    messages.error(request, 'El archivo no es un Excel válido o está dañado. Verifica el formato.')
+                    return redirect('importar_excel')
                 ws = wb.active
                 filas = list(ws.iter_rows(min_row=2, values_only=True))
 
             elif nombre_archivo.endswith('.csv'):
-                contenido = archivo.read().decode('utf-8-sig')
+                try:
+                    contenido = archivo.read().decode('utf-8-sig')
+                except UnicodeDecodeError:
+                    logger.warning('CSV con codificación inválida. Usuario: %s', request.user.id)
+                    messages.error(request, 'El archivo CSV tiene una codificación no compatible. Guárdalo como UTF-8 e intenta de nuevo.')
+                    return redirect('importar_excel')
                 reader = csv.reader(io.StringIO(contenido))
-                next(reader)  # saltar cabecera
+                try:
+                    next(reader)  # saltar cabecera
+                except StopIteration:
+                    messages.error(request, 'El archivo está vacío.')
+                    return redirect('importar_excel')
                 filas = list(reader)
 
             else:
                 messages.error(request, 'Formato no soportado. Usa .xlsx o .csv')
+                return redirect('importar_excel')
+
+            if not filas:
+                messages.warning(request, 'El archivo no contiene filas de datos para importar.')
                 return redirect('importar_excel')
 
             # ── PROCESAR FILAS ────────────────────────────────────────────────
@@ -361,7 +401,7 @@ def importar_excel(request):
                         'reservado': 'reservado', 'separado': 'reservado', 'apartado': 'reservado', 'pendiente': 'reservado',
                         'vendido': 'vendido', 'vendida': 'vendido', 'pagado': 'vendido', 'entregado': 'vendido'
                     }
-                    
+
                     # Normalizar estado buscando coincidencias, default a 'disponible'
                     estado_final = 'disponible'
                     for clave, valor_oficial in mapeo_estados.items():
@@ -400,10 +440,19 @@ def importar_excel(request):
                         actualizados += 1
 
                 except (IndexError, ValueError, TypeError) as e:
-                    errores.append(f'Fila {i}: {str(e)}')
+                    errores.append(f'Fila {i}: revisa que los datos tengan el formato correcto.')
+                    logger.info('Error de formato en fila %s al importar Excel (empresa %s): %s', i, request.empresa.id, e)
+
+                except IntegrityError as e:
+                    # No exponer el mensaje crudo de la base de datos al usuario.
+                    errores.append(f'Fila {i}: no se pudo guardar "{nombre_prod}" — faltan datos obligatorios o hay un conflicto con un registro existente.')
+                    logger.error('IntegrityError en fila %s al importar Excel (empresa %s): %s', i, request.empresa.id, e)
 
         except Exception as e:
-            messages.error(request, f'Error al leer el archivo: {str(e)}')
+            # Cualquier error no anticipado: se registra completo para diagnóstico
+            # interno, pero al usuario solo se le muestra un mensaje genérico.
+            logger.exception('Error inesperado al importar Excel (empresa %s, usuario %s)', getattr(request.empresa, 'id', None), request.user.id)
+            messages.error(request, 'Ocurrió un error inesperado al procesar el archivo. Intenta nuevamente o contacta al administrador.')
             return redirect('importar_excel')
 
         # ── RESULTADO ─────────────────────────────────────────────────────────
@@ -414,6 +463,8 @@ def importar_excel(request):
                 messages.warning(request, error)
             if len(errores) > 5:
                 messages.warning(request, f'... y {len(errores) - 5} errores más.')
+        if not creados and not actualizados and not errores:
+            messages.warning(request, 'No se encontraron filas válidas para importar.')
 
         return redirect('lista_productos')
 

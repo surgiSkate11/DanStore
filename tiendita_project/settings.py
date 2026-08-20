@@ -12,98 +12,177 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
-import os
 import platform
-from decouple import config
+import dj_database_url
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+# ============================================================
+# BUILD PATHS
+# ============================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# ============================================================
+# SECURITY
+# ============================================================
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-%ufqav673r6x8-0k(mzj+_$k-+6l$w(ktrc62g0gkx$^f!hg7%')
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure-%ufqav673r6x8-0k(mzj+_$k-+6l$w(ktrc62g0gkx$^f!hg7%'
+)
 
-# ==============================
-# SEGURIDAD BÁSICA - DJANGO
-# ==============================
-# Nunca dejes DEBUG=True en producción
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = config(
+    'DEBUG',
+    default=False,
+    cast=bool
+)
 
-# ==============================
-# ALLOWED_HOSTS
-# ==============================
 
-# Lee los hosts desde el archivo .env
+# ============================================================
+# ALLOWED HOSTS
+# ============================================================
+
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
     default='localhost,127.0.0.1'
 ).split(',')
 
-# Limpia espacios
-ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS if host.strip()]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in ALLOWED_HOSTS
+    if host.strip()
+]
 
-# ==============================
-# CSRF_TRUSTED_ORIGINS
-# ==============================
-# Necesario para que Django acepte POSTs (login, formularios) en producción con HTTPS.
-# Deben incluir el esquema (https://) a diferencia de ALLOWED_HOSTS.
+
+# ============================================================
+# CSRF TRUSTED ORIGINS
+# ============================================================
+
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='https://danstore-9vta.onrender.com'
+    default=''
 ).split(',')
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS if origin.strip()]
 
-# ==============================
-# VALIDACIONES DE SEGURIDAD
-# ==============================
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in CSRF_TRUSTED_ORIGINS
+    if origin.strip()
+]
 
-# No permitir '*' en producción
+
+# ============================================================
+# SECURITY VALIDATIONS
+# ============================================================
+
 if not DEBUG and '*' in ALLOWED_HOSTS:
     raise ValueError(
         "No se permite '*' en ALLOWED_HOSTS cuando DEBUG=False"
     )
 
-# Obliga a configurar dominio real en producción
 if not DEBUG and ALLOWED_HOSTS == ['localhost', '127.0.0.1']:
     raise ValueError(
-        "Debes configurar tu dominio en ALLOWED_HOSTS en producción"
+        "Debes configurar ALLOWED_HOSTS en producción."
     )
 
-# ==============================
-# CONFIGURACIÓN DE CORREO
-# ==============================
-# En desarrollo usamos consola para evitar depender de un SMTP local.
+
+# ============================================================
+# EMAIL CONFIGURATION
+# ============================================================
+
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
-    default='django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend'
+    default=(
+        'django.core.mail.backends.console.EmailBackend'
+        if DEBUG
+        else 'django.core.mail.backends.smtp.EmailBackend'
+    )
 )
-EMAIL_HOST = config('EMAIL_HOST', default='localhost')
-EMAIL_PORT = config('EMAIL_PORT', default=25, cast=int)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=not DEBUG, cast=bool)
-EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=10, cast=int)
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@tiendita.local')
-SERVER_EMAIL = config('SERVER_EMAIL', default=DEFAULT_FROM_EMAIL)
-FERNET_KEY = config('FERNET_KEY', default=None)
+
+EMAIL_HOST = config(
+    'EMAIL_HOST',
+    default='localhost'
+)
+
+EMAIL_PORT = config(
+    'EMAIL_PORT',
+    default=25,
+    cast=int
+)
+
+EMAIL_HOST_USER = config(
+    'EMAIL_HOST_USER',
+    default=''
+)
+
+EMAIL_HOST_PASSWORD = config(
+    'EMAIL_HOST_PASSWORD',
+    default=''
+)
+
+EMAIL_USE_TLS = config(
+    'EMAIL_USE_TLS',
+    default=not DEBUG,
+    cast=bool
+)
+
+EMAIL_USE_SSL = config(
+    'EMAIL_USE_SSL',
+    default=False,
+    cast=bool
+)
+
+EMAIL_TIMEOUT = config(
+    'EMAIL_TIMEOUT',
+    default=10,
+    cast=int
+)
+
+DEFAULT_FROM_EMAIL = config(
+    'DEFAULT_FROM_EMAIL',
+    default='noreply@tiendita.local'
+)
+
+SERVER_EMAIL = config(
+    'SERVER_EMAIL',
+    default=DEFAULT_FROM_EMAIL
+)
+
+
+# ============================================================
+# FERNET KEY
+# ============================================================
+
+FERNET_KEY = config(
+    'FERNET_KEY',
+    default=None
+)
+
 if not FERNET_KEY:
     raise ValueError(
-        'Debes definir FERNET_KEY en el entorno (.env o variables del hosting) para cifrar secretos.'
+        'Debes definir FERNET_KEY en el entorno '
+        '(.env local o variables de Render).'
     )
 
-# Application definition
+
+# ============================================================
+# APPLICATION DEFINITION
+# ============================================================
 
 INSTALLED_APPS = [
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+
+    'cloudinary_storage',
+
     'django.contrib.staticfiles',
+
+    'cloudinary',
+
     # Apps propias
     'dashboard',
     'usuarios',
@@ -115,101 +194,188 @@ INSTALLED_APPS = [
     'empresas',
 ]
 
+
+# ============================================================
+# MIDDLEWARE
+# ============================================================
+
 MIDDLEWARE = [
+
     'django.middleware.security.SecurityMiddleware',
+
     'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
+
     'django.middleware.common.CommonMiddleware',
+
     'django.middleware.csrf.CsrfViewMiddleware',
+
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+
     'django.contrib.messages.middleware.MessageMiddleware',
+
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Middleware para Multi-tenant (identificar la empresa de cada usuario)
+
+    # Middleware Multi-tenant
     'empresas.middleware.TenantMiddleware',
 ]
 
+
+# ============================================================
+# URL CONFIGURATION
+# ============================================================
+
 ROOT_URLCONF = 'tiendita_project.urls'
 
+
+# ============================================================
+# TEMPLATES
+# ============================================================
+
 TEMPLATES = [
+
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+
+        'DIRS': [
+            BASE_DIR / 'templates'
+        ],
+
         'APP_DIRS': True,
+
         'OPTIONS': {
+
             'context_processors': [
+
                 'django.template.context_processors.debug',
+
                 'django.template.context_processors.request',
+
                 'django.contrib.auth.context_processors.auth',
+
                 'django.contrib.messages.context_processors.messages',
+
                 'usuarios.context_processors.vocabulario',
+
                 'empresas.context_processors.empresa_actual',
+
             ],
         },
     },
 ]
 
+
+# ============================================================
+# WSGI
+# ============================================================
+
 WSGI_APPLICATION = 'tiendita_project.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-# Soporte para DATABASE_URL
-import dj_database_url
+# ============================================================
+# DATABASE
+# ============================================================
 
 if DEBUG:
-    # En desarrollo local (DEBUG=True), usar siempre SQLite
+
+    # ========================================================
+    # DESARROLLO LOCAL
+    # ========================================================
+    # Cuando DEBUG=True se utiliza SQLite.
+    # No se necesita DATABASE_URL.
+    # ========================================================
+
     DATABASES = {
+
         'default': {
+
             'ENGINE': 'django.db.backends.sqlite3',
+
             'NAME': BASE_DIR / 'db.sqlite3',
+
         }
+
     }
+
 else:
-    # En producción (DEBUG=False), usar DATABASE_URL
-    DATABASE_URL = config('DATABASE_URL', default=None)
-    if DATABASE_URL:
-        DATABASES = {
-            'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
-        }
-    else:
-        # Fallback a SQLite si no hay DATABASE_URL
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
+
+    # ========================================================
+    # PRODUCCIÓN - RENDER
+    # ========================================================
+    # Cuando DEBUG=False se utiliza PostgreSQL mediante
+    # DATABASE_URL configurada en Render.
+    # ========================================================
+
+    DATABASE_URL = config(
+        'DATABASE_URL',
+        default=None
+    )
+
+    if not DATABASE_URL:
+        raise ValueError(
+            'DATABASE_URL no está configurada en producción. '
+            'Debes agregarla en las Environment Variables de Render.'
+        )
+
+    DATABASES = {
+
+        'default': dj_database_url.config(
+
+            default=DATABASE_URL,
+
+            conn_max_age=600,
+
+        )
+
+    }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+# ============================================================
+# PASSWORD VALIDATION
+# ============================================================
 
 AUTH_PASSWORD_VALIDATORS = [
+
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
+
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
+
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
+
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+
 ]
 
-# ==============================
-# AUTENTICACIÓN PERSONALIZADA
-# ==============================
+
+# ============================================================
+# CUSTOM AUTHENTICATION
+# ============================================================
+
 AUTHENTICATION_BACKENDS = [
+
     'usuarios.backends.EmailOrUsernameModelBackend',
+
     'django.contrib.auth.backends.ModelBackend',
+
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
+
+# ============================================================
+# INTERNATIONALIZATION
+# ============================================================
 
 LANGUAGE_CODE = 'es-mx'
 
@@ -220,40 +386,102 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
+# ============================================================
+# STATIC FILES
+# ============================================================
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (uploads)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static'
+]
+
+STATICFILES_STORAGE = (
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
+
+
+# ============================================================
+# MEDIA FILES
+# ============================================================
+
 MEDIA_URL = '/media/'
+
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Login URLs
+
+# ============================================================
+# CLOUDINARY
+# ============================================================
+
+CLOUDINARY_STORAGE = {
+
+    'CLOUD_NAME': config(
+        'CLOUDINARY_CLOUD_NAME',
+        default='kkrfqjs0'
+    ),
+
+    'API_KEY': config(
+        'CLOUDINARY_API_KEY',
+        default=''
+    ),
+
+    'API_SECRET': config(
+        'CLOUDINARY_API_SECRET',
+        default=''
+    ),
+
+}
+
+DEFAULT_FILE_STORAGE = (
+    'cloudinary_storage.storage.MediaCloudinaryStorage'
+)
+
+
+# ============================================================
+# LOGIN URLS
+# ============================================================
+
 LOGIN_URL = 'login'
+
 LOGIN_REDIRECT_URL = 'home'
+
 LOGOUT_REDIRECT_URL = 'login'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+
+# ============================================================
+# DEFAULT PRIMARY KEY
+# ============================================================
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configuración para pdfkit (wkhtmltopdf)
+
+# ============================================================
+# WKHTMLTOPDF
+# ============================================================
+
 if platform.system() == 'Windows':
-    # Ruta por defecto al instalar en Windows
-    WKHTMLTOPDF_CMD = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+
+    WKHTMLTOPDF_CMD = (
+        r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    )
+
 else:
+
     WKHTMLTOPDF_CMD = '/usr/bin/wkhtmltopdf'
 
-# Permitir iframes desde el mismo dominio (Para el Live Preview del Editor de Tienda)
+
+# ============================================================
+# IFRAME
+# ============================================================
+
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-# ==============================
-# PÁGINA DE ERROR PERSONALIZADA
-# ==============================
-# Solo se activan cuando DEBUG=False (producción).
+
+# ============================================================
+# CUSTOM ERROR PAGE
+# ============================================================
+
 handler403 = 'usuarios.views.error_403_view'

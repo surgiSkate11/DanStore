@@ -247,7 +247,7 @@
                 <!-- Imagen del producto -->
                 <div class="product-image-container">
                     {% if producto.imagen %}
-                    <img src="{{ producto.imagen.url }}" class="product-image" alt="{{ producto.tipo_producto }}" id="img-{{ producto.id }}">
+                    <img src="{{ producto.imagen.url }}" class="product-image" alt="{{ producto.nombre }}" id="img-{{ producto.id }}">
                     {% else %}
                     <div class="d-flex align-items-center justify-content-center h-100">
                         <i class="bi bi-image" style="font-size: 4rem; color: #d1d5db;"></i>

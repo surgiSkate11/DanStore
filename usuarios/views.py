@@ -1,3 +1,4 @@
+import logging
 import threading
 import re
 from datetime import timedelta
@@ -16,7 +17,7 @@ from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 from django.contrib.sessions.models import Session
 from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.encoding import force_bytes
@@ -27,6 +28,8 @@ from empresas.mail_utils import enviar_correo_saas
 from productos.models import Producto, TipoProducto
 from tiendita_project.utils import form_errors_to_messages
 from .models import UserProfile
+
+logger = logging.getLogger(__name__)
 
 
 def cerrar_todas_las_sesiones(user):
@@ -146,7 +149,7 @@ def perfil(request):
                 messages.error(request, "No se pudo actualizar el perfil. El nombre de usuario o correo electrónico ya está en uso por otra cuenta.")
                 return redirect('perfil')
 
-    context = {'usuario': usuario, 'perfil': perfil, 'empresa': empresa, 'suscripcion': suscripcion}
+    context = {'usuario': usuario, 'perfil': perfil, 'empresa': empresa, 'suscripcion': suscripcion, 'tipos_negocio': UserProfile.TIPO_NEGOCIO_CHOICES}
     return render(request, 'usuarios/perfil.html', context)
 
 
@@ -165,7 +168,6 @@ def verificar_cambio_email(request, token):
             cerrar_todas_las_sesiones(user)
             if request.user.is_authenticated and request.user.id == user.id:
                 logout(request)
-                
             messages.success(request, "¡Tu correo electrónico ha sido actualizado exitosamente! Por seguridad, hemos cerrado tus sesiones activas. Inicia sesión de nuevo.")
             return redirect(getattr(settings, 'LOGIN_URL', '/'))
         else:
@@ -214,9 +216,150 @@ def forzar_cambio_password(request):
     return render(request, 'usuarios/forzar_cambio_password.html')
 
 
+def _reverse_seguro(nombre_url, fallback='dashboard_router'):
+    """
+    Intenta resolver una URL por su nombre. Si no existe (por ejemplo,
+    porque el nombre de la ruta de ventas/clientes/productos es distinto
+    en este proyecto), cae al dashboard en vez de romper la página con
+    un NoReverseMatch. Ajustar los nombres reales abajo en cuanto se
+    confirmen las urls.py de ventas/clientes/productos.
+    """
+    try:
+        return reverse(nombre_url)
+    except NoReverseMatch:
+        try:
+            return reverse(fallback)
+        except NoReverseMatch:
+            return '/'
+
+
+def _construir_contexto_onboarding(perfil, empresa):
+    """
+    Arma todo el contexto del onboarding leyendo suscripción, plan,
+    módulos y progreso de configuración inicial de forma 100% defensiva:
+    cualquier dato faltante, relación nula o modelo inexistente cae a un
+    valor seguro por defecto — esta función nunca debe lanzar una excepción
+    sin capturar, porque de eso depende que el onboarding no tire un 500.
+    """
+    usuario = perfil.user
+
+    contexto = {
+        'usuario': usuario,
+        'perfil': perfil,
+        'empresa': empresa,
+        'nombre_empresa': getattr(empresa, 'nombre', '') or 'tu empresa',
+        'nombre_usuario': usuario.first_name.strip() if usuario.first_name else usuario.username,
+        'empresa_activa': bool(getattr(empresa, 'activa', True)),
+        'plan_nombre': 'Sin plan asignado',
+        'tipo_plan_display': '',
+        'fecha_inicio': None,
+        'fecha_vencimiento': None,
+        'dias_restantes': None,
+        'porcentaje_consumido': 0,
+        'estado_color': 'secondary',
+        'limite_usuarios': None,       # None = ilimitado
+        'usuarios_usados': 0,
+        'modulos': [],
+        'progreso_setup': 0,
+        'pasos_pendientes': [],
+        'accesos_rapidos': [],
+    }
+
+    # --- Suscripción, plan y módulos habilitados ---
+    suscripcion = None
+    try:
+        suscripcion = getattr(empresa, 'suscripcion', None)
+    except Exception:
+        logger.warning("Onboarding: no se pudo leer la suscripción de la empresa %s", getattr(empresa, 'pk', '?'))
+
+    if suscripcion:
+        try:
+            contexto['fecha_inicio'] = suscripcion.fecha_inicio
+            contexto['fecha_vencimiento'] = suscripcion.fecha_vencimiento
+            contexto['dias_restantes'] = suscripcion.dias_restantes()
+            contexto['porcentaje_consumido'] = suscripcion.porcentaje_consumido()
+            contexto['estado_color'] = suscripcion.estado_color()
+            contexto['tipo_plan_display'] = suscripcion.get_tipo_plan_display()
+        except Exception:
+            logger.warning("Onboarding: error calculando datos de suscripción para empresa %s", getattr(empresa, 'pk', '?'))
+
+        plan = getattr(suscripcion, 'plan', None)
+        if plan:
+            contexto['plan_nombre'] = plan.nombre
+            contexto['limite_usuarios'] = plan.limite_empleados
+            try:
+                contexto['modulos'] = list(plan.modulos.all())
+            except Exception:
+                logger.warning("Onboarding: error leyendo módulos del plan %s", getattr(plan, 'pk', '?'))
+
+    # --- Usuarios utilizados (empleados asociados a la empresa) ---
+    try:
+        contexto['usuarios_usados'] = empresa.empleados.count()
+    except Exception:
+        logger.warning("Onboarding: error contando empleados de la empresa %s", getattr(empresa, 'pk', '?'))
+
+    # --- Progreso de configuración inicial (detecta pendientes) ---
+    pasos = []
+    try:
+        tiene_productos = Producto.objects.filter(empresa=empresa).exists()
+        pasos.append({'texto': 'Agregar tu primer producto', 'hecho': tiene_productos, 'url': _reverse_seguro('agregar_producto')})
+    except Exception:
+        logger.warning("Onboarding: no se pudo verificar productos de la empresa %s", getattr(empresa, 'pk', '?'))
+
+    try:
+        from clientes.models import Cliente
+        tiene_clientes = Cliente.objects.filter(empresa=empresa).exists()
+        pasos.append({'texto': 'Registrar tu primer cliente', 'hecho': tiene_clientes, 'url': _reverse_seguro('registrar_cliente')})
+    except Exception:
+        logger.warning("Onboarding: app 'clientes' no disponible o sin campo empresa, se omite ese paso")
+
+    try:
+        from ventas.models import Venta
+        tiene_ventas = Venta.objects.filter(empresa=empresa).exists()
+        pasos.append({'texto': 'Crear tu primera venta', 'hecho': tiene_ventas, 'url': _reverse_seguro('crear_venta')})
+    except Exception:
+        logger.warning("Onboarding: app 'ventas' no disponible o sin campo empresa, se omite ese paso")
+
+    pasos.append({
+        'texto': 'Configurar el logo y datos de tu empresa',
+        'hecho': bool(getattr(empresa, 'logo', None)),
+        'url': _reverse_seguro('perfil'),
+    })
+
+    total_pasos = len(pasos) or 1
+    completados = sum(1 for p in pasos if p['hecho'])
+    contexto['progreso_setup'] = int((completados / total_pasos) * 100)
+    contexto['pasos_pendientes'] = pasos
+
+    # --- Accesos rápidos del CTA ---
+    contexto['accesos_rapidos'] = [
+        {'texto': 'Crear primera venta', 'icono': 'bi-cart-plus', 'url': _reverse_seguro('crear_venta')},
+        {'texto': 'Registrar primer cliente', 'icono': 'bi-person-plus', 'url': _reverse_seguro('registrar_cliente')},
+        {'texto': 'Agregar primer producto', 'icono': 'bi-box-seam', 'url': _reverse_seguro('agregar_producto')},
+        {'texto': 'Configurar empresa', 'icono': 'bi-gear', 'url': _reverse_seguro('perfil')},
+    ]
+
+    return contexto
+
+
 @login_required
 def onboarding(request):
-    """Vista para configurar la cuenta la primera vez que se inicia sesión"""
+    """
+    Pantalla de bienvenida al primer login. YA NO pide nombre/tipo de
+    negocio (eso ahora se edita desde 'Mi Perfil', ver vista perfil()).
+
+    En este diseño (Opción B: el superadmin crea la Empresa desde el
+    panel SaaS y asigna al dueño), esta vista solo necesita:
+    1. Verificar que el admin ya le haya asignado una Empresa. Si no,
+       mostrar una pantalla de espera en vez de dejarlo "completar" el
+       onboarding sin negocio real conectado — que era exactamente el
+       bug que rompía todo el sistema después.
+    2. Marcar onboarding_completado=True al VISUALIZAR la pantalla (GET),
+       no al hacer clic en un botón. Así los accesos rápidos (Crear venta,
+       Agregar producto, etc.) pueden ser links normales sin lógica extra.
+    3. Armar el contexto de forma 100% defensiva: ningún dato faltante,
+       módulo inexistente o url no encontrada puede tirar un 500 acá.
+    """
     usuario = request.user
 
     if usuario.is_superuser:
@@ -227,17 +370,48 @@ def onboarding(request):
     if perfil.rol != 'owner':
         return redirect('dashboard_router')
 
-    if request.method == 'POST':
-        perfil.nombre_negocio = request.POST.get('nombre_negocio', '').strip()
-        perfil.negocio_tipo = request.POST.get('negocio_tipo', 'otro')
-        perfil.onboarding_completado = True
-        perfil.save()
+    # Si ya completó el onboarding antes, no tiene que volver a verlo
+    # desde acá (para volver a verlo manualmente existe la opción en
+    # Configuración, que resetea onboarding_completado a False).
+    if perfil.onboarding_completado:
         return redirect('dashboard_router')
 
-    context = {
-        'tipos_negocio': UserProfile.TIPO_NEGOCIO_CHOICES,
-    }
-    return render(request, 'usuarios/onboarding.html', context)
+    empresa = perfil.empresa
+
+    # El admin todavía no le asignó una Empresa: no dejamos "completar"
+    # el onboarding en este estado, porque quedaría exactamente igual
+    # de roto que antes (perfil.empresa = None, nada funciona después).
+    if not empresa:
+        return render(request, 'usuarios/onboarding_pendiente.html', {'perfil': perfil})
+
+    # Se marca completado al mostrar la pantalla (GET), no al hacer clic.
+    try:
+        if not perfil.onboarding_completado:
+            perfil.onboarding_completado = True
+            perfil.save(update_fields=['onboarding_completado'])
+    except Exception:
+        logger.exception("Onboarding: no se pudo marcar onboarding_completado para el usuario %s", usuario.pk)
+
+    try:
+        contexto = _construir_contexto_onboarding(perfil, empresa)
+    except Exception:
+        # Blindaje final: si algo inesperado falla armando el contexto
+        # enriquecido, igual mostramos el onboarding con lo mínimo
+        # indispensable en vez de tirar un 500.
+        logger.exception("Onboarding: fallo inesperado construyendo el contexto para la empresa %s", getattr(empresa, 'pk', '?'))
+        contexto = {
+            'usuario': usuario,
+            'perfil': perfil,
+            'empresa': empresa,
+            'nombre_empresa': getattr(empresa, 'nombre', '') or 'tu empresa',
+            'nombre_usuario': usuario.first_name or usuario.username,
+            'accesos_rapidos': [],
+            'pasos_pendientes': [],
+            'modulos': [],
+            'progreso_setup': 0,
+        }
+
+    return render(request, 'usuarios/onboarding.html', contexto)
 
 
 @login_required
