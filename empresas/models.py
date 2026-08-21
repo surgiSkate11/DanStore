@@ -64,6 +64,24 @@ class Empresa(models.Model):
     mensaje_planes = models.TextField(blank=True, default="Hola, soy de la empresa {empresa}. Me interesa renovar/adquirir el plan {plan}.")
     # -------------------------------------
 
+    # --- INTEGRACIÓN GOOGLE SHEETS ---
+    # Antes se guardaba como archivo JSON en texto plano en MEDIA_ROOT
+    # (se perdía en cada deploy de Render por el filesystem efímero, y
+    # cualquiera con acceso al servidor podía leer el refresh_token).
+    # Ahora se guarda cifrado (Fernet) directamente en la base de datos.
+    google_oauth_credentials = EncryptedTextField(
+        blank=True,
+        verbose_name="Credenciales OAuth de Google Sheets",
+        help_text="JSON con token/refresh_token de Google, cifrado en reposo. No editar manualmente."
+    )
+    google_sheets_config = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Configuración de sincronización con Google Sheets",
+        help_text="URL de la hoja, rango de celdas y última sincronización. No contiene datos sensibles."
+    )
+    # -----------------------------------
+
     class Meta:
         verbose_name = 'Empresa'
         verbose_name_plural = 'Empresas'

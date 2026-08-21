@@ -2,6 +2,7 @@ import json
 import os
 import re
 import uuid
+import logging
 from collections import defaultdict
 from decimal import Decimal
 
@@ -25,6 +26,7 @@ from empresas.mixins import requiere_modulo
 from productos.models import Producto, TipoProducto
 from ventas.models import Venta, DetalleVenta
 
+logger = logging.getLogger(__name__)
 
 # Permitir OAuth sobre HTTP (solo para entorno de desarrollo local)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
@@ -90,18 +92,16 @@ def obtener_oauth_client_config():
 
 
 def conectar_google_sheets(empresa=None):
-    """Conecta con Google Sheets usando OAuth 2.0 por usuario (empresa)"""
+    """Conecta con Google Sheets usando OAuth 2.0 por empresa (Empresa.google_oauth_credentials, cifrado)"""
     try:
         if not empresa:
             return None, "Error interno: Empresa no especificada para la conexión."
-            
-        creds_path = os.path.join(settings.MEDIA_ROOT, f'google_oauth_{empresa.id}.json')
-        if not os.path.exists(creds_path):
+
+        if not empresa.google_oauth_credentials:
             return None, "No has iniciado sesión en Google Sheets. Por favor, conecta tu cuenta."
-            
-        with open(creds_path, 'r') as f:
-            creds_data = json.load(f)
-            
+
+        creds_data = json.loads(empresa.google_oauth_credentials)
+
         creds = OAuthCredentials(
             token=creds_data['token'],
             refresh_token=creds_data['refresh_token'],
@@ -110,18 +110,19 @@ def conectar_google_sheets(empresa=None):
             client_secret=creds_data['client_secret'],
             scopes=creds_data['scopes']
         )
-        
+
         if creds.expired and creds.refresh_token:
             creds.refresh(Request())
-            # Guardar el token actualizado
+            # Guardar el token renovado, cifrado, en la base de datos
             creds_data['token'] = creds.token
-            with open(creds_path, 'w') as f:
-                json.dump(creds_data, f)
-                
+            empresa.google_oauth_credentials = json.dumps(creds_data)
+            empresa.save(update_fields=['google_oauth_credentials'])
+
         client = gspread.authorize(creds)
         return client, None
     except Exception as e:
-        return None, f"Error de conexión OAuth: La sesión puede haber expirado. Vuelve a conectar tu cuenta."
+        logger.exception('Error de conexión OAuth con Google Sheets (empresa %s)', getattr(empresa, 'id', None))
+        return None, "Error de conexión OAuth: La sesión puede haber expirado. Vuelve a conectar tu cuenta."
 
 
 @login_required
@@ -132,7 +133,6 @@ def sincronizar_sheets(request):
         messages.error(request, "Tu usuario no tiene una empresa asociada o la cuenta está suspendida.")
         return redirect('home')
 
-    creds_path = os.path.join(settings.MEDIA_ROOT, f'google_oauth_{request.empresa.id}.json')
     scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     client_config = obtener_oauth_client_config()
 
@@ -157,14 +157,14 @@ def sincronizar_sheets(request):
                 'client_secret': credentials.client_secret,
                 'scopes': credentials.scopes
             }
-            os.makedirs(os.path.dirname(creds_path), exist_ok=True)
-            with open(creds_path, 'w') as f:
-                json.dump(creds_data, f)
-                
+            request.empresa.google_oauth_credentials = json.dumps(creds_data)
+            request.empresa.save(update_fields=['google_oauth_credentials'])
+
             messages.success(request, '✅ ¡Cuenta de Google conectada exitosamente!')
             return redirect('sincronizar_sheets')
         except Exception as e:
-            messages.error(request, f'Error al conectar con Google: {str(e)}')
+            logger.exception('Error en callback OAuth de Google Sheets. Usuario: %s', request.user.id)
+            messages.error(request, 'No se pudo completar la conexión con Google. Intenta iniciar sesión nuevamente.')
             return redirect('sincronizar_sheets')
 
     # ── 2. INICIAR LOGIN OAUTH ──
@@ -188,8 +188,8 @@ def sincronizar_sheets(request):
         
     # ── 3. DESCONECTAR CUENTA ──
     if request.GET.get('action') == 'logout':
-        if os.path.exists(creds_path):
-            os.remove(creds_path)
+        request.empresa.google_oauth_credentials = ''
+        request.empresa.save(update_fields=['google_oauth_credentials'])
         messages.info(request, 'Cuenta de Google desconectada.')
         return redirect('sincronizar_sheets')
     
@@ -436,7 +436,8 @@ def sincronizar_sheets(request):
                             )
                         )
                 except Exception as e:
-                    errores.append(f"Fila {idx}: {str(e)}")
+                    errores.append(f"Fila {idx}: no se pudo procesar — revisa que los datos tengan el formato correcto.")
+                    logger.info('Error procesando fila %s en sincronización de Sheets (empresa %s): %s', idx, request.empresa.id, e)
             
             # OPTIMIZACIÓN: Ejecutar bulk operations (solo 2 queries en total)
             if productos_a_crear:
@@ -453,15 +454,12 @@ def sincronizar_sheets(request):
                 productos_actualizados = len(productos_a_actualizar)
             
             # Guardar configuración de Sheets para sincronización bidireccional
-            config_data = {
+            request.empresa.google_sheets_config = {
                 'sheet_url': sheet_url,
                 'rango_celdas': rango_celdas,
                 'ultima_sincronizacion': str(timezone.now())
             }
-            config_file = os.path.join(settings.MEDIA_ROOT, f'sheets_config_{request.empresa.id}.json')
-            os.makedirs(os.path.dirname(config_file), exist_ok=True)
-            with open(config_file, 'w') as f:
-                json.dump(config_data, f)
+            request.empresa.save(update_fields=['google_sheets_config'])
             
             # ========================================
             # MENSAJES DE RESULTADO DE PRODUCTOS
@@ -552,7 +550,8 @@ def sincronizar_sheets(request):
             # cuando solo se están actualizando productos existentes
             
         except Exception as e:
-            messages.error(request, f'Hubo un problema procesando los datos. Comprueba que tu hoja no tenga celdas combinadas o datos inválidos. (Detalle técnico: {str(e)})')
+            logger.exception('Error inesperado en sincronización de Sheets (empresa %s, usuario %s)', getattr(request.empresa, 'id', None), request.user.id)
+            messages.error(request, 'Hubo un problema procesando los datos. Comprueba que tu hoja no tenga celdas combinadas o datos inválidos, e intenta nuevamente.')
         
         return redirect('sincronizar_sheets')
     
@@ -571,7 +570,7 @@ def sincronizar_sheets(request):
         'total_productos': total_productos,
         'total_clientes': total_clientes,
         'valor_total': valor_total,
-        'tiene_credentials': os.path.exists(creds_path),
+        'tiene_credentials': bool(request.empresa.google_oauth_credentials),
     }
     
     return render(request, 'productos/sincronizar_sheets.html', context)
@@ -739,7 +738,8 @@ def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None, empresa=None):
         return True, f"✅ Cliente '{nombre_cliente}' agregado exitosamente al Google Sheet"
         
     except Exception as e:
-        return False, f"Error al agregar cliente: {str(e)}"
+        logger.exception('Error al agregar cliente "%s" a Google Sheets (empresa %s)', nombre_cliente, getattr(empresa, 'id', None))
+        return False, "No se pudo agregar el cliente a Google Sheets. Intenta nuevamente."
 
 
 def guardar_sheet_url(sheet_url):
@@ -883,10 +883,12 @@ def sincronizar_ventas_desde_sheets(empresa):
                 estadisticas['ventas_creadas'] += 1
                 
             except Exception as e:
-                estadisticas['errores'].append(f"Error procesando cliente {cliente_nombre}: {str(e)}")
+                estadisticas['errores'].append(f"No se pudo procesar la factura del cliente {cliente_nombre}. Revisa sus datos e intenta nuevamente.")
+                logger.info('Error procesando factura para cliente "%s" (empresa %s): %s', cliente_nombre, empresa.id, e)
                 continue
         
     except Exception as e:
-        estadisticas['errores'].append(f"Error general: {str(e)}")
+        estadisticas['errores'].append("Ocurrió un error inesperado generando las facturas automáticas.")
+        logger.exception('Error general en sincronizar_ventas_desde_sheets (empresa %s)', getattr(empresa, 'id', None))
     
     return estadisticas

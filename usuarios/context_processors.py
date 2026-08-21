@@ -1,6 +1,4 @@
 from usuarios.models import UserProfile
-import os
-from django.conf import settings
 
 
 def vocabulario(request):
@@ -58,8 +56,7 @@ def vocabulario(request):
             
         # Verificar si tiene credenciales de Google Sheets conectadas
         if hasattr(request, 'empresa') and request.empresa:
-            creds_path = os.path.join(settings.MEDIA_ROOT, f'google_oauth_{request.empresa.id}.json')
-            contexto['tiene_credentials_google'] = os.path.exists(creds_path)
+            contexto['tiene_credentials_google'] = bool(request.empresa.google_oauth_credentials)
         else:
             contexto['tiene_credentials_google'] = False
     

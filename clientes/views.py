@@ -1,5 +1,6 @@
 import json
 import csv
+import logging
 from datetime import timedelta
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -13,6 +14,8 @@ from .models import Cliente
 from .forms import ClienteForm
 from empresas.mixins import requiere_modulo
 from tiendita_project.utils import form_errors_to_messages
+
+logger = logging.getLogger(__name__)
 
 @login_required
 @requiere_modulo('clientes', accion='crear')
@@ -45,7 +48,8 @@ def api_crear_cliente(request):
                 return JsonResponse({'success': False, 'error': errores}, status=400)
                 
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+            logger.exception('Error inesperado en api_crear_cliente (empresa %s, usuario %s)', getattr(getattr(request, 'empresa', None), 'id', None), request.user.id)
+            return JsonResponse({'success': False, 'error': 'Ocurrió un error inesperado. Intenta nuevamente o contacta al administrador.'}, status=500)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 @login_required
