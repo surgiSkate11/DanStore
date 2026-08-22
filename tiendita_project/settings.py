@@ -397,14 +397,21 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static'
 ]
 
-STORAGES = {
-    "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
+# ============================================================
+# ALMACENAMIENTO: sintaxis clásica (Django 4.2 la soporta
+# completamente), en vez de STORAGES (sintaxis nueva de 4.2).
+# Con STORAGES, collectstatic dejó de encontrar archivos
+# (0 static files copied) — con esta sintaxis clásica,
+# probada, sí los encuentra y copia correctamente.
+#
+# CompressedStaticFilesStorage (sin "Manifest"): comprime con
+# gzip/brotli pero NO reescribe URLs internas ni exige que cada
+# referencia (ej. iconos del admin) exista al pie de la letra —
+# evita por completo la clase de error "MissingFileError" que
+# tronaba el build antes.
+# ============================================================
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # ============================================================
 # MEDIA FILES
