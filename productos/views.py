@@ -110,7 +110,15 @@ def crear_producto(request):
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES, empresa=request.empresa)
         if form.is_valid():
-            form.save()
+            try:
+                form.save()
+            except Exception:
+                logger.exception('Error creando producto (empresa %s, usuario %s)', request.empresa.id, request.user.id)
+                messages.error(request, 'No se pudo guardar el producto. Intenta nuevamente en unos minutos; si el problema persiste, contacta a soporte.')
+                return render(request, 'productos/form_producto.html', {
+                    'form': form,
+                    'titulo': 'Crear Nuevo Producto',
+                })
             messages.success(request, '¡Producto creado exitosamente!')
             return redirect('lista_productos')
         else:
@@ -135,11 +143,13 @@ def editar_producto(request, pk):
         if form.is_valid():
             try:
                 form.save()
-            except Exception as e:
-                # TEMPORAL: para diagnosticar el 500 al subir imagen a Cloudinary.
-                # Quitar este try/except una vez identificada la causa real.
-                logger.exception('Error guardando producto %s (empresa %s)', pk, request.empresa.id)
-                messages.error(request, f'DEBUG TEMPORAL — error real: {type(e).__name__}: {e}')
+            except Exception:
+                # Cualquier falla al guardar (ej. Cloudinary, red, disco) se
+                # registra completa en logs para diagnóstico, pero al usuario
+                # solo se le muestra un mensaje genérico — nunca el 500 crudo
+                # de Django ni el detalle técnico de la excepción.
+                logger.exception('Error guardando producto %s (empresa %s, usuario %s)', pk, request.empresa.id, request.user.id)
+                messages.error(request, 'No se pudo guardar el producto. Intenta nuevamente en unos minutos; si el problema persiste, contacta a soporte.')
                 return render(request, 'productos/form_producto.html', {
                     'form': form,
                     'titulo': 'Editar Producto',
