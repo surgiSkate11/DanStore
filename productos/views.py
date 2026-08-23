@@ -133,7 +133,18 @@ def editar_producto(request, pk):
     if request.method == 'POST':
         form = ProductoForm(request.POST, request.FILES, instance=producto, empresa=request.empresa)
         if form.is_valid():
-            form.save()
+            try:
+                form.save()
+            except Exception as e:
+                # TEMPORAL: para diagnosticar el 500 al subir imagen a Cloudinary.
+                # Quitar este try/except una vez identificada la causa real.
+                logger.exception('Error guardando producto %s (empresa %s)', pk, request.empresa.id)
+                messages.error(request, f'DEBUG TEMPORAL — error real: {type(e).__name__}: {e}')
+                return render(request, 'productos/form_producto.html', {
+                    'form': form,
+                    'titulo': 'Editar Producto',
+                    'producto': producto,
+                })
             messages.success(request, '¡Producto actualizado exitosamente!')
             return redirect('lista_productos')
         else:
