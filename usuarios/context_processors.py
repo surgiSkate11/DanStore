@@ -59,5 +59,15 @@ def vocabulario(request):
             contexto['tiene_credentials_google'] = bool(request.empresa.google_oauth_credentials)
         else:
             contexto['tiene_credentials_google'] = False
+
+        # Tour guiado (Shepherd.js, ver base.html): se dispara solo para
+        # el dueño de una empresa que todavía no lo completó, y solo si
+        # ya tiene una Empresa real asignada (si no, está en la pantalla
+        # de espera, donde no hay nada que recorrer).
+        contexto['iniciar_tour'] = bool(
+            contexto.get('rol_usuario') == 'owner'
+            and not contexto.get('onboarding_completado', True)
+            and hasattr(request, 'empresa') and request.empresa
+        )
     
     return contexto

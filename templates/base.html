@@ -9,6 +9,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Shepherd.js (tour guiado interactivo) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/css/shepherd.css">
     
     <!-- Premium Fonts (Plus Jakarta Sans) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -269,6 +272,83 @@
             color: #3b82f6 !important;
             transform: translateY(-1px);
         }
+
+        /* ============================================================
+           TOUR GUIADO (Shepherd.js) — tema visual acorde a la app
+           ============================================================ */
+        .shepherd-element {
+            border-radius: 16px !important;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25) !important;
+            border: none !important;
+            max-width: 340px !important;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .shepherd-has-title .shepherd-content .shepherd-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+            padding: 1rem 1.25rem !important;
+            border-radius: 16px 16px 0 0 !important;
+        }
+        .shepherd-title {
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            font-size: 1rem !important;
+            letter-spacing: -0.2px;
+        }
+        .shepherd-cancel-icon {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 1.4rem !important;
+        }
+        .shepherd-cancel-icon:hover { color: #ffffff !important; }
+        .shepherd-text {
+            padding: 1rem 1.25rem !important;
+            font-size: 0.92rem !important;
+            color: #374151 !important;
+            line-height: 1.5;
+        }
+        .shepherd-footer {
+            padding: 0 1.25rem 1.1rem !important;
+            gap: 0.5rem;
+        }
+        .shepherd-button {
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            font-size: 0.85rem !important;
+            padding: 0.5rem 1.1rem !important;
+            transition: all 0.15s ease !important;
+        }
+        .shepherd-button:not(.shepherd-button-secondary) {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+        }
+        .shepherd-button:not(.shepherd-button-secondary):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
+        }
+        .shepherd-button-secondary {
+            background: #f1f5f9 !important;
+            color: #64748b !important;
+        }
+        .shepherd-button-secondary:hover {
+            background: #e2e8f0 !important;
+            color: #334155 !important;
+        }
+        .shepherd-modal-overlay-container { opacity: 0.55 !important; }
+        .shepherd-progress {
+            display: flex;
+            gap: 4px;
+            padding: 0 1.25rem 0.75rem;
+        }
+        .shepherd-progress-dot {
+            height: 5px;
+            flex: 1;
+            border-radius: 10px;
+            background: #e2e8f0;
+            transition: background 0.2s ease;
+        }
+        .shepherd-progress-dot.is-active,
+        .shepherd-progress-dot.is-done {
+            background: linear-gradient(to right, #3b82f6, #1d4ed8);
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -317,13 +397,13 @@
                     {% else %}
                     <!-- Menú Operativo de Tienda -->
                     <li class="nav-item">
-                        <a class="nav-link fw-semibold px-3" href="{% url 'dashboard_router' %}">
+                        <a class="nav-link fw-semibold px-3" href="{% url 'dashboard_router' %}" id="tour-inicio">
                             <i class="bi bi-house-door me-1"></i> Inicio
                         </a>
                     </li>
                     {% if 'reportes' in modulos_permitidos %}
                     <li class="nav-item">
-                        <a class="nav-link px-3" href="{% url 'tenant_reportes' %}">
+                        <a class="nav-link px-3" href="{% url 'tenant_reportes' %}" id="tour-reportes">
                             <i class="bi bi-bar-chart-line me-1"></i> Reportes
                         </a>
                     </li>
@@ -377,7 +457,7 @@
                     {% endif %}
                     {% if 'clientes' in modulos_permitidos %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'lista_clientes' %}">
+                        <a class="nav-link" href="{% url 'lista_clientes' %}" id="tour-clientes">
                             <i class="bi bi-star"></i> Clientes 
                         </a>
                     </li>
@@ -592,6 +672,9 @@
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Shepherd.js (tour guiado interactivo) -->
+    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.2.0/dist/js/shepherd.min.js"></script>
     
     <script>
         // Constantes globales para notificaciones Toast
@@ -843,7 +926,157 @@
             }
         });
     </script>
-    
+
+    {% if iniciar_tour %}
+    <script>
+        // ============================================================
+        // TOUR GUIADO — recorrido interactivo del primer login.
+        // Un paso a la vez, sobre los elementos REALES del dashboard.
+        // Ningún click real navega mientras el tour está activo.
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function () {
+            var tourActivo = true;
+
+            // Bloquea toda navegación real mientras el tour corre, sin
+            // importar qué elemento del navbar esté resaltado. Se ejecuta
+            // en fase de captura (antes que cualquier otro listener,
+            // incluido el de los dropdowns de Bootstrap).
+            document.addEventListener('click', function (e) {
+                if (!tourActivo) return;
+                if (e.target.closest('.shepherd-element')) return; // botones propios del tour
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }, true);
+
+            function getCookie(nombre) {
+                var valor = '; ' + document.cookie;
+                var partes = valor.split('; ' + nombre + '=');
+                if (partes.length === 2) return partes.pop().split(';').shift();
+            }
+
+            function marcarTourCompletado() {
+                tourActivo = false;
+                fetch("{% url 'completar_onboarding' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+            }
+
+            var tour = new Shepherd.Tour({
+                useModalOverlay: true,
+                exitOnEsc: false,
+                keyboardNavigation: false,
+                defaultStepOptions: {
+                    scrollTo: { behavior: 'smooth', block: 'center' },
+                    cancelIcon: { enabled: true }
+                }
+            });
+
+            tour.on('cancel', marcarTourCompletado);
+            tour.on('complete', marcarTourCompletado);
+
+            // Pasos generados dinámicamente: solo se incluyen los módulos
+            // a los que este usuario realmente tiene acceso (misma
+            // condición que controla si el link aparece en el navbar).
+            var pasos = [];
+
+            pasos.push({
+                title: 'Tu panel principal',
+                text: 'Acá vas a ver un resumen de tu negocio cada vez que entres.',
+                attachTo: { element: '#tour-inicio', on: 'bottom' }
+            });
+
+            {% if 'reportes' in modulos_permitidos %}
+            pasos.push({
+                title: 'Reportes',
+                text: 'Consulta tus ventas y estadísticas en cualquier momento.',
+                attachTo: { element: '#tour-reportes', on: 'bottom' }
+            });
+            {% endif %}
+
+            {% if 'productos' in modulos_permitidos %}
+            pasos.push({
+                title: 'Productos',
+                text: 'Gestiona tu inventario y catálogo desde acá.',
+                attachTo: { element: '#productosDropdown', on: 'bottom' }
+            });
+            {% endif %}
+
+            {% if 'catalogos' in modulos_permitidos %}
+            pasos.push({
+                title: 'Catálogo',
+                text: 'Genera un PDF de tus productos para compartir con tus clientes.',
+                attachTo: { element: '#catalogoDropdown', on: 'bottom' }
+            });
+            {% endif %}
+
+            {% if 'clientes' in modulos_permitidos %}
+            pasos.push({
+                title: 'Clientes',
+                text: 'Tu directorio de clientes y su historial de compras.',
+                attachTo: { element: '#tour-clientes', on: 'bottom' }
+            });
+            {% endif %}
+
+            {% if 'ventas' in modulos_permitidos %}
+            pasos.push({
+                title: 'Ventas y facturas',
+                text: 'Registra ventas y controla tus ingresos.',
+                attachTo: { element: '#ventasDropdown', on: 'bottom' }
+            });
+            {% endif %}
+
+            {% if 'sorteos' in modulos_permitidos %}
+            pasos.push({
+                title: 'Sorteos',
+                text: 'Crea sorteos para fidelizar a tus clientes.',
+                attachTo: { element: '#sorteosDropdown', on: 'bottom' }
+            });
+            {% endif %}
+
+            {% if empresa and 'tienda' in modulos_permitidos %}
+            pasos.push({
+                title: 'Tienda online',
+                text: 'Así te ven tus clientes cuando visitan tu tienda en internet.',
+                attachTo: { element: '#tiendaDropdown', on: 'bottom' }
+            });
+            {% endif %}
+
+            pasos.push({
+                title: 'Tu cuenta',
+                text: 'Edita tu perfil y los datos de tu negocio cuando quieras.',
+                attachTo: { element: '#navbarDropdown', on: 'bottom' }
+            });
+
+            pasos.forEach(function (paso, index) {
+                var esUltimo = index === pasos.length - 1;
+                var botones = [
+                    { text: 'Saltar recorrido', classes: 'shepherd-button-secondary', action: tour.cancel }
+                ];
+                if (index > 0) {
+                    botones.push({ text: 'Anterior', classes: 'shepherd-button-secondary', action: tour.back });
+                }
+                botones.push({
+                    text: esUltimo ? 'Finalizar' : 'Siguiente',
+                    action: esUltimo ? tour.complete : tour.next
+                });
+
+                tour.addStep({
+                    title: paso.title,
+                    text: paso.text,
+                    attachTo: paso.attachTo,
+                    buttons: botones
+                });
+            });
+
+            if (pasos.length > 0) {
+                tour.start();
+            }
+        });
+    </script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
