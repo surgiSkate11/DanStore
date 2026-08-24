@@ -24,8 +24,7 @@
         background: rgba(255,255,255,0.06);
         border-radius: 50%;
     }
-    .onb-hero h1 { position: relative; z-index: 1; }
-    .onb-hero p { position: relative; z-index: 1; }
+    .onb-hero h1, .onb-hero p { position: relative; z-index: 1; }
 
     .onb-badge-plan {
         background: linear-gradient(to right, #fcd34d, #f59e0b);
@@ -43,106 +42,58 @@
         height: 100%;
     }
 
-    /* Animación ligera de aparición progresiva (solo CSS, sin librerías) */
-    .onb-reveal {
-        opacity: 0;
-        transform: translateY(14px);
-        transition: opacity 0.45s ease, transform 0.45s ease;
-    }
-    .onb-reveal.onb-visible {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
     .onb-modulo-card {
         background: white;
         border: 1px solid #e5e7eb;
         border-radius: 14px;
         padding: 1.1rem;
         text-align: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
         height: 100%;
     }
-    .onb-modulo-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-    }
     .onb-modulo-icono {
-        width: 52px;
-        height: 52px;
+        width: 52px; height: 52px;
         border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
         margin: 0 auto 0.75rem;
         background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
         color: #4338ca;
         font-size: 1.5rem;
     }
 
-    .onb-progress-track {
-        height: 10px;
-        border-radius: 10px;
-        background: #e5e7eb;
-        overflow: hidden;
-    }
-    .onb-progress-fill {
-        height: 100%;
-        border-radius: 10px;
-        background: linear-gradient(to right, #3b82f6, #6366f1);
-        width: 0%;
-        transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
-    }
+    .onb-progress-track { height: 10px; border-radius: 10px; background: #e5e7eb; overflow: hidden; }
+    .onb-progress-fill { height: 100%; border-radius: 10px; background: linear-gradient(to right, #3b82f6, #6366f1); width: 0%; transition: width 1s cubic-bezier(0.16, 1, 0.3, 1); }
 
-    .onb-paso {
-        display: flex;
-        align-items: center;
-        gap: 0.65rem;
-        padding: 0.6rem 0;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 0.92rem;
-    }
+    .onb-paso { display: flex; align-items: center; gap: 0.65rem; padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9; font-size: 0.92rem; }
     .onb-paso:last-child { border-bottom: none; }
-    .onb-paso-check {
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        font-size: 0.75rem;
-    }
+    .onb-paso-check { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.75rem; }
     .onb-paso-check.hecho { background: #d1fae5; color: #065f46; }
     .onb-paso-check.pendiente { background: #f1f5f9; color: #94a3b8; }
 
     .onb-acceso-rapido {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.85rem 1rem;
-        border-radius: 12px;
-        border: 1px solid #e5e7eb;
-        text-decoration: none;
-        color: #1f2937;
-        font-weight: 600;
+        display: flex; align-items: center; gap: 0.6rem;
+        padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid #e5e7eb;
+        text-decoration: none; color: #1f2937; font-weight: 600;
         transition: background 0.15s ease, transform 0.15s ease;
     }
-    .onb-acceso-rapido:hover {
-        background: #f8fafc;
-        color: #1f2937;
-        transform: translateX(3px);
-    }
+    .onb-acceso-rapido:hover { background: #f8fafc; color: #1f2937; transform: translateX(3px); }
     .onb-acceso-rapido i { color: #4f46e5; font-size: 1.15rem; }
 
+    /* Botón CTA moderno, mismo lenguaje visual que el tour del dashboard */
     .onb-cta {
-        border-radius: 14px;
-        padding: 0.9rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        padding: 0.85rem 2.2rem;
         font-weight: 700;
-        font-size: 1.05rem;
+        font-size: 1rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
+        opacity: 0.5;
+        pointer-events: none;
     }
-    .onb-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(59,130,246,0.35); }
+    .onb-cta.onb-cta-activo { opacity: 1; pointer-events: auto; }
+    .onb-cta.onb-cta-activo:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59,130,246,0.45); }
 
     @media (max-width: 576px) {
         .onb-hero { padding: 1.75rem; }
@@ -154,15 +105,12 @@
 {% block content %}
 <div class="container py-4" style="max-width: 1080px;">
 
-    <!-- Bienvenida personalizada -->
-    <div class="onb-hero onb-reveal">
+    <div class="onb-hero" id="onb-hero">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
             <div>
-                <div style="font-size: 2.5rem;">🎉</div>
+                <div style="font-size: 2.2rem;">🎉</div>
                 <h1 class="fw-bold mb-1">¡Hola, {{ nombre_usuario }}!</h1>
-                <p class="mb-0 opacity-90">
-                    <strong>{{ nombre_empresa }}</strong> ya está lista para empezar a trabajar.
-                </p>
+                <p class="mb-0 opacity-90"><strong>{{ nombre_empresa }}</strong> ya está lista.</p>
             </div>
             <div class="text-end">
                 {% if empresa_activa %}
@@ -172,20 +120,16 @@
                 {% endif %}
                 <div class="mt-2">
                     <span class="onb-badge-plan display-6">{{ plan_nombre }}</span>
-                    {% if tipo_plan_display %}
-                        <div class="small opacity-75">{{ tipo_plan_display }}</div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row g-3 mb-3">
-        <!-- Estado de la suscripción -->
         <div class="col-md-6">
-            <div class="onb-card onb-reveal">
+            <div class="onb-card" id="onb-suscripcion">
                 <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                    <i class="bi bi-calendar-check me-1"></i> Estado de tu suscripción
+                    <i class="bi bi-calendar-check me-1"></i> Suscripción
                 </h6>
                 {% if fecha_vencimiento %}
                     <div class="d-flex justify-content-between small mb-2">
@@ -194,60 +138,47 @@
                     </div>
                     <div class="onb-progress-track mb-2">
                         <div class="progress-bar bg-{{ estado_color }}" role="progressbar"
-                             style="width: {{ porcentaje_consumido }}%; height: 100%; border-radius: 10px; transition: width 1s ease;">
-                        </div>
+                             style="width: {{ porcentaje_consumido }}%; height: 100%; border-radius: 10px;"></div>
                     </div>
                     <div class="d-flex justify-content-between small text-muted">
                         <span>Inicio: {{ fecha_inicio|date:"d M Y" }}</span>
                         <span>Vence: {{ fecha_vencimiento|date:"d M Y" }}</span>
                     </div>
                 {% else %}
-                    <p class="text-muted small mb-0">Todavía no tenés una suscripción activa registrada.</p>
+                    <p class="text-muted small mb-0">Sin suscripción activa todavía.</p>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Usuarios del plan -->
         <div class="col-md-6">
-            <div class="onb-card onb-reveal">
+            <div class="onb-card" id="onb-equipo">
                 <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                    <i class="bi bi-people me-1"></i> Usuarios de tu equipo
+                    <i class="bi bi-people me-1"></i> Tu equipo
                 </h6>
                 <div class="d-flex align-items-end gap-2 mb-2">
                     <span class="display-6 fw-bold mb-0">{{ usuarios_usados }}</span>
-                    <span class="text-muted mb-1">
-                        / {% if limite_usuarios %}{{ limite_usuarios }}{% else %}Ilimitados{% endif %}
-                    </span>
+                    <span class="text-muted mb-1">/ {% if limite_usuarios %}{{ limite_usuarios }}{% else %}Ilimitados{% endif %}</span>
                 </div>
                 {% if limite_usuarios %}
-                    <div class="onb-progress-track">
-                        <div class="onb-progress-fill" data-target="{{ usuarios_usados }}" data-total="{{ limite_usuarios }}"
-                             style="background: linear-gradient(to right, #10b981, #059669);"></div>
-                    </div>
-                {% else %}
-                    <p class="text-muted small mb-0">Tu plan permite empleados ilimitados.</p>
+                <div class="onb-progress-track">
+                    <div class="onb-progress-fill" data-target="{{ usuarios_usados }}" data-total="{{ limite_usuarios }}" style="background: linear-gradient(to right, #10b981, #059669);"></div>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Módulos habilitados -->
     {% if modulos %}
-    <div class="onb-reveal mb-4">
+    <div class="mb-4" id="onb-modulos">
         <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-            <i class="bi bi-grid-3x3-gap me-1"></i> Módulos habilitados para tu empresa
+            <i class="bi bi-grid-3x3-gap me-1"></i> Tus módulos
         </h6>
         <div class="row g-3">
             {% for modulo in modulos %}
             <div class="col-6 col-md-3">
-                <div class="onb-modulo-card onb-reveal" style="transition-delay: {{ forloop.counter0|add:1 }}00ms;">
-                    <div class="onb-modulo-icono">
-                        <i class="bi {{ modulo.icono|default:'bi-box' }}"></i>
-                    </div>
+                <div class="onb-modulo-card">
+                    <div class="onb-modulo-icono"><i class="bi {{ modulo.icono|default:'bi-box' }}"></i></div>
                     <div class="fw-semibold small">{{ modulo.nombre }}</div>
-                    {% if modulo.requiere_plan_premium %}
-                        <span class="badge bg-warning-subtle text-warning-emphasis mt-2" style="font-size: 0.65rem;">Premium</span>
-                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -256,12 +187,11 @@
     {% endif %}
 
     <div class="row g-3 mb-4">
-        <!-- Progreso de configuración inicial -->
         <div class="col-md-7">
-            <div class="onb-card onb-reveal h-100">
+            <div class="onb-card h-100" id="onb-progreso">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold text-uppercase text-muted mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">
-                        <i class="bi bi-list-check me-1"></i> Configuración inicial
+                        <i class="bi bi-list-check me-1"></i> Primeros pasos
                     </h6>
                     <span class="fw-bold small">{{ progreso_setup }}%</span>
                 </div>
@@ -269,7 +199,7 @@
                     <div class="onb-progress-fill" data-progreso="{{ progreso_setup }}"></div>
                 </div>
                 {% for paso in pasos_pendientes %}
-                <a href="{{ paso.url }}" class="onb-paso text-decoration-none text-reset">
+                <a href="{{ paso.url }}" class="onb-paso text-decoration-none text-reset onb-link-real">
                     <span class="onb-paso-check {% if paso.hecho %}hecho{% else %}pendiente{% endif %}">
                         <i class="bi {% if paso.hecho %}bi-check-lg{% else %}bi-dot{% endif %}"></i>
                     </span>
@@ -279,15 +209,14 @@
             </div>
         </div>
 
-        <!-- Accesos rápidos -->
         <div class="col-md-5">
-            <div class="onb-card onb-reveal h-100">
+            <div class="onb-card h-100" id="onb-accesos">
                 <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.8rem; letter-spacing: 0.5px;">
                     <i class="bi bi-lightning-charge me-1"></i> Accesos rápidos
                 </h6>
                 <div class="d-flex flex-column gap-2">
                     {% for acceso in accesos_rapidos %}
-                    <a href="{{ acceso.url }}" class="onb-acceso-rapido">
+                    <a href="{{ acceso.url }}" class="onb-acceso-rapido onb-link-real">
                         <i class="bi {{ acceso.icono }}"></i> {{ acceso.texto }}
                     </a>
                     {% endfor %}
@@ -296,65 +225,124 @@
         </div>
     </div>
 
-    <!-- Aclaración: esto es una confirmación de lo que el admin ya configuró -->
-    <div class="alert alert-light border d-flex align-items-start gap-2 onb-reveal mb-4" role="alert">
-        <i class="bi bi-info-circle-fill text-primary mt-1"></i>
-        <div class="small">
-            Esta es la configuración que tu administrador definió para <strong>{{ nombre_empresa }}</strong>.
-            Podés cambiar el nombre comercial, tipo de negocio y otros detalles cuando quieras desde
-            <strong>Mi Perfil</strong>.
-        </div>
-    </div>
-
-    <!-- CTA principal -->
-    <div class="text-center onb-reveal">
-        <a href="{% url 'dashboard_router' %}" class="btn btn-primary btn-lg onb-cta w-100 w-md-auto">
-            Comenzar a usar el sistema <i class="bi bi-arrow-right ms-1"></i>
-        </a>
-        <p class="text-muted small mt-3 mb-0">
-            Podés volver a ver esta pantalla desde <strong>Configuración</strong> cuando quieras.
-        </p>
+    <div class="text-center">
+        <button id="onb-cta-final" class="onb-cta">
+            Empezar a usar el sistema <i class="bi bi-arrow-right ms-1"></i>
+        </button>
     </div>
 </div>
 
 <script>
-(function () {
-    // Revelado progresivo con IntersectionObserver — nativo, sin
-    // librerías, y muy liviano en CPU (solo observa, no hace polling).
-    var elementos = document.querySelectorAll('.onb-reveal');
+document.addEventListener('DOMContentLoaded', function () {
+    var tourActivo = true;
 
-    if ('IntersectionObserver' in window) {
-        var observer = new IntersectionObserver(function (entries, obs) {
-            entries.forEach(function (entry, index) {
-                if (entry.isIntersecting) {
-                    // pequeño stagger para que no aparezcan todas de golpe
-                    setTimeout(function () {
-                        entry.target.classList.add('onb-visible');
-                    }, index * 60);
-                    obs.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 });
+    // Bloquea toda navegación real (incluidos los accesos rápidos y el
+    // checklist, que son links reales) mientras el recorrido está activo.
+    document.addEventListener('click', function (e) {
+        if (!tourActivo) return;
+        if (e.target.closest('.shepherd-element')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+    }, true);
 
-        elementos.forEach(function (el) { observer.observe(el); });
-    } else {
-        // Fallback simple si el navegador no soporta IntersectionObserver
-        elementos.forEach(function (el) { el.classList.add('onb-visible'); });
-    }
-
-    // Animar barra de progreso de setup al montar
-    document.querySelectorAll('.onb-progress-fill[data-progreso]').forEach(function (bar) {
-        var valor = parseInt(bar.getAttribute('data-progreso'), 10) || 0;
-        requestAnimationFrame(function () { bar.style.width = valor + '%'; });
+    var tour = new Shepherd.Tour({
+        useModalOverlay: true,
+        exitOnEsc: false,
+        keyboardNavigation: false,
+        defaultStepOptions: {
+            scrollTo: { behavior: 'smooth', block: 'center' },
+            cancelIcon: { enabled: true }
+        }
     });
 
-    // Animar barra de usuarios usados/límite
+    function finalizarRecorrido() {
+        tourActivo = false;
+        var cta = document.getElementById('onb-cta-final');
+        cta.classList.add('onb-cta-activo');
+        cta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    tour.on('cancel', finalizarRecorrido);
+    tour.on('complete', finalizarRecorrido);
+
+    var pasos = [];
+
+    pasos.push({
+        title: '¡Bienvenido, {{ nombre_usuario|escapejs }}!',
+        text: 'Te muestro rápido dónde está todo. Podés saltarlo cuando quieras.'
+    });
+
+    pasos.push({
+        title: 'Tu suscripción',
+        text: 'Acá ves tu plan, {{ dias_restantes|default:"0" }} días restantes y cuándo vence.',
+        attachTo: { element: '#onb-suscripcion', on: 'bottom' }
+    });
+
+    pasos.push({
+        title: 'Tu equipo',
+        text: 'Cuántos usuarios tenés activos según tu plan.',
+        attachTo: { element: '#onb-equipo', on: 'bottom' }
+    });
+
+    {% if modulos %}
+    pasos.push({
+        title: 'Tus módulos',
+        text: 'Estas son las funciones habilitadas para tu empresa según tu plan.',
+        attachTo: { element: '#onb-modulos', on: 'top' }
+    });
+    {% endif %}
+
+    pasos.push({
+        title: 'Primeros pasos',
+        text: 'Una checklist rápida para dejar tu tienda lista.',
+        attachTo: { element: '#onb-progreso', on: 'top' }
+    });
+
+    pasos.push({
+        title: 'Accesos rápidos',
+        text: 'Los atajos más usados, siempre a mano.',
+        attachTo: { element: '#onb-accesos', on: 'top' }
+    });
+
+    pasos.forEach(function (paso, index) {
+        var esUltimo = index === pasos.length - 1;
+        var botones = [
+            { text: 'Saltar', classes: 'shepherd-button-secondary', action: tour.cancel }
+        ];
+        if (index > 0) {
+            botones.push({ text: 'Anterior', classes: 'shepherd-button-secondary', action: tour.back });
+        }
+        botones.push({
+            text: esUltimo ? 'Finalizar' : 'Siguiente',
+            action: esUltimo ? tour.complete : tour.next
+        });
+
+        tour.addStep({
+            title: paso.title,
+            text: paso.text,
+            attachTo: paso.attachTo,
+            buttons: botones
+        });
+    });
+
+    tour.start();
+
+    // Animaciones de barras de progreso
+    document.querySelectorAll('.onb-progress-fill[data-progreso]').forEach(function (bar) {
+        var v = parseInt(bar.getAttribute('data-progreso'), 10) || 0;
+        requestAnimationFrame(function () { bar.style.width = v + '%'; });
+    });
     document.querySelectorAll('.onb-progress-fill[data-target]').forEach(function (bar) {
         var usados = parseFloat(bar.getAttribute('data-target')) || 0;
         var total = parseFloat(bar.getAttribute('data-total')) || 1;
         var pct = Math.min(100, Math.max(0, (usados / total) * 100));
         requestAnimationFrame(function () { bar.style.width = pct + '%'; });
     });
-})();
+
+    document.getElementById('onb-cta-final').addEventListener('click', function () {
+        window.location.href = "{% url 'dashboard_router' %}";
+    });
+});
 </script>
 {% endblock %}
