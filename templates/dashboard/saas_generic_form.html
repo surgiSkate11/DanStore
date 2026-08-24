@@ -57,38 +57,6 @@
         flex-shrink: 0;
         cursor: pointer;
     }
-
-    /* Checkboxes con clases Bootstrap nativas (.form-check) — sea que el
-       widget venga envuelto en el div .form-check o no, forzamos flexbox
-       para que el checkbox y su texto queden en línea siempre. flexbox
-       hace que el navegador IGNORE el float:left/margin-left negativo
-       que usa Bootstrap por defecto para .form-check-input, así que esto
-       funciona incluso si el HTML no trae el div contenedor. */
-    .dynamic-field .form-check,
-    .dynamic-field ul li {
-        display: flex !important;
-        align-items: flex-start !important;
-        gap: 0.65rem !important;
-        padding-left: 0 !important;
-        margin: 0 0 0.4rem 0 !important;
-    }
-    .dynamic-field .form-check-input {
-        float: none !important;
-        margin: 0.15em 0 0 0 !important;
-        width: 1.1em !important;
-        height: 1.1em !important;
-        min-width: 1.1em;
-        flex-shrink: 0;
-        cursor: pointer;
-    }
-    .dynamic-field .form-check-label {
-        margin: 0 !important;
-        font-weight: 500 !important;
-        font-size: 0.92rem !important;
-        color: #374151 !important;
-        cursor: pointer;
-        line-height: 1.35;
-    }
 </style>
 {% endblock %}
 
@@ -132,7 +100,7 @@
                         {% endif %}
 
                         {% for field in form %}
-                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' or field.widget_type == 'checkboxselectmultiple' %}12{% else %}6{% endif %} dynamic-field">
+                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' %}12{% else %}6{% endif %} dynamic-field">
                                 <label class="form-label fw-bold text-muted small text-uppercase mb-2">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
                                 {{ field }}
                                 {% if field.help_text %}<small class="text-muted d-block mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>{{ field.help_text }}</small>{% endif %}
@@ -157,90 +125,8 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ============================================================
-    // MARCADOR DE DIAGNÓSTICO — TEMPORAL. Si esto no aparece en
-    // pantalla, este bloque de JS no está corriendo en absoluto
-    // (archivo viejo cacheado en el servidor, CSP bloqueando scripts
-    // inline, o el navegador sirviendo una versión vieja de la página
-    // desde su propio caché). Si SÍ aparece, el script corre bien y
-    // el problema está en que los selectores no encuentran los
-    // elementos esperados — lo cual también vamos a ver acá mismo.
-    var marcador = document.createElement('div');
-    marcador.textContent = 'JS DE DIAGNÓSTICO CORRIENDO — encontrados ' +
-        document.querySelectorAll('.dynamic-field ul li').length + ' <li> de checkbox';
-    marcador.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ef4444;color:white;' +
-        'font-weight:bold;text-align:center;padding:10px;z-index:99999;font-size:14px;';
-    document.body.prepend(marcador);
-    console.log('DIAGNÓSTICO — .dynamic-field encontrados:', document.querySelectorAll('.dynamic-field').length);
-    console.log('DIAGNÓSTICO — .dynamic-field ul encontrados:', document.querySelectorAll('.dynamic-field ul').length);
-    console.log('DIAGNÓSTICO — .dynamic-field ul li encontrados:', document.querySelectorAll('.dynamic-field ul li').length);
-
-    // Buscamos el .dynamic-field que tiene los checkboxes (el de Módulos)
-    // y volcamos su HTML real completo, sea cual sea su estructura.
-    document.querySelectorAll('.dynamic-field').forEach(function (campo, i) {
-        var checkboxes = campo.querySelectorAll('input[type="checkbox"]');
-        if (checkboxes.length > 0) {
-            console.log('DIAGNÓSTICO — .dynamic-field #' + i + ' tiene ' + checkboxes.length + ' checkboxes. HTML completo:');
-            console.log(campo.innerHTML);
-        }
-    });
-    // ============================================================
-
-    // Blindaje extra: reestructura cualquier lista de checkboxes
-    // (CheckboxSelectMultiple de Django) para que el checkbox y su
-    // texto queden en línea SIEMPRE, sin depender de que ninguna CSS
-    // externa (Bootstrap, admin, etc.) se comporte como esperamos.
-    // Convierte <li><label><input>Texto</label></li> en un contenedor
-    // con position:relative + estilos inline con !important, inmunes
-    // a cualquier conflicto de especificidad externo.
-    document.querySelectorAll('.dynamic-field ul li').forEach(function (li) {
-        li.style.setProperty('display', 'flex', 'important');
-        li.style.setProperty('align-items', 'flex-start', 'important');
-        li.style.setProperty('gap', '0.65rem', 'important');
-        li.style.setProperty('float', 'none', 'important');
-        li.style.setProperty('height', 'auto', 'important');
-        li.style.setProperty('min-height', '0', 'important');
-        li.style.setProperty('position', 'static', 'important');
-
-        var label = li.querySelector('label');
-        if (label) {
-            label.style.setProperty('display', 'flex', 'important');
-            label.style.setProperty('align-items', 'flex-start', 'important');
-            label.style.setProperty('gap', '0.65rem', 'important');
-            label.style.setProperty('float', 'none', 'important');
-            label.style.setProperty('margin', '0', 'important');
-            label.style.setProperty('width', '100%', 'important');
-        }
-
-        var checkbox = li.querySelector('input[type="checkbox"]');
-        if (checkbox) {
-            checkbox.style.setProperty('float', 'none', 'important');
-            checkbox.style.setProperty('margin', '0.15em 0 0 0', 'important');
-            checkbox.style.setProperty('width', '1.1em', 'important');
-            checkbox.style.setProperty('height', '1.1em', 'important');
-            checkbox.style.setProperty('min-width', '1.1em', 'important');
-            checkbox.style.setProperty('flex-shrink', '0', 'important');
-            checkbox.style.setProperty('position', 'static', 'important');
-        }
-    });
-
-    // Asegura que el contenedor <ul> de módulos ocupe todo el ancho de
-    // su columna y no quede compitiendo por espacio con el campo de al lado.
-    document.querySelectorAll('.dynamic-field ul').forEach(function (ul) {
-        ul.style.setProperty('display', 'block', 'important');
-        ul.style.setProperty('width', '100%', 'important');
-        ul.style.setProperty('float', 'none', 'important');
-        ul.closest('.dynamic-field')?.classList.add('col-12');
-        var col6 = ul.closest('.dynamic-field');
-        if (col6) {
-            col6.classList.remove('col-md-6');
-            col6.classList.add('col-md-12');
-        }
-    });
-});
-
-const form = document.getElementById('genericForm');
-if (form) {
+    const form = document.getElementById('genericForm');
+    
     form.addEventListener('submit', function(e) {
         if (!this.checkValidity()) {
             e.preventDefault();
@@ -269,6 +155,6 @@ if (form) {
             if (primerError) primerError.focus();
         }
     });
-}
+});
 </script>
 {% endblock %}
