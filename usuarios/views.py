@@ -222,7 +222,6 @@ def _reverse_seguro(nombre_url, fallback='dashboard_router'):
         except NoReverseMatch:
             return '/'
 
-
 def _construir_contexto_onboarding(perfil, empresa):
     """
     Arma todo el contexto del onboarding leyendo suscripción, plan,
@@ -230,6 +229,10 @@ def _construir_contexto_onboarding(perfil, empresa):
     cualquier dato faltante, relación nula o modelo inexistente cae a un
     valor seguro por defecto — esta función nunca debe lanzar una excepción
     sin capturar, porque de eso depende que el onboarding no tire un 500.
+
+    Los accesos rápidos y la checklist de "primeros pasos" se filtran
+    SIEMPRE por los módulos reales del plan de la empresa — nunca se
+    muestra un acceso a un módulo que el dueño no tiene contratado.
     """
     usuario = perfil.user
 
@@ -282,6 +285,10 @@ def _construir_contexto_onboarding(perfil, empresa):
             except Exception:
                 logger.warning("Onboarding: error leyendo módulos del plan %s", getattr(plan, 'pk', '?'))
 
+    # Set de códigos de módulo del plan — única fuente de verdad para
+    # decidir qué accesos rápidos y pasos de checklist se muestran.
+    codigos_modulos = {m.codigo for m in contexto['modulos']}
+
     # --- Usuarios utilizados (empleados asociados a la empresa) ---
     try:
         contexto['usuarios_usados'] = empresa.empleados.count()
@@ -289,26 +296,39 @@ def _construir_contexto_onboarding(perfil, empresa):
         logger.warning("Onboarding: error contando empleados de la empresa %s", getattr(empresa, 'pk', '?'))
 
     # --- Progreso de configuración inicial (detecta pendientes) ---
+    # Cada paso solo se agrega si el módulo correspondiente está en el
+    # plan de la empresa. "Configurar empresa" siempre está disponible
+    # porque no depende de ningún módulo operativo.
     pasos = []
-    try:
-        tiene_productos = Producto.objects.filter(empresa=empresa).exists()
-        pasos.append({'texto': 'Agregar tu primer producto', 'hecho': tiene_productos, 'url': _reverse_seguro('agregar_producto')})
-    except Exception:
-        logger.warning("Onboarding: no se pudo verificar productos de la empresa %s", getattr(empresa, 'pk', '?'))
 
-    try:
-        from clientes.models import Cliente
-        tiene_clientes = Cliente.objects.filter(empresa=empresa).exists()
-        pasos.append({'texto': 'Registrar tu primer cliente', 'hecho': tiene_clientes, 'url': _reverse_seguro('registrar_cliente')})
-    except Exception:
-        logger.warning("Onboarding: app 'clientes' no disponible o sin campo empresa, se omite ese paso")
+    if 'productos' in codigos_modulos:
+        try:
+            tiene_productos = Producto.objects.filter(empresa=empresa).exists()
+            pasos.append({'texto': 'Agregar tu primer producto', 'hecho': tiene_productos, 'url': reverse('crear_producto')})
+        except NoReverseMatch:
+            logger.warning("Onboarding: la url 'crear_producto' no existe, se omite ese paso")
+        except Exception:
+            logger.warning("Onboarding: no se pudo verificar productos de la empresa %s", getattr(empresa, 'pk', '?'))
 
-    try:
-        from ventas.models import Venta
-        tiene_ventas = Venta.objects.filter(empresa=empresa).exists()
-        pasos.append({'texto': 'Crear tu primera venta', 'hecho': tiene_ventas, 'url': _reverse_seguro('crear_venta')})
-    except Exception:
-        logger.warning("Onboarding: app 'ventas' no disponible o sin campo empresa, se omite ese paso")
+    if 'clientes' in codigos_modulos:
+        try:
+            from clientes.models import Cliente
+            tiene_clientes = Cliente.objects.filter(empresa=empresa).exists()
+            pasos.append({'texto': 'Registrar tu primer cliente', 'hecho': tiene_clientes, 'url': reverse('crear_cliente')})
+        except NoReverseMatch:
+            logger.warning("Onboarding: la url 'crear_cliente' no existe, se omite ese paso")
+        except Exception:
+            logger.warning("Onboarding: app 'clientes' no disponible o sin campo empresa, se omite ese paso")
+
+    if 'ventas' in codigos_modulos:
+        try:
+            from ventas.models import Venta
+            tiene_ventas = Venta.objects.filter(empresa=empresa).exists()
+            pasos.append({'texto': 'Crear tu primera venta', 'hecho': tiene_ventas, 'url': reverse('crear_venta')})
+        except NoReverseMatch:
+            logger.warning("Onboarding: la url 'crear_venta' no existe, se omite ese paso")
+        except Exception:
+            logger.warning("Onboarding: app 'ventas' no disponible o sin campo empresa, se omite ese paso")
 
     pasos.append({
         'texto': 'Configurar el logo y datos de tu empresa',
@@ -321,13 +341,26 @@ def _construir_contexto_onboarding(perfil, empresa):
     contexto['progreso_setup'] = int((completados / total_pasos) * 100)
     contexto['pasos_pendientes'] = pasos
 
-    # --- Accesos rápidos del CTA ---
-    contexto['accesos_rapidos'] = [
-        {'texto': 'Crear primera venta', 'icono': 'bi-cart-plus', 'url': _reverse_seguro('crear_venta')},
-        {'texto': 'Registrar primer cliente', 'icono': 'bi-person-plus', 'url': _reverse_seguro('registrar_cliente')},
-        {'texto': 'Agregar primer producto', 'icono': 'bi-box-seam', 'url': _reverse_seguro('agregar_producto')},
-        {'texto': 'Configurar empresa', 'icono': 'bi-gear', 'url': _reverse_seguro('perfil')},
+    # --- Accesos rápidos del CTA: solo los módulos que el plan habilita ---
+    catalogo_accesos = [
+        {'codigo_requerido': 'ventas', 'texto': 'Crear primera venta', 'icono': 'bi-cart-plus', 'url_name': 'crear_venta'},
+        {'codigo_requerido': 'clientes', 'texto': 'Registrar primer cliente', 'icono': 'bi-person-plus', 'url_name': 'crear_cliente'},
+        {'codigo_requerido': 'productos', 'texto': 'Agregar primer producto', 'icono': 'bi-box-seam', 'url_name': 'crear_producto'},
     ]
+
+    accesos_rapidos = []
+    for acceso in catalogo_accesos:
+        if acceso['codigo_requerido'] in codigos_modulos:
+            try:
+                url = reverse(acceso['url_name'])
+            except NoReverseMatch:
+                continue  # si la url no existe, se omite el acceso en vez de caer a /router/
+            accesos_rapidos.append({'texto': acceso['texto'], 'icono': acceso['icono'], 'url': url})
+
+    # "Configurar empresa" siempre está disponible, no depende de ningún módulo
+    accesos_rapidos.append({'texto': 'Configurar empresa', 'icono': 'bi-gear', 'url': _reverse_seguro('perfil')})
+
+    contexto['accesos_rapidos'] = accesos_rapidos
 
     return contexto
 
