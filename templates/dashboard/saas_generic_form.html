@@ -57,6 +57,38 @@
         flex-shrink: 0;
         cursor: pointer;
     }
+
+    /* Checkboxes con clases Bootstrap nativas (.form-check) — sea que el
+       widget venga envuelto en el div .form-check o no, forzamos flexbox
+       para que el checkbox y su texto queden en línea siempre. flexbox
+       hace que el navegador IGNORE el float:left/margin-left negativo
+       que usa Bootstrap por defecto para .form-check-input, así que esto
+       funciona incluso si el HTML no trae el div contenedor. */
+    .dynamic-field .form-check,
+    .dynamic-field ul li {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 0.65rem !important;
+        padding-left: 0 !important;
+        margin: 0 0 0.4rem 0 !important;
+    }
+    .dynamic-field .form-check-input {
+        float: none !important;
+        margin: 0.15em 0 0 0 !important;
+        width: 1.1em !important;
+        height: 1.1em !important;
+        min-width: 1.1em;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+    .dynamic-field .form-check-label {
+        margin: 0 !important;
+        font-weight: 500 !important;
+        font-size: 0.92rem !important;
+        color: #374151 !important;
+        cursor: pointer;
+        line-height: 1.35;
+    }
 </style>
 {% endblock %}
 
@@ -100,7 +132,7 @@
                         {% endif %}
 
                         {% for field in form %}
-                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' %}12{% else %}6{% endif %} dynamic-field">
+                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' or field.widget_type == 'checkboxselectmultiple' %}12{% else %}6{% endif %} dynamic-field">
                                 <label class="form-label fw-bold text-muted small text-uppercase mb-2">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
                                 {{ field }}
                                 {% if field.help_text %}<small class="text-muted d-block mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>{{ field.help_text }}</small>{% endif %}
