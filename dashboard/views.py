@@ -609,7 +609,9 @@ def saas_crear_registro(request, app_label, model_name):
             # Un <select multiple> nativo requiere Ctrl/Cmd+Click para elegir
             # varios sin perder la selección anterior — muy poco intuitivo.
             # Checkboxes: cada opción se marca/desmarca con un solo click.
-            field.widget = forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+            nuevo_widget = forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+            nuevo_widget.choices = field.widget.choices  # heredar las opciones del widget original
+            field.widget = nuevo_widget
         elif isinstance(field.widget, forms.Select):
             field.widget.attrs.update({'class': 'form-select form-select-lg bg-light border-0 shadow-sm', 'style': 'border-radius: 12px;'})
         elif isinstance(field.widget, forms.Textarea):
@@ -724,7 +726,9 @@ def saas_editar_registro(request, app_label, model_name, object_id):
         if isinstance(field.widget, forms.CheckboxInput):
             field.widget.attrs.update({'class': 'form-check-input ms-0 me-2', 'style': 'width: 1.5em; height: 1.5em; cursor: pointer;'})
         elif isinstance(field.widget, forms.SelectMultiple):
-            field.widget = forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+            nuevo_widget = forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+            nuevo_widget.choices = field.widget.choices  # heredar las opciones del widget original
+            field.widget = nuevo_widget
         elif isinstance(field.widget, forms.Select) or isinstance(field.widget, forms.Textarea) or isinstance(field.widget, forms.TextInput):
             field.widget.attrs.update({'class': 'form-control form-control-lg bg-light border-0 shadow-sm', 'style': 'border-radius: 12px;'})
 
