@@ -19,44 +19,73 @@
     }
     .dynamic-field label { letter-spacing: 0.5px; }
 
-    /* Lista de checkboxes (campos ManyToMany como Módulos) */
+    /* ===== Selector de Módulos (checkboxes ManyToMany) ===== */
     .dynamic-field ul {
         list-style: none !important;
-        padding: 0.75rem 1rem !important;
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+        gap: 0.65rem !important;
+        padding: 1rem !important;
         margin: 0.5rem 0 0 0 !important;
         background: #f8fafc !important;
         border: 1px solid #e5e7eb !important;
-        border-radius: 12px !important;
-        max-height: 240px;
+        border-radius: 14px !important;
+        max-height: 300px;
         overflow-y: auto;
     }
+
     .dynamic-field ul li {
-        padding: 0.55rem 0 !important;
+        padding: 0 !important;
         margin: 0 !important;
-        border-bottom: 1px solid #e5e7eb !important;
+        border: none !important;
         list-style: none !important;
     }
-    .dynamic-field ul li:last-child { border-bottom: none !important; }
+
     .dynamic-field ul li label {
         display: flex !important;
-        align-items: flex-start !important;
-        gap: 0.65rem !important;
+        align-items: center !important;
+        gap: 0.6rem !important;
         cursor: pointer;
-        font-weight: 500 !important;
-        font-size: 0.92rem !important;
-        color: #374151 !important;
+        font-weight: 600 !important;
+        font-size: 0.88rem !important;
+        color: #475569 !important;
         letter-spacing: normal !important;
         margin: 0 !important;
-        line-height: 1.35;
+        padding: 0.7rem 0.85rem !important;
+        background: #ffffff !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        line-height: 1.3;
+        transition: all 0.15s ease-in-out;
+        min-height: 44px;
     }
+
+    .dynamic-field ul li label:hover {
+        border-color: #93c5fd !important;
+        background: #f0f7ff !important;
+    }
+
     .dynamic-field ul li input[type="checkbox"] {
-        width: 1.1em !important;
-        height: 1.1em !important;
-        min-width: 1.1em;
-        margin: 0.1em 0 0 0 !important;
+        width: 1.15em !important;
+        height: 1.15em !important;
+        min-width: 1.15em;
+        margin: 0 !important;
         flex-shrink: 0;
         cursor: pointer;
+        accent-color: #2563eb;
     }
+
+    /* Estado seleccionado: resalta toda la tarjeta */
+    .dynamic-field ul li:has(input[type="checkbox"]:checked) label {
+        background: #eff6ff !important;
+        border-color: #3b82f6 !important;
+        color: #1d4ed8 !important;
+        box-shadow: 0 2px 8px -2px rgba(59,130,246,0.35);
+    }
+
+    /* Scrollbar más discreto */
+    .dynamic-field ul::-webkit-scrollbar { width: 6px; }
+    .dynamic-field ul::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 </style>
 {% endblock %}
 
@@ -98,14 +127,16 @@
                             >
                         </div>
                         {% endif %}
-
+                        
                         {% for field in form %}
-                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' %}12{% else %}6{% endif %} dynamic-field">
+                            {% with es_multiple=field.field.widget.allow_multiple_selected %}
+                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' or es_multiple %}12{% else %}6{% endif %} dynamic-field">
                                 <label class="form-label fw-bold text-muted small text-uppercase mb-2">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
                                 {{ field }}
                                 {% if field.help_text %}<small class="text-muted d-block mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>{{ field.help_text }}</small>{% endif %}
                                 {% if field.errors %}<div class="text-danger small mt-1 fw-bold"><i class="bi bi-exclamation-circle me-1"></i>{{ field.errors|striptags }}</div>{% endif %}
                             </div>
+                            {% endwith %}
                         {% endfor %}
                     </div>
                     
