@@ -127,6 +127,7 @@
             border-color .2s ease,
             box-shadow .2s ease,
             background .2s ease;
+        box-sizing: border-box;
     }
 
     .dynamic-field input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -172,18 +173,19 @@
     .module-field {
         grid-column: 1 / -1;
         width: 100%;
-        padding: 1.35rem;
+        padding: 1.5rem;
         border: 1px solid #e2e8f0;
         border-radius: 18px;
         background: #f8fafc;
+        box-sizing: border-box;
     }
 
     .module-field-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
         gap: 1rem;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
     }
 
     .module-field-title {
@@ -196,14 +198,14 @@
     }
 
     .module-field-subtitle {
-        margin: .25rem 0 0;
+        margin: .3rem 0 0;
         color: #64748b;
         font-size: .78rem;
     }
 
     .module-count {
         flex-shrink: 0;
-        padding: .4rem .7rem;
+        padding: .45rem .75rem;
         border-radius: 999px;
         background: #eff6ff;
         color: #2563eb;
@@ -212,43 +214,63 @@
         border: 1px solid #dbeafe;
     }
 
-    .module-field > ul {
+    /* Contenedor real del widget Django */
+    .module-options {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* CheckboxSelectMultiple de Django genera un div interno */
+    .module-options > div {
         display: grid !important;
         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
         gap: .75rem !important;
+
         width: 100%;
-        max-height: 340px;
+        max-height: 300px;
         overflow-y: auto;
         overflow-x: hidden;
+
         margin: 0 !important;
         padding: .25rem !important;
-        list-style: none !important;
+
+        box-sizing: border-box;
     }
 
-    .module-field > ul li {
+    /* Cada opción */
+    .module-options > div > div {
         min-width: 0;
+        width: 100%;
         margin: 0 !important;
         padding: 0 !important;
-        list-style: none !important;
+        box-sizing: border-box;
     }
 
-    .module-field > ul li label {
+    /* Tarjeta individual */
+    .module-options label {
         display: flex !important;
         align-items: center !important;
+
         width: 100%;
         min-height: 54px;
-        gap: .75rem;
+
         margin: 0 !important;
         padding: .8rem .9rem !important;
+
+        box-sizing: border-box;
+
         border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
+
         background: #ffffff !important;
         color: #475569 !important;
+
         font-size: .87rem !important;
         font-weight: 700 !important;
         line-height: 1.3;
+
         cursor: pointer;
-        box-sizing: border-box;
+
         transition:
             border-color .18s ease,
             background .18s ease,
@@ -256,47 +278,62 @@
             transform .18s ease;
     }
 
-    .module-field > ul li label:hover {
+    .module-options label:hover {
         border-color: #93c5fd !important;
         background: #f8fbff !important;
+
         transform: translateY(-1px);
-        box-shadow: 0 5px 14px rgba(37,99,235,.07);
+
+        box-shadow:
+            0 5px 14px rgba(37, 99, 235, .07);
     }
 
-    .module-field > ul li input[type="checkbox"] {
+    /* Checkbox */
+    .module-options input[type="checkbox"] {
         flex: 0 0 auto;
+
         width: 19px !important;
         height: 19px !important;
         min-width: 19px !important;
-        margin: 0 !important;
+
+        margin: 0 .7rem 0 0 !important;
         padding: 0 !important;
+
         accent-color: #2563eb;
+
         cursor: pointer;
     }
 
-    .module-field > ul li:has(input[type="checkbox"]:checked) label {
+    .module-options input[type="checkbox"]:checked {
+        accent-color: #2563eb;
+    }
+
+    /* Tarjeta seleccionada */
+    .module-options label:has(input[type="checkbox"]:checked) {
         border-color: #60a5fa !important;
         background: #eff6ff !important;
         color: #1d4ed8 !important;
+
         box-shadow:
-            0 5px 16px rgba(37,99,235,.10),
-            inset 0 0 0 1px rgba(59,130,246,.08);
+            0 5px 16px rgba(37, 99, 235, .10),
+            inset 0 0 0 1px rgba(59, 130, 246, .08);
     }
 
-    .module-field > ul::-webkit-scrollbar {
+    /* Scroll */
+    .module-options > div::-webkit-scrollbar {
         width: 7px;
     }
 
-    .module-field > ul::-webkit-scrollbar-track {
+    .module-options > div::-webkit-scrollbar-track {
         background: transparent;
     }
 
-    .module-field > ul::-webkit-scrollbar-thumb {
+    .module-options > div::-webkit-scrollbar-thumb {
         background: #cbd5e1;
         border-radius: 999px;
     }
 
-    .module-field > ul::-webkit-scrollbar-thumb:hover {
+    .module-options > div::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
     }
 
@@ -344,6 +381,7 @@
         font-weight: 800;
         border: 1px solid #e2e8f0;
         transition: all .2s ease;
+        cursor: pointer;
     }
 
     .cancel-button {
@@ -377,12 +415,14 @@
        ========================================================= */
 
     @media (max-width: 900px) {
-        .module-field > ul {
+
+        .module-options > div {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         }
     }
 
     @media (max-width: 767px) {
+
         .form-page {
             padding: 1.5rem .75rem 3rem;
         }
@@ -408,7 +448,7 @@
             padding: 1rem;
         }
 
-        .module-field > ul {
+        .module-options > div {
             grid-template-columns: 1fr !important;
         }
 
@@ -429,46 +469,71 @@
 </style>
 {% endblock %}
 
+
 {% block content %}
+
 <div class="container-fluid form-page">
+
     <div class="form-wrapper">
 
-        <a href="javascript:history.back()" class="back-button">
+        <!-- Botón volver -->
+        <a
+            href="javascript:history.back()"
+            class="back-button"
+        >
             <i class="bi bi-arrow-left"></i>
             Volver
         </a>
 
+
+        <!-- Tarjeta principal -->
         <div class="form-card">
 
+            <!-- Encabezado -->
             <div class="form-header">
+
                 <h2 class="fw-bolder mb-1">
                     {{ titulo }}
                 </h2>
+
                 <p class="mb-0 opacity-75">
                     Completa los datos requeridos para registrar la información en el sistema.
                 </p>
+
             </div>
 
+
+            <!-- Formulario -->
             <form
                 method="POST"
                 enctype="multipart/form-data"
                 novalidate
                 id="genericForm"
             >
+
                 {% csrf_token %}
 
                 <div class="form-body">
 
                     <div class="form-grid">
 
+
+                        <!-- =================================================
+                             CONTRASEÑA PARA USUARIOS
+                             ================================================= -->
+
                         {% if es_modelo_user %}
+
                         <div class="dynamic-field password-field">
 
                             <label class="field-label">
+
                                 Contraseña
+
                                 {% if es_creacion %}
                                     <span class="required">*</span>
                                 {% endif %}
+
                             </label>
 
                             <input
@@ -476,21 +541,40 @@
                                 name="password"
                                 autocomplete="new-password"
                                 class="form-control"
-                                {% if es_creacion %}required{% endif %}
+                                {% if es_creacion %}
+                                    required
+                                {% endif %}
                             >
 
                             {% if not es_creacion %}
+
                             <div class="field-help">
+
                                 <i class="bi bi-info-circle"></i>
-                                <span>Deja este campo vacío para conservar la contraseña actual.</span>
+
+                                <span>
+                                    Deja este campo vacío para conservar la contraseña actual.
+                                </span>
+
                             </div>
+
                             {% endif %}
 
                         </div>
+
                         {% endif %}
 
 
+                        <!-- =================================================
+                             CAMPOS DEL FORMULARIO
+                             ================================================= -->
+
                         {% for field in form %}
+
+
+                            <!-- =============================================
+                                 SELECTOR DE MÓDULOS
+                                 ============================================= -->
 
                             {% if field.widget_type == 'checkboxselectmultiple' %}
 
@@ -499,86 +583,154 @@
                                 <div class="module-field-header">
 
                                     <div>
+
                                         <h3 class="module-field-title">
+
                                             {{ field.label }}
+
                                             {% if field.field.required %}
-                                                <span style="color:#ef4444;">*</span>
+                                                <span style="color:#ef4444;">
+                                                    *
+                                                </span>
                                             {% endif %}
+
                                         </h3>
 
                                         <p class="module-field-subtitle">
                                             Selecciona los módulos que estarán disponibles para este registro.
                                         </p>
+
                                     </div>
 
+
                                     <span class="module-count">
+
                                         <i class="bi bi-grid-3x3-gap me-1"></i>
+
                                         Módulos
+
                                     </span>
 
                                 </div>
 
-                                {{ field }}
+
+                                <!--
+                                    IMPORTANTE:
+                                    Este contenedor permite controlar
+                                    correctamente el HTML generado por
+                                    CheckboxSelectMultiple de Django.
+                                -->
+
+                                <div class="module-options">
+
+                                    {{ field }}
+
+                                </div>
+
 
                                 {% if field.help_text %}
+
                                 <div class="field-help">
+
                                     <i class="bi bi-info-circle"></i>
-                                    <span>{{ field.help_text }}</span>
+
+                                    <span>
+                                        {{ field.help_text }}
+                                    </span>
+
                                 </div>
+
                                 {% endif %}
 
+
                                 {% if field.errors %}
+
                                 <div class="field-error">
+
                                     <i class="bi bi-exclamation-circle me-1"></i>
+
                                     {{ field.errors|striptags }}
+
                                 </div>
+
                                 {% endif %}
 
                             </div>
 
+
+                            <!-- =============================================
+                                 CAMPOS NORMALES
+                                 ============================================= -->
+
                             {% else %}
 
-                            <div class="dynamic-field
+                            <div
+                                class="dynamic-field
                                 {% if field.name == 'descripcion' %}
                                     full-width
-                                {% endif %}
-                            ">
+                                {% endif %}"
+                            >
 
                                 <label class="field-label">
+
                                     {{ field.label }}
+
                                     {% if field.field.required %}
-                                        <span class="required">*</span>
+
+                                        <span class="required">
+                                            *
+                                        </span>
+
                                     {% endif %}
+
                                 </label>
+
 
                                 {{ field }}
 
+
                                 {% if field.help_text %}
+
                                 <div class="field-help">
+
                                     <i class="bi bi-info-circle"></i>
-                                    <span>{{ field.help_text }}</span>
+
+                                    <span>
+                                        {{ field.help_text }}
+                                    </span>
+
                                 </div>
+
                                 {% endif %}
 
+
                                 {% if field.errors %}
+
                                 <div class="field-error">
+
                                     <i class="bi bi-exclamation-circle me-1"></i>
+
                                     {{ field.errors|striptags }}
+
                                 </div>
+
                                 {% endif %}
 
                             </div>
 
                             {% endif %}
 
+
                         {% endfor %}
 
                     </div>
 
 
+                    <!-- Separador -->
                     <div class="form-divider"></div>
 
 
+                    <!-- Botones -->
                     <div class="form-actions">
 
                         <button
@@ -589,12 +741,16 @@
                             Cancelar
                         </button>
 
+
                         <button
                             type="submit"
                             class="save-button"
                         >
+
                             <i class="bi bi-check2-circle me-2"></i>
+
                             Guardar Registro
+
                         </button>
 
                     </div>
@@ -606,11 +762,16 @@
         </div>
 
     </div>
+
 </div>
+
 {% endblock %}
 
+
 {% block extra_js %}
+
 <script>
+
 document.addEventListener('DOMContentLoaded', function () {
 
     const form = document.getElementById('genericForm');
@@ -618,6 +779,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!form) {
         return;
     }
+
+
+    /* =========================================================
+       VALIDACIÓN DEL FORMULARIO
+       ========================================================= */
 
     form.addEventListener('submit', function (e) {
 
@@ -628,51 +794,69 @@ document.addEventListener('DOMContentLoaded', function () {
 
             let primerError = null;
 
+
             Array.from(this.elements).forEach(function (input) {
 
                 if (!input.checkValidity()) {
 
                     input.classList.add('is-invalid');
 
+
                     if (!primerError) {
                         primerError = input;
                     }
 
+
                     input.addEventListener(
                         'input',
                         function () {
+
                             if (this.checkValidity()) {
+
                                 this.classList.remove('is-invalid');
+
                             }
+
                         },
-                        { once: true }
+                        {
+                            once: true
+                        }
                     );
+
                 }
 
             });
 
-            if (
-                typeof showDjangoToast === 'function'
-            ) {
+
+            if (typeof showDjangoToast === 'function') {
+
                 showDjangoToast(
                     'Por favor, completa correctamente todos los campos obligatorios marcados en rojo.',
                     'warning'
                 );
+
             }
+
 
             if (primerError) {
+
                 primerError.focus();
+
             }
+
         }
+
     });
 
-    /*
-     * Actualiza visualmente las tarjetas de módulos
-     * sin depender únicamente de :has().
-     */
+
+    /* =========================================================
+       ESTADO VISUAL DE LOS MÓDULOS
+       ========================================================= */
+
     const moduleCheckboxes = document.querySelectorAll(
-        '.module-field input[type="checkbox"]'
+        '.module-options input[type="checkbox"]'
     );
+
 
     moduleCheckboxes.forEach(function (checkbox) {
 
@@ -684,16 +868,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
+
             if (checkbox.checked) {
+
                 label.classList.add('module-selected');
+
             } else {
+
                 label.classList.remove('module-selected');
+
             }
+
         }
-        checkbox.addEventListener('change', updateModuleCard);
+
+
+        checkbox.addEventListener(
+            'change',
+            updateModuleCard
+        );
+
+
         updateModuleCard();
+
     });
 
 });
+
 </script>
+
 {% endblock %}
