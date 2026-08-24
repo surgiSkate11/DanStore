@@ -18,6 +18,41 @@
         color: white;
     }
     .dynamic-field label { letter-spacing: 0.5px; }
+
+    /* Lista de checkboxes (campos ManyToMany como Módulos) */
+    .dynamic-field ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 0.5rem 1rem;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+    .dynamic-field ul li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .dynamic-field ul li:last-child { border-bottom: none; }
+    .dynamic-field ul li label {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: #374151;
+        letter-spacing: normal;
+        margin: 0;
+    }
+    .dynamic-field ul li input[type="checkbox"] {
+        width: 1.15em;
+        height: 1.15em;
+        margin: 0;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
