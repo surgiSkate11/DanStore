@@ -4,187 +4,696 @@
 
 {% block extra_css %}
 <style>
-    body { background-color: #f8fafc; }
+    body {
+        background: #f8fafc;
+    }
+
+    .form-page {
+        padding: 3rem 1rem 4rem;
+    }
+
+    .form-wrapper {
+        max-width: 980px;
+        margin: 0 auto;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        margin-bottom: 1.25rem;
+        padding: .65rem 1.1rem;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-weight: 700;
+        text-decoration: none;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+        transition: all .2s ease;
+    }
+
+    .back-button:hover {
+        color: #2563eb;
+        border-color: #bfdbfe;
+        transform: translateY(-1px);
+    }
+
     .form-card {
         background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 24px;
-        box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
-        border: 1px solid rgba(226,232,240,0.8);
         overflow: hidden;
+        box-shadow:
+            0 20px 50px rgba(15, 23, 42, .07),
+            0 4px 12px rgba(15, 23, 42, .03);
     }
+
     .form-header {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        position: relative;
+        overflow: hidden;
+        padding: 2.5rem 2.75rem;
+        color: #ffffff;
+        background: linear-gradient(
+            135deg,
+            #2563eb 0%,
+            #1d4ed8 55%,
+            #1e40af 100%
+        );
+    }
+
+    .form-header::after {
+        content: "";
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        right: -100px;
+        top: -150px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.08);
+        pointer-events: none;
+    }
+
+    .form-header h2,
+    .form-header p {
+        position: relative;
+        z-index: 1;
+    }
+
+    .form-header h2 {
+        font-size: 1.65rem;
+        letter-spacing: -.5px;
+    }
+
+    .form-header p {
+        font-size: .95rem;
+    }
+
+    .form-body {
         padding: 2.5rem;
-        color: white;
     }
-    .dynamic-field label { letter-spacing: 0.5px; }
 
-    /* ===== Selector de Módulos (checkboxes ManyToMany) ===== */
-    .dynamic-field ul {
-        list-style: none !important;
+    .dynamic-field {
+        min-width: 0;
+    }
+
+    .field-label {
+        display: block;
+        margin-bottom: .55rem;
+        color: #475569;
+        font-size: .74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+    }
+
+    .field-label .required {
+        color: #ef4444;
+        margin-left: .2rem;
+    }
+
+    .dynamic-field input:not([type="checkbox"]):not([type="radio"]),
+    .dynamic-field select,
+    .dynamic-field textarea {
+        width: 100%;
+        min-height: 46px;
+        border: 1px solid #dbe3ee;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #1e293b;
+        padding: .7rem .9rem;
+        box-shadow: 0 2px 5px rgba(15,23,42,.025);
+        transition:
+            border-color .2s ease,
+            box-shadow .2s ease,
+            background .2s ease;
+    }
+
+    .dynamic-field input:not([type="checkbox"]):not([type="radio"]):focus,
+    .dynamic-field select:focus,
+    .dynamic-field textarea:focus {
+        outline: none;
+        border-color: #60a5fa;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(59,130,246,.10);
+    }
+
+    .dynamic-field textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .field-help {
+        display: flex;
+        align-items: flex-start;
+        gap: .35rem;
+        margin-top: .5rem;
+        color: #64748b;
+        font-size: .76rem;
+        line-height: 1.45;
+    }
+
+    .field-help i {
+        margin-top: 2px;
+        color: #94a3b8;
+    }
+
+    .field-error {
+        margin-top: .45rem;
+        color: #dc2626;
+        font-size: .78rem;
+        font-weight: 700;
+    }
+
+    /* =========================================================
+       SELECTOR DE MÓDULOS
+       ========================================================= */
+
+    .module-field {
+        grid-column: 1 / -1;
+        width: 100%;
+        padding: 1.35rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        background: #f8fafc;
+    }
+
+    .module-field-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .module-field-title {
+        margin: 0;
+        color: #1e293b;
+        font-size: .9rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    .module-field-subtitle {
+        margin: .25rem 0 0;
+        color: #64748b;
+        font-size: .78rem;
+    }
+
+    .module-count {
+        flex-shrink: 0;
+        padding: .4rem .7rem;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: .72rem;
+        font-weight: 800;
+        border: 1px solid #dbeafe;
+    }
+
+    .module-field > ul {
         display: grid !important;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-        gap: 0.65rem !important;
-        padding: 1rem !important;
-        margin: 0.5rem 0 0 0 !important;
-        background: #f8fafc !important;
-        border: 1px solid #e5e7eb !important;
-        border-radius: 14px !important;
-        max-height: 300px;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: .75rem !important;
+        width: 100%;
+        max-height: 340px;
         overflow-y: auto;
-    }
-
-    .dynamic-field ul li {
-        padding: 0 !important;
+        overflow-x: hidden;
         margin: 0 !important;
-        border: none !important;
+        padding: .25rem !important;
         list-style: none !important;
     }
 
-    .dynamic-field ul li label {
+    .module-field > ul li {
+        min-width: 0;
+        margin: 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+    }
+
+    .module-field > ul li label {
         display: flex !important;
         align-items: center !important;
-        gap: 0.6rem !important;
-        cursor: pointer;
-        font-weight: 600 !important;
-        font-size: 0.88rem !important;
-        color: #475569 !important;
-        letter-spacing: normal !important;
+        width: 100%;
+        min-height: 54px;
+        gap: .75rem;
         margin: 0 !important;
-        padding: 0.7rem 0.85rem !important;
+        padding: .8rem .9rem !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
         background: #ffffff !important;
-        border: 1.5px solid #e2e8f0 !important;
-        border-radius: 10px !important;
+        color: #475569 !important;
+        font-size: .87rem !important;
+        font-weight: 700 !important;
         line-height: 1.3;
-        transition: all 0.15s ease-in-out;
-        min-height: 44px;
-    }
-
-    .dynamic-field ul li label:hover {
-        border-color: #93c5fd !important;
-        background: #f0f7ff !important;
-    }
-
-    .dynamic-field ul li input[type="checkbox"] {
-        width: 1.15em !important;
-        height: 1.15em !important;
-        min-width: 1.15em;
-        margin: 0 !important;
-        flex-shrink: 0;
         cursor: pointer;
+        box-sizing: border-box;
+        transition:
+            border-color .18s ease,
+            background .18s ease,
+            box-shadow .18s ease,
+            transform .18s ease;
+    }
+
+    .module-field > ul li label:hover {
+        border-color: #93c5fd !important;
+        background: #f8fbff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 5px 14px rgba(37,99,235,.07);
+    }
+
+    .module-field > ul li input[type="checkbox"] {
+        flex: 0 0 auto;
+        width: 19px !important;
+        height: 19px !important;
+        min-width: 19px !important;
+        margin: 0 !important;
+        padding: 0 !important;
         accent-color: #2563eb;
+        cursor: pointer;
     }
 
-    /* Estado seleccionado: resalta toda la tarjeta */
-    .dynamic-field ul li:has(input[type="checkbox"]:checked) label {
+    .module-field > ul li:has(input[type="checkbox"]:checked) label {
+        border-color: #60a5fa !important;
         background: #eff6ff !important;
-        border-color: #3b82f6 !important;
         color: #1d4ed8 !important;
-        box-shadow: 0 2px 8px -2px rgba(59,130,246,0.35);
+        box-shadow:
+            0 5px 16px rgba(37,99,235,.10),
+            inset 0 0 0 1px rgba(59,130,246,.08);
     }
 
-    .dynamic-field ul::-webkit-scrollbar { width: 6px; }
-    .dynamic-field ul::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .module-field > ul::-webkit-scrollbar {
+        width: 7px;
+    }
+
+    .module-field > ul::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .module-field > ul::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px;
+    }
+
+    .module-field > ul::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* =========================================================
+       CAMPOS NORMALES
+       ========================================================= */
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .form-grid .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .password-field {
+        grid-column: span 1;
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .form-divider {
+        height: 1px;
+        margin: 2.5rem 0 1.75rem;
+        background: #e2e8f0;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: .75rem;
+    }
+
+    .cancel-button,
+    .save-button {
+        min-height: 46px;
+        padding: .7rem 1.35rem;
+        border-radius: 12px;
+        font-weight: 800;
+        border: 1px solid #e2e8f0;
+        transition: all .2s ease;
+    }
+
+    .cancel-button {
+        background: #ffffff;
+        color: #475569;
+    }
+
+    .cancel-button:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .save-button {
+        padding-left: 1.6rem;
+        padding-right: 1.6rem;
+        color: #ffffff;
+        background: #2563eb;
+        border-color: #2563eb;
+        box-shadow: 0 6px 14px rgba(37,99,235,.20);
+    }
+
+    .save-button:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 9px 18px rgba(37,99,235,.25);
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 900px) {
+        .module-field > ul {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .form-page {
+            padding: 1.5rem .75rem 3rem;
+        }
+
+        .form-header {
+            padding: 2rem 1.5rem;
+        }
+
+        .form-body {
+            padding: 1.5rem;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .password-field,
+        .form-grid .full-width {
+            grid-column: 1;
+        }
+
+        .module-field {
+            padding: 1rem;
+        }
+
+        .module-field > ul {
+            grid-template-columns: 1fr !important;
+        }
+
+        .module-field-header {
+            align-items: flex-start;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .cancel-button,
+        .save-button {
+            width: 100%;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-xl-7">
+<div class="container-fluid form-page">
+    <div class="form-wrapper">
 
-            <!-- Botón de regreso -->
-            <a href="javascript:history.back()" class="btn btn-light bg-white border shadow-sm rounded-pill fw-bold text-secondary mb-4 px-4 py-2 d-inline-flex align-items-center">
-                <i class="bi bi-arrow-left fs-5 me-2"></i> Volver
-            </a>
+        <a href="javascript:history.back()" class="back-button">
+            <i class="bi bi-arrow-left"></i>
+            Volver
+        </a>
 
-            <div class="form-card">
-                <div class="form-header">
-                    <h2 class="fw-bolder mb-1" style="letter-spacing: -0.5px;">{{ titulo }}</h2>
-                    <p class="mb-0 opacity-75">Completa los datos requeridos para registrar la información en el sistema.</p>
-                </div>
+        <div class="form-card">
 
-                <form method="POST" enctype="multipart/form-data" class="p-4 p-md-5" novalidate id="genericForm">
-                    {% csrf_token %}
-                    <div class="row g-4">
+            <div class="form-header">
+                <h2 class="fw-bolder mb-1">
+                    {{ titulo }}
+                </h2>
+                <p class="mb-0 opacity-75">
+                    Completa los datos requeridos para registrar la información en el sistema.
+                </p>
+            </div>
+
+            <form
+                method="POST"
+                enctype="multipart/form-data"
+                novalidate
+                id="genericForm"
+            >
+                {% csrf_token %}
+
+                <div class="form-body">
+
+                    <div class="form-grid">
 
                         {% if es_modelo_user %}
-                        <!-- Campo de contraseña especial: no viene del ModelForm porque
-                             necesita pasar por set_password() en la vista, nunca guardarse tal cual. -->
-                        <div class="col-md-6 dynamic-field">
-                            <label class="form-label fw-bold text-muted small text-uppercase mb-2">
+                        <div class="dynamic-field password-field">
+
+                            <label class="field-label">
                                 Contraseña
-                                {% if es_creacion %}<span class="text-danger">*</span>{% else %}<small class="text-muted fw-normal text-lowercase">(dejar en blanco para no cambiarla)</small>{% endif %}
+                                {% if es_creacion %}
+                                    <span class="required">*</span>
+                                {% endif %}
                             </label>
+
                             <input
                                 type="password"
                                 name="password"
                                 autocomplete="new-password"
-                                class="form-control form-control-lg bg-light border-0 shadow-sm"
-                                style="border-radius: 12px;"
+                                class="form-control"
                                 {% if es_creacion %}required{% endif %}
                             >
+
+                            {% if not es_creacion %}
+                            <div class="field-help">
+                                <i class="bi bi-info-circle"></i>
+                                <span>Deja este campo vacío para conservar la contraseña actual.</span>
+                            </div>
+                            {% endif %}
+
                         </div>
                         {% endif %}
 
+
                         {% for field in form %}
-                            {% with es_multiple=field.field.widget.allow_multiple_selected %}
-                            <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' or es_multiple %}12{% else %}6{% endif %} dynamic-field">
-                                <label class="form-label fw-bold text-muted small text-uppercase mb-2">{{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}</label>
+
+                            {% if field.widget_type == 'checkboxselectmultiple' %}
+
+                            <div class="module-field">
+
+                                <div class="module-field-header">
+
+                                    <div>
+                                        <h3 class="module-field-title">
+                                            {{ field.label }}
+                                            {% if field.field.required %}
+                                                <span style="color:#ef4444;">*</span>
+                                            {% endif %}
+                                        </h3>
+
+                                        <p class="module-field-subtitle">
+                                            Selecciona los módulos que estarán disponibles para este registro.
+                                        </p>
+                                    </div>
+
+                                    <span class="module-count">
+                                        <i class="bi bi-grid-3x3-gap me-1"></i>
+                                        Módulos
+                                    </span>
+
+                                </div>
+
                                 {{ field }}
-                                {% if field.help_text %}<small class="text-muted d-block mt-2" style="font-size: 0.75rem;"><i class="bi bi-info-circle me-1"></i>{{ field.help_text }}</small>{% endif %}
-                                {% if field.errors %}<div class="text-danger small mt-1 fw-bold"><i class="bi bi-exclamation-circle me-1"></i>{{ field.errors|striptags }}</div>{% endif %}
+
+                                {% if field.help_text %}
+                                <div class="field-help">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span>{{ field.help_text }}</span>
+                                </div>
+                                {% endif %}
+
+                                {% if field.errors %}
+                                <div class="field-error">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    {{ field.errors|striptags }}
+                                </div>
+                                {% endif %}
+
                             </div>
-                            {% endwith %}
+
+                            {% else %}
+
+                            <div class="dynamic-field
+                                {% if field.name == 'descripcion' %}
+                                    full-width
+                                {% endif %}
+                            ">
+
+                                <label class="field-label">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="required">*</span>
+                                    {% endif %}
+                                </label>
+
+                                {{ field }}
+
+                                {% if field.help_text %}
+                                <div class="field-help">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span>{{ field.help_text }}</span>
+                                </div>
+                                {% endif %}
+
+                                {% if field.errors %}
+                                <div class="field-error">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    {{ field.errors|striptags }}
+                                </div>
+                                {% endif %}
+
+                            </div>
+
+                            {% endif %}
+
                         {% endfor %}
+
                     </div>
 
-                    <hr class="my-5 opacity-10">
 
-                    <div class="d-flex justify-content-end gap-3">
-                        <button type="button" onclick="history.back()" class="btn btn-light px-4 py-2 rounded-pill fw-bold border">Cancelar</button>
-                        <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm"><i class="bi bi-check2-circle me-2"></i>Guardar Registro</button>
+                    <div class="form-divider"></div>
+
+
+                    <div class="form-actions">
+
+                        <button
+                            type="button"
+                            onclick="history.back()"
+                            class="cancel-button"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="save-button"
+                        >
+                            <i class="bi bi-check2-circle me-2"></i>
+                            Guardar Registro
+                        </button>
+
                     </div>
-                </form>
-            </div>
+
+                </div>
+
+            </form>
+
         </div>
+
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+
     const form = document.getElementById('genericForm');
 
-    form.addEventListener('submit', function(e) {
+    if (!form) {
+        return;
+    }
+
+    form.addEventListener('submit', function (e) {
+
         if (!this.checkValidity()) {
+
             e.preventDefault();
             e.stopPropagation();
 
             let primerError = null;
-            Array.from(this.elements).forEach(input => {
+
+            Array.from(this.elements).forEach(function (input) {
+
                 if (!input.checkValidity()) {
+
                     input.classList.add('is-invalid');
-                    input.style.borderColor = '#ef4444';
-                    input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
 
-                    if (!primerError) primerError = input;
+                    if (!primerError) {
+                        primerError = input;
+                    }
 
-                    input.addEventListener('input', function() {
-                        if (this.checkValidity()) {
-                            this.classList.remove('is-invalid');
-                            this.style.borderColor = '';
-                            this.style.boxShadow = '';
-                        }
-                    }, { once: true });
+                    input.addEventListener(
+                        'input',
+                        function () {
+                            if (this.checkValidity()) {
+                                this.classList.remove('is-invalid');
+                            }
+                        },
+                        { once: true }
+                    );
                 }
+
             });
 
-            showDjangoToast('Por favor, completa correctamente todos los campos obligatorios marcados en rojo.', 'warning');
-            if (primerError) primerError.focus();
+            if (
+                typeof showDjangoToast === 'function'
+            ) {
+                showDjangoToast(
+                    'Por favor, completa correctamente todos los campos obligatorios marcados en rojo.',
+                    'warning'
+                );
+            }
+
+            if (primerError) {
+                primerError.focus();
+            }
         }
     });
+
+    /*
+     * Actualiza visualmente las tarjetas de módulos
+     * sin depender únicamente de :has().
+     */
+    const moduleCheckboxes = document.querySelectorAll(
+        '.module-field input[type="checkbox"]'
+    );
+
+    moduleCheckboxes.forEach(function (checkbox) {
+
+        function updateModuleCard() {
+
+            const label = checkbox.closest('label');
+
+            if (!label) {
+                return;
+            }
+
+            if (checkbox.checked) {
+                label.classList.add('module-selected');
+            } else {
+                label.classList.remove('module-selected');
+            }
+        }
+        checkbox.addEventListener('change', updateModuleCard);
+        updateModuleCard();
+    });
+
 });
 </script>
 {% endblock %}
