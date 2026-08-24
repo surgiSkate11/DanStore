@@ -157,6 +157,28 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ============================================================
+    // MARCADOR DE DIAGNÓSTICO — TEMPORAL. Si esto no aparece en
+    // pantalla, este bloque de JS no está corriendo en absoluto
+    // (archivo viejo cacheado en el servidor, CSP bloqueando scripts
+    // inline, o el navegador sirviendo una versión vieja de la página
+    // desde su propio caché). Si SÍ aparece, el script corre bien y
+    // el problema está en que los selectores no encuentran los
+    // elementos esperados — lo cual también vamos a ver acá mismo.
+    var marcador = document.createElement('div');
+    marcador.textContent = 'JS DE DIAGNÓSTICO CORRIENDO — encontrados ' +
+        document.querySelectorAll('.dynamic-field ul li').length + ' <li> de checkbox';
+    marcador.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ef4444;color:white;' +
+        'font-weight:bold;text-align:center;padding:10px;z-index:99999;font-size:14px;';
+    document.body.prepend(marcador);
+    console.log('DIAGNÓSTICO — .dynamic-field encontrados:', document.querySelectorAll('.dynamic-field').length);
+    console.log('DIAGNÓSTICO — .dynamic-field ul encontrados:', document.querySelectorAll('.dynamic-field ul').length);
+    console.log('DIAGNÓSTICO — .dynamic-field ul li encontrados:', document.querySelectorAll('.dynamic-field ul li').length);
+    if (document.querySelectorAll('.dynamic-field ul li').length > 0) {
+        console.log('DIAGNÓSTICO — HTML del primer li:', document.querySelector('.dynamic-field ul li').outerHTML);
+    }
+    // ============================================================
+
     // Blindaje extra: reestructura cualquier lista de checkboxes
     // (CheckboxSelectMultiple de Django) para que el checkbox y su
     // texto queden en línea SIEMPRE, sin depender de que ninguna CSS
