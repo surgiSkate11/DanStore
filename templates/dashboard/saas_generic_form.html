@@ -220,21 +220,43 @@
         box-sizing: border-box;
     }
 
-    /* CheckboxSelectMultiple de Django genera un div interno */
+    .module-options {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        box-sizing: border-box;
+    }
+
     .module-options > div {
         display: grid !important;
         grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
         gap: .75rem !important;
 
-        width: 100%;
-        max-height: 300px;
-        overflow-y: auto;
-        overflow-x: hidden;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 120px !important;
+        max-height: 340px !important;
+
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
 
         margin: 0 !important;
         padding: .25rem !important;
 
-        box-sizing: border-box;
+        box-sizing: border-box !important;
+        align-content: start !important;
+    }
+    .module-options > div > div {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 54px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-sizing: border-box !important;
     }
 
     /* Cada opción */
@@ -415,13 +437,19 @@
        ========================================================= */
 
     @media (max-width: 900px) {
-
         .module-options > div {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            min-height: 120px !important;
         }
     }
 
     @media (max-width: 767px) {
+        
+        .module-options > div {
+            grid-template-columns: 1fr !important;
+            min-height: 100px !important;
+            max-height: 400px !important;
+        }
 
         .form-page {
             padding: 1.5rem .75rem 3rem;
