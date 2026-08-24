@@ -157,8 +157,61 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('genericForm');
-    
+    // Blindaje extra: reestructura cualquier lista de checkboxes
+    // (CheckboxSelectMultiple de Django) para que el checkbox y su
+    // texto queden en línea SIEMPRE, sin depender de que ninguna CSS
+    // externa (Bootstrap, admin, etc.) se comporte como esperamos.
+    // Convierte <li><label><input>Texto</label></li> en un contenedor
+    // con position:relative + estilos inline con !important, inmunes
+    // a cualquier conflicto de especificidad externo.
+    document.querySelectorAll('.dynamic-field ul li').forEach(function (li) {
+        li.style.setProperty('display', 'flex', 'important');
+        li.style.setProperty('align-items', 'flex-start', 'important');
+        li.style.setProperty('gap', '0.65rem', 'important');
+        li.style.setProperty('float', 'none', 'important');
+        li.style.setProperty('height', 'auto', 'important');
+        li.style.setProperty('min-height', '0', 'important');
+        li.style.setProperty('position', 'static', 'important');
+
+        var label = li.querySelector('label');
+        if (label) {
+            label.style.setProperty('display', 'flex', 'important');
+            label.style.setProperty('align-items', 'flex-start', 'important');
+            label.style.setProperty('gap', '0.65rem', 'important');
+            label.style.setProperty('float', 'none', 'important');
+            label.style.setProperty('margin', '0', 'important');
+            label.style.setProperty('width', '100%', 'important');
+        }
+
+        var checkbox = li.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.style.setProperty('float', 'none', 'important');
+            checkbox.style.setProperty('margin', '0.15em 0 0 0', 'important');
+            checkbox.style.setProperty('width', '1.1em', 'important');
+            checkbox.style.setProperty('height', '1.1em', 'important');
+            checkbox.style.setProperty('min-width', '1.1em', 'important');
+            checkbox.style.setProperty('flex-shrink', '0', 'important');
+            checkbox.style.setProperty('position', 'static', 'important');
+        }
+    });
+
+    // Asegura que el contenedor <ul> de módulos ocupe todo el ancho de
+    // su columna y no quede compitiendo por espacio con el campo de al lado.
+    document.querySelectorAll('.dynamic-field ul').forEach(function (ul) {
+        ul.style.setProperty('display', 'block', 'important');
+        ul.style.setProperty('width', '100%', 'important');
+        ul.style.setProperty('float', 'none', 'important');
+        ul.closest('.dynamic-field')?.classList.add('col-12');
+        var col6 = ul.closest('.dynamic-field');
+        if (col6) {
+            col6.classList.remove('col-md-6');
+            col6.classList.add('col-md-12');
+        }
+    });
+});
+
+const form = document.getElementById('genericForm');
+if (form) {
     form.addEventListener('submit', function(e) {
         if (!this.checkValidity()) {
             e.preventDefault();
@@ -187,6 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (primerError) primerError.focus();
         }
     });
-});
+}
 </script>
 {% endblock %}
