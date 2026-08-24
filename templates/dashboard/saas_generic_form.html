@@ -83,7 +83,6 @@
         box-shadow: 0 2px 8px -2px rgba(59,130,246,0.35);
     }
 
-    /* Scrollbar más discreto */
     .dynamic-field ul::-webkit-scrollbar { width: 6px; }
     .dynamic-field ul::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 </style>
@@ -93,7 +92,7 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-8 col-xl-7">
-            
+
             <!-- Botón de regreso -->
             <a href="javascript:history.back()" class="btn btn-light bg-white border shadow-sm rounded-pill fw-bold text-secondary mb-4 px-4 py-2 d-inline-flex align-items-center">
                 <i class="bi bi-arrow-left fs-5 me-2"></i> Volver
@@ -104,7 +103,7 @@
                     <h2 class="fw-bolder mb-1" style="letter-spacing: -0.5px;">{{ titulo }}</h2>
                     <p class="mb-0 opacity-75">Completa los datos requeridos para registrar la información en el sistema.</p>
                 </div>
-                
+
                 <form method="POST" enctype="multipart/form-data" class="p-4 p-md-5" novalidate id="genericForm">
                     {% csrf_token %}
                     <div class="row g-4">
@@ -127,7 +126,7 @@
                             >
                         </div>
                         {% endif %}
-                        
+
                         {% for field in form %}
                             {% with es_multiple=field.field.widget.allow_multiple_selected %}
                             <div class="col-md-{% if field.name == 'descripcion' or field.widget_type == 'selectmultiple' or es_multiple %}12{% else %}6{% endif %} dynamic-field">
@@ -139,9 +138,9 @@
                             {% endwith %}
                         {% endfor %}
                     </div>
-                    
+
                     <hr class="my-5 opacity-10">
-                    
+
                     <div class="d-flex justify-content-end gap-3">
                         <button type="button" onclick="history.back()" class="btn btn-light px-4 py-2 rounded-pill fw-bold border">Cancelar</button>
                         <button type="submit" class="btn btn-primary px-5 py-2 rounded-pill fw-bold shadow-sm"><i class="bi bi-check2-circle me-2"></i>Guardar Registro</button>
@@ -157,21 +156,21 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('genericForm');
-    
+
     form.addEventListener('submit', function(e) {
         if (!this.checkValidity()) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             let primerError = null;
             Array.from(this.elements).forEach(input => {
                 if (!input.checkValidity()) {
                     input.classList.add('is-invalid');
                     input.style.borderColor = '#ef4444';
                     input.style.boxShadow = '0 0 0 0.2rem rgba(239, 68, 68, 0.25)';
-                    
+
                     if (!primerError) primerError = input;
-                    
+
                     input.addEventListener('input', function() {
                         if (this.checkValidity()) {
                             this.classList.remove('is-invalid');
@@ -181,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, { once: true });
                 }
             });
-            
+
             showDjangoToast('Por favor, completa correctamente todos los campos obligatorios marcados en rojo.', 'warning');
             if (primerError) primerError.focus();
         }
