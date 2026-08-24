@@ -174,9 +174,16 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DIAGNÓSTICO — .dynamic-field encontrados:', document.querySelectorAll('.dynamic-field').length);
     console.log('DIAGNÓSTICO — .dynamic-field ul encontrados:', document.querySelectorAll('.dynamic-field ul').length);
     console.log('DIAGNÓSTICO — .dynamic-field ul li encontrados:', document.querySelectorAll('.dynamic-field ul li').length);
-    if (document.querySelectorAll('.dynamic-field ul li').length > 0) {
-        console.log('DIAGNÓSTICO — HTML del primer li:', document.querySelector('.dynamic-field ul li').outerHTML);
-    }
+
+    // Buscamos el .dynamic-field que tiene los checkboxes (el de Módulos)
+    // y volcamos su HTML real completo, sea cual sea su estructura.
+    document.querySelectorAll('.dynamic-field').forEach(function (campo, i) {
+        var checkboxes = campo.querySelectorAll('input[type="checkbox"]');
+        if (checkboxes.length > 0) {
+            console.log('DIAGNÓSTICO — .dynamic-field #' + i + ' tiene ' + checkboxes.length + ' checkboxes. HTML completo:');
+            console.log(campo.innerHTML);
+        }
+    });
     // ============================================================
 
     // Blindaje extra: reestructura cualquier lista de checkboxes
