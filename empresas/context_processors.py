@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from usuarios.utils import es_superadmin
 
 
 def empresa_actual(request):
@@ -16,10 +17,12 @@ def empresa_actual(request):
     elif hasattr(request, 'user') and hasattr(request.user, 'profile'):
         context['rol_usuario'] = request.user.profile.rol
 
-    # Fuente de verdad robusta: is_superuser es un booleano nativo de Django,
-    # no depende de que el campo de texto 'rol' esté sincronizado.
+    # Fuente única de verdad: usa el mismo helper que las vistas saas_*,
+    # así el navbar y los permisos de acceso nunca se desincronizan entre
+    # sí (antes esto solo miraba is_superuser, mientras las vistas miraban
+    # el campo de texto 'rol' — podían quedar en desacuerdo).
     if hasattr(request, 'user') and request.user.is_authenticated:
-        context['es_superadmin'] = request.user.is_superuser
+        context['es_superadmin'] = es_superadmin(request.user)
 
     # OPTIMIZACIÓN EXTREMA: Leer el nombre de la app desde la memoria RAM (Caché)
     # en lugar de consultar la base de datos en cada recarga de página

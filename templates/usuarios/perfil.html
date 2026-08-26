@@ -37,7 +37,7 @@
         {% csrf_token %}
         <div class="row g-4">
             <!-- Columna Izquierda: Datos Personales (Visible para todos) -->
-            <div class="col-lg-{% if perfil.rol == 'owner' or perfil.rol == 'superadmin' %}6{% else %}12{% endif %}">
+            <div class="col-lg-{% if perfil.rol == 'owner' %}6{% else %}12{% endif %}">
                 <div class="section-card">
                     <h4 class="fw-bold mb-4" style="color: #1f2937;"><i class="bi bi-person-lines-fill text-primary me-2"></i> Datos Personales</h4>
                     
@@ -71,7 +71,7 @@
             </div>
 
             <!-- Columna Derecha: Datos de la Empresa (SOLO PARA DUEÑOS) -->
-            {% if perfil.rol == 'owner' or perfil.rol == 'superadmin' %}
+            {% if perfil.rol == 'owner' %}
             <div class="col-lg-6">
                 <!-- Datos del Negocio -->
                 <div class="section-card mb-4">
@@ -138,7 +138,7 @@
         </div>
         
         <!-- Botón Guardar Global (Para Dueños) -->
-        {% if perfil.rol == 'owner' or perfil.rol == 'superadmin' %}
+        {% if perfil.rol == 'owner' %}
         <div class="text-end mt-4">
             <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow-sm" style="border-radius: 12px;">
                 <i class="bi bi-check-circle-fill me-2"></i> Guardar Toda la Configuración

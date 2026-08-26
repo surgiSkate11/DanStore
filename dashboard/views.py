@@ -32,11 +32,13 @@ from empresas.mixins import requiere_modulo
 from empresas.models import Empresa, SuscripcionEmpresa, Plan, Ticket, MensajeTicket, ConfiguracionSaaS
 from productos.models import Producto
 from tiendita_project.utils import form_errors_to_messages
-from usuarios.models import AdminActionRequest, ModuloSaaS, RolEmpresa, UserProfile
+from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
+from usuarios.utils import es_superadmin
 from ventas.models import Venta, DetalleVenta
 
-# Identificadores internos de roles (Mejor mantenibilidad)
-ROLE_SUPERADMIN = 'superadmin'
+# Identificadores internos de roles de TENANT (Mejor mantenibilidad).
+# No hay un ROLE_SUPERADMIN acá: is_superuser es la única fuente de
+# verdad para eso — ver usuarios.utils.es_superadmin.
 ROLE_OWNER = 'owner'
 ROLE_EMPLOYEE = 'employee'
 
@@ -174,7 +176,7 @@ def dashboard_router(request):
     if perfil and perfil.rol == ROLE_OWNER and not perfil.onboarding_completado:
         return redirect('onboarding')
         
-    if perfil and perfil.rol == ROLE_SUPERADMIN:
+    if perfil and es_superadmin(usuario):
         return redirect('dashboard_saas')
     elif perfil and perfil.rol in [ROLE_OWNER, ROLE_EMPLOYEE]:
         return redirect('dashboard_tenant')
@@ -188,7 +190,7 @@ def dashboard_router(request):
 @login_required
 def dashboard_saas(request):
     """Dashboard GLOBAL y exclusivo para el dueño del software (SuperAdmin)"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales del sistema.")
         
     # Métricas Globales SaaS
@@ -222,7 +224,7 @@ def dashboard_saas(request):
 @login_required
 def saas_empresas(request):
     """Vista del SuperAdmin para gestionar Inquilinos (Tenants)"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
         
     empresas = Empresa.objects.select_related('suscripcion').prefetch_related('empleados__user').order_by('-fecha_creacion')
@@ -232,7 +234,7 @@ def saas_empresas(request):
 @login_required
 def exportar_empresas_csv(request):
     """Exporta el listado de empresas a CSV para el Super Admin"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
         
     response = HttpResponse(content_type='text/csv; charset=utf-8')
@@ -259,7 +261,7 @@ def exportar_empresas_csv(request):
 @login_required
 def toggle_estado_empresa(request, empresa_id):
     """Suspende o activa una empresa (Tenant)"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN or request.method != 'POST':
+    if not es_superadmin(request.user) or request.method != 'POST':
         raise PermissionDenied("Acción no permitida.")
         
     empresa = get_object_or_404(Empresa, id=empresa_id)
@@ -284,7 +286,7 @@ def toggle_estado_empresa(request, empresa_id):
 @login_required
 def saas_configuracion(request):
     """Vista del SuperAdmin para configuración global del SaaS"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
         
     # Obtener la configuración o crearla si es la primera vez (singleton)
@@ -379,7 +381,7 @@ def saas_configuracion_test_smtp(request):
     if request.method != 'POST':
         return JsonResponse({'ok': False, 'message': 'Método no permitido.'}, status=405)
 
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         return JsonResponse({'ok': False, 'message': 'Acceso exclusivo para administradores globales.'}, status=403)
 
     config, _ = ConfiguracionSaaS.objects.get_or_create(id=1)
@@ -469,7 +471,7 @@ def saas_configuracion_test_smtp(request):
 @login_required
 def saas_tickets(request):
     """Bandeja de entrada (Inbox) de Soporte Técnico para el SuperAdmin"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
         
     ticket_id = request.GET.get('id')
@@ -540,7 +542,7 @@ def saas_tickets(request):
 @login_required
 def saas_control_panel(request):
     """Hub central de la base de datos para crear/editar todos los modelos (CRUD)"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
         
     # Estadísticas para el header del panel
@@ -558,7 +560,7 @@ def saas_control_panel(request):
 @login_required
 def saas_crear_registro(request, app_label, model_name):
     """Fábrica de Formularios: Crea dinámicamente el formulario para CUALQUIER modelo"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
 
     try:
@@ -631,7 +633,7 @@ def saas_crear_registro(request, app_label, model_name):
 @login_required
 def saas_listar_registros(request, app_label, model_name):
     """Fábrica de Vistas: Lista dinámicamente CUALQUIER modelo del sistema"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
 
     try:
@@ -684,7 +686,7 @@ def saas_listar_registros(request, app_label, model_name):
 @login_required
 def saas_editar_registro(request, app_label, model_name, object_id):
     """Fábrica de Edición: Edita cualquier registro existente de manera automática"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
 
     try:
@@ -744,7 +746,7 @@ def saas_editar_registro(request, app_label, model_name, object_id):
 @login_required
 def saas_eliminar_registro(request, app_label, model_name, object_id):
     """Fábrica de Eliminación: Borra dinámicamente un registro"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
 
     try:
@@ -1057,88 +1059,70 @@ def tienda_publica(request, slug):
 
 @login_required
 def saas_equipo(request):
-    """Gestión de administradores globales del sistema (SaaS)"""
-    if getattr(request.user.profile, 'rol', '') != ROLE_SUPERADMIN:
+    """
+    Gestión de administradores globales del sistema (SaaS).
+
+    Sin protocolo de votación: dar de alta o de baja a un administrador
+    es una acción directa. La seguridad de quién puede llegar a esta
+    vista ya la da es_superadmin() (solo superusers entran acá); no hace
+    falta una capa extra de consenso entre pares para una operación que
+    ya está detrás de ese gate.
+    """
+    if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
-        
-    # Evaluación Inteligente: Cierra votaciones expiradas (48h) o ejecuta si hay consenso antes
-    for req_obj in AdminActionRequest.objects.filter(status='pending'):
-        req_obj.check_and_execute()
-        
-    admins = UserProfile.objects.filter(rol=ROLE_SUPERADMIN).select_related('user').order_by('-creado_en')
-    active_requests = AdminActionRequest.objects.filter(status='pending').select_related('target_admin__user', 'requester__user').prefetch_related('votes_approve', 'votes_reject')
-    
+
+    admins = User.objects.filter(is_superuser=True).select_related('profile').order_by('-date_joined')
+
     if request.method == 'POST':
         action = request.POST.get('action', 'crear')
-        
+
         if action == 'crear':
             username = request.POST.get('username')
             email = request.POST.get('email')
             password = request.POST.get('password')
-            
+
             if username and email and password:
                 try:
                     with transaction.atomic():
-                        # 1. Crear el usuario nativo de Django
+                        # 1. Crear el usuario nativo de Django como superusuario.
+                        #    is_superuser=True es lo único que lo convierte en
+                        #    administrador global; el signal crea_perfil_usuario
+                        #    se encarga de darle un perfil SIN rol de tenant.
                         user = User.objects.create_user(username=username, email=email, password=password)
                         user.is_staff = True  # Para que puedan acceder al /admin/ nativo si se requiere
+                        user.is_superuser = True
                         user.save()
-                        
-                        # 2. Obtener o crear su perfil de forma segura
-                        profile, _ = UserProfile.objects.get_or_create(user=user)
-                        profile.rol = ROLE_SUPERADMIN
+
+                        profile = user.profile
                         profile.onboarding_completado = True
-                        profile.save()
-                        
+                        profile.save(update_fields=['onboarding_completado'])
+
                         messages.success(request, f"Administrador {username} añadido exitosamente al Equipo del Sistema.")
-                except Exception as e:
-                    messages.error(request, f"No se pudo crear el administrador: Ya existe un usuario con ese nombre o correo.")
-                    
-        elif action in ['solicitar_suspension', 'solicitar_eliminacion']:
+                except Exception:
+                    messages.error(request, "No se pudo crear el administrador: Ya existe un usuario con ese nombre o correo.")
+
+        elif action == 'eliminar':
             admin_id = request.POST.get('admin_id')
-            target_admin = get_object_or_404(UserProfile, id=admin_id, rol=ROLE_SUPERADMIN)
-            
-            if target_admin.user == request.user:
-                messages.error(request, "Por políticas de seguridad, no puedes realizar esta acción sobre tu propia cuenta.")
-                return redirect('saas_equipo')
-                
-            # Evaluar el consenso: Buscamos a TODOS los otros admins, excluyéndote a ti y al afectado
-            otros_admins = UserProfile.objects.filter(rol=ROLE_SUPERADMIN).exclude(id__in=[target_admin.id, request.user.profile.id])
-            
-            if not otros_admins.exists():
-                messages.warning(request, "Acción denegada: Se requiere al menos un tercer administrador en el sistema para aprobar esta solicitud (Protocolo de Consenso de Dueños).")
+            target = get_object_or_404(User, id=admin_id, is_superuser=True)
+
+            if target == request.user:
+                messages.error(request, "Por políticas de seguridad, no puedes eliminar tu propia cuenta.")
             else:
-                # Verificar que no exista un consenso pendiente para este usuario
-                if AdminActionRequest.objects.filter(target_admin=target_admin, status='pending').exists():
-                    messages.warning(request, "Ya existe una votación en curso para este administrador.")
-                    return redirect('saas_equipo')
-                    
-                accion_txt = "suspender" if action == 'solicitar_suspension' else "eliminar"
-                
-                # Crear la propuesta y agregar el voto "A favor" del creador automáticamente
-                nueva_solicitud = AdminActionRequest.objects.create(target_admin=target_admin, requester=request.user.profile, action_type=action)
-                nueva_solicitud.votes_approve.add(request.user.profile)
-                nueva_solicitud.check_and_execute() # Por si solo existen 2 admins en total
-                
-                messages.success(request, f"Protocolo de Consenso activado: Se ha notificado en el panel al resto de dueños para autorizar '{accion_txt}' a '{target_admin.user.username}'. Tienen 48 horas para votar.")
-                
-        elif action == 'votar_consenso':
-            req_id = request.POST.get('request_id')
-            voto = request.POST.get('voto')
-            req = get_object_or_404(AdminActionRequest, id=req_id, status='pending')
-            
-            if req.target_admin == request.user.profile:
-                messages.error(request, "Seguridad: No puedes votar en tu propio protocolo de consenso.")
-            elif req.votes_approve.filter(id=request.user.profile.id).exists() or req.votes_reject.filter(id=request.user.profile.id).exists():
-                messages.error(request, "Ya has emitido tu voto para esta solicitud.")
+                username = target.username
+                target.delete()
+                messages.success(request, f"Administrador {username} eliminado del Equipo del Sistema.")
+
+        elif action == 'suspender':
+            admin_id = request.POST.get('admin_id')
+            target = get_object_or_404(User, id=admin_id, is_superuser=True)
+
+            if target == request.user:
+                messages.error(request, "Por políticas de seguridad, no puedes suspender tu propia cuenta.")
             else:
-                if voto == 'approve':
-                    req.votes_approve.add(request.user.profile)
-                else:
-                    req.votes_reject.add(request.user.profile)
-                messages.success(request, "Tu voto ha sido registrado correctamente.")
-                req.check_and_execute() # Evaluamos si con este voto se cumple la meta
-                
+                target.is_active = False
+                target.save(update_fields=['is_active'])
+                messages.success(request, f"Administrador {target.username} suspendido correctamente.")
+
         return redirect('saas_equipo')
-        
-    return render(request, 'dashboard/saas_equipo.html', {'admins': admins, 'active_requests': active_requests})
+
+    return render(request, 'dashboard/saas_equipo.html', {'admins': admins})

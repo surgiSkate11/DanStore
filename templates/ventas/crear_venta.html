@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Crear Venta - Tiendita{% endblock %}
+{% block title %}Crear Venta - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -408,18 +408,16 @@
         50% { transform: scale(1.1); }
     }
     
-    /* Productos Grid Mejorado */
+    /* Productos Grid Mejorado (mantiene el auto-fill responsive de arriba;
+       solo se agregan aquí los detalles visuales adicionales) */
     .productos-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
         gap: 1.25rem;
         padding: 1.25rem;
         background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
         border-radius: 12px;
         border: 2px solid #e5e7eb;
-        min-height: 950px;
     }
-    
+
     .producto-seleccionable {
         width: 100%;
         height: fit-content;
@@ -1050,7 +1048,7 @@
                         </div>
                         
                         <!-- Información adicional del cliente (teléfono/dirección) -->
-                        <div id="infoClienteSeleccionado" style="display: none;" class="mt-3 p-3 bg-light rounded" style="border-radius: 10px !important;">
+                        <div id="infoClienteSeleccionado" style="display: none; border-radius: 10px !important;" class="mt-3 p-3 bg-light rounded">
                             <div class="d-flex align-items-start">
                                 <i class="bi bi-info-circle-fill text-primary me-2" style="font-size: 1.2rem;"></i>
                                 <div>
@@ -1241,6 +1239,7 @@
                     </h5>
                     
                     <!-- Tabla de Productos Seleccionados -->
+                    <div class="table-responsive">
                     <table class="factura-tabla">
                         <thead>
                             <tr>
@@ -1265,7 +1264,8 @@
                             </tr>
                         </tbody>
                     </table>
-                    
+                    </div>
+
                     <!-- Resumen de Totales -->
                     <div class="row mt-4">
                         <div class="col-md-6">

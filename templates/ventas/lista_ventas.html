@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Ventas y Facturas - Tiendita{% endblock %}
+{% block title %}Ventas y Facturas - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

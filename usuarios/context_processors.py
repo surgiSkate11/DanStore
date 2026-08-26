@@ -1,4 +1,5 @@
 from usuarios.models import UserProfile
+from usuarios.utils import es_superadmin
 
 
 def vocabulario(request):
@@ -21,8 +22,10 @@ def vocabulario(request):
             contexto['usa_demo_data'] = profile.usa_demo_data
             contexto['rol_usuario'] = profile.rol
 
-            if profile.rol == 'superadmin':
-                # El SuperAdmin NO debe tener acceso a módulos operativos de las tiendas
+            if es_superadmin(request.user):
+                # El SuperAdmin no tiene rol de tenant (profile.rol='') ni
+                # módulos operativos de tienda — es_superadmin() es la única
+                # fuente de verdad, no un valor de texto en profile.rol.
                 contexto['modulos_permitidos'] = set()
                 contexto['permisos'] = {}
             elif profile.rol == 'owner':
@@ -65,7 +68,7 @@ def vocabulario(request):
             contexto['tiene_credentials_google'] = bool(request.empresa.google_oauth_credentials)
         else:
             contexto['tiene_credentials_google'] = False
-            
+
         contexto['iniciar_tour'] = bool(
             contexto.get('rol_usuario') == 'owner'
             and not contexto.get('onboarding_completado', True)

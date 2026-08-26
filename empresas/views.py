@@ -296,7 +296,13 @@ def crear_ticket(request):
             messages.error(request, "El asunto y el mensaje son obligatorios para crear un ticket.")
             return redirect(request.META.get('HTTP_REFERER', 'home'))
 
-        empresa = getattr(request, 'empresa', getattr(request.user.profile, 'empresa', None))
+        # CORRECCIÓN: antes se hacía getattr(request.user.profile, 'empresa', None)
+        # como valor por defecto de un getattr — pero el default se evalúa SIEMPRE,
+        # así que request.user.profile crasheaba de inmediato para un superadmin
+        # (que no tiene UserProfile). Ahora se resuelve el perfil por separado, sin
+        # asumir que existe.
+        perfil_usuario = getattr(request.user, 'profile', None)
+        empresa = getattr(request, 'empresa', None) or getattr(perfil_usuario, 'empresa', None)
 
         if not empresa:
             messages.error(request, "No tienes una empresa asociada para crear tickets.")

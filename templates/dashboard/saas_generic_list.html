@@ -78,10 +78,14 @@
                         {% for valor in reg.fila %}<td>{% if forloop.first %}<span class="fw-bold text-dark">{% endif %}{{ valor|default:"-"|truncatechars:50 }}{% if forloop.first %}</span>{% endif %}</td>{% endfor %}
                         <td class="text-end text-nowrap">
                             <a href="{% url 'saas_editar_registro' app_label model_name reg.id %}" class="btn btn-sm btn-light text-primary shadow-sm border me-1" title="Editar"><i class="bi bi-pencil-square"></i></a>
-                            <form method="POST" action="{% url 'saas_eliminar_registro' app_label model_name reg.id %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.');">
+                            <form method="POST" action="{% url 'saas_eliminar_registro' app_label model_name reg.id %}" id="delete-form-{{ reg.id }}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-light text-danger shadow-sm border" title="Eliminar"><i class="bi bi-trash3-fill"></i></button>
                             </form>
+                            <button type="button" class="btn btn-sm btn-light text-danger shadow-sm border"
+                                    data-bs-toggle="modal" data-bs-target="#deleteModal"
+                                    data-form-id="delete-form-{{ reg.id }}" title="Eliminar">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
                         </td>
                     </tr>
                     {% empty %}
@@ -91,5 +95,40 @@
             </table>
         </div>
     </div>
+
+    <!-- Modal de confirmación de eliminación (reemplaza al confirm() nativo del navegador) -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+          <div class="modal-body text-center p-4">
+            <div class="mb-3" style="font-size: 2.5rem; color: #ef4444;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <h5 class="fw-bold mb-2">¿Eliminar este registro?</h5>
+            <p class="text-muted mb-4">Esta acción no se puede deshacer.</p>
+            <div class="d-flex gap-2 justify-content-center">
+              <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal" style="border-radius: 10px;">Cancelar</button>
+              <button type="button" id="confirmDeleteBtn" class="btn btn-danger px-4 fw-bold" style="border-radius: 10px;">Sí, eliminar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const deleteModal = document.getElementById('deleteModal');
+      let formToSubmit = null;
+
+      deleteModal.addEventListener('show.bs.modal', function (event) {
+          const trigger = event.relatedTarget;
+          formToSubmit = document.getElementById(trigger.getAttribute('data-form-id'));
+      });
+
+      document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+          if (formToSubmit) {
+              formToSubmit.submit();
+          }
+      });
+  });
+</script>
 {% endblock %}

@@ -44,9 +44,14 @@ def cerrar_todas_las_sesiones(user):
 @login_required
 def perfil(request):
     usuario = request.user
-    # Asegurar que el perfil exista
-    perfil, _ = UserProfile.objects.get_or_create(user=usuario)
-    empresa = getattr(request, 'empresa', perfil.empresa)
+
+    # Un superadmin no tiene UserProfile (no es un usuario del dominio
+    # de negocio), así que acá NO se hace get_or_create: eso volvería a
+    # crearle una fila que no le corresponde. Se usa getattr para leer
+    # el perfil solo si existe (será None para un superadmin).
+    perfil = getattr(usuario, 'profile', None)
+
+    empresa = getattr(request, 'empresa', None) or getattr(perfil, 'empresa', None)
 
     # La suscripción de la empresa YA NO se crea acá. Se asigna
     # automáticamente al momento de crear la Empresa (ver la señal
@@ -116,7 +121,8 @@ def perfil(request):
                 usuario.save()
 
                 # 2. Si es DUEÑO, actualizamos los datos de la Empresa y Negocio Operativo
-                if perfil.rol == 'owner':
+                # (perfil es None para un superadmin, por eso el chequeo "perfil and")
+                if perfil and perfil.rol == 'owner':
                     perfil.nombre_negocio = request.POST.get('nombre_negocio', '').strip()
                     perfil.descripcion_negocio = request.POST.get('descripcion_negocio', '').strip()
                     perfil.negocio_tipo = request.POST.get('negocio_tipo', 'otro')
@@ -173,10 +179,13 @@ def verificar_cambio_email(request, token):
 def forzar_cambio_password(request):
     """
     Vista para que los empleados cambien su contraseña temporal obligatoriamente.
+
+    Un superadmin no tiene UserProfile, por lo tanto nunca tiene este
+    flag: se usa getattr para no asumir que el perfil existe.
     """
-    perfil = request.user.profile
-    # Si el usuario no necesita cambiar la contraseña, lo sacamos de aquí.
-    if not perfil.debe_cambiar_password:
+    perfil = getattr(request.user, 'profile', None)
+    # Si no hay perfil (superadmin) o no necesita cambiar la contraseña, lo sacamos de aquí.
+    if not perfil or not perfil.debe_cambiar_password:
         return redirect('dashboard_router')
 
     if request.method == 'POST':
@@ -382,6 +391,9 @@ def onboarding(request):
        Agregar producto, etc.) pueden ser links normales sin lógica extra.
     3. Armar el contexto de forma 100% defensiva: ningún dato faltante,
        módulo inexistente o url no encontrada puede tirar un 500 acá.
+
+    El superadmin se saca de acá ANTES de tocar UserProfile.objects,
+    porque un superadmin no tiene (ni debe tener) fila en UserProfile.
     """
     usuario = request.user
 
@@ -439,9 +451,13 @@ def onboarding(request):
 
 @login_required
 def limpiar_demo(request):
-    """Desactiva el modo demo para el usuario actual"""
-    perfil = request.user.profile
-    if perfil.usa_demo_data:
+    """
+    Desactiva el modo demo para el usuario actual.
+
+    Un superadmin no tiene UserProfile ni datos demo que limpiar.
+    """
+    perfil = getattr(request.user, 'profile', None)
+    if perfil and perfil.usa_demo_data:
         perfil.usa_demo_data = False
         perfil.save()
         messages.success(request, "Modo demostración desactivado correctamente.")
@@ -450,12 +466,16 @@ def limpiar_demo(request):
 
 @login_required
 def cargar_demo(request):
-    """Activa el modo demo y genera algunos datos de prueba básicos"""
+    """
+    Activa el modo demo y genera algunos datos de prueba básicos.
+
+    Un superadmin no tiene UserProfile, así que nunca puede cargar demo.
+    """
     if request.method == 'POST':
-        perfil = request.user.profile
+        perfil = getattr(request.user, 'profile', None)
         empresa = getattr(request, 'empresa', None)
         
-        if not perfil.usa_demo_data and empresa:
+        if perfil and not perfil.usa_demo_data and empresa:
             # Crear una categoría y un par de productos de demostración
             tipo_demo, _ = TipoProducto.objects.get_or_create(nombre="Demo", empresa=empresa)
             

@@ -533,7 +533,7 @@
                                     <h6 class="mb-1 fw-bold text-white" style="letter-spacing: 0.5px; font-size: 0.95rem;">{{ user.get_full_name|default:user.username }}</h6>
                                     <div class="d-flex align-items-center justify-content-center gap-2 mt-2">
                                         <span class="badge bg-white text-primary px-2 py-1" style="font-size: 0.65rem; border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                                            {% if rol_usuario == 'superadmin' %}DUEÑO DEL SOFTWARE{% elif rol_usuario == 'owner' %}DUEÑO DE EMPRESA{% else %}{{ rol_usuario|title }}{% endif %}
+                                            {% if es_superadmin %}DUEÑO DEL SOFTWARE{% elif rol_usuario == 'owner' %}DUEÑO DE EMPRESA{% else %}{{ rol_usuario|title }}{% endif %}
                                         </span>
                                         {% if empresa and not empresa.activa %}
                                         <span class="badge bg-danger px-2 py-1" style="font-size: 0.65rem; border-radius: 20px; box-shadow: 0 0 10px rgba(220, 53, 69, 0.6); border: 1px solid #fecaca;">
@@ -614,7 +614,7 @@
     </div>
     
     <!-- Modal de Soporte Técnico -->
-    {% if rol_usuario != 'superadmin' %}
+    {% if not es_superadmin %}
     <div class="modal fade" id="supportModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">

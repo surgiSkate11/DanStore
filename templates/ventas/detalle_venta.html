@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Factura {{ venta.numero_factura }} - Tiendita{% endblock %}
+{% block title %}Factura {{ venta.numero_factura }} - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

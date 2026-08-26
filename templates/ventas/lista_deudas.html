@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Deudas Pendientes - Tiendita{% endblock %}
+{% block title %}Deudas Pendientes - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

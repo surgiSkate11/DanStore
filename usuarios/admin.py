@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from .models import ModuloSaaS, RolEmpresa, UserProfile
 
-# Ocultar el modelo de Grupos nativo de Django porque ahora usamos 
+# Ocultar el modelo de Grupos nativo de Django porque ahora usamos
 # nuestro propio sistema SaaS (RolEmpresa)
 admin.site.unregister(Group)
 
@@ -24,6 +24,13 @@ class RolEmpresaAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
+    """
+    Administra ÚNICAMENTE perfiles de tenant (owner/employee/cliente).
+    Un superadmin nunca tiene fila en UserProfile — is_superuser es su
+    única fuente de verdad — así que este admin nunca necesita
+    distinguir "cuenta de tenant" vs "administrador global", ni ocultar
+    campos empresariales: acá jamás aparece un superadmin.
+    """
     list_display = ('user', 'rol', 'empresa', 'negocio_tipo')
     search_fields = ('user__username', 'user__email', 'empresa__nombre')
     list_filter = ('rol', 'negocio_tipo', 'onboarding_completado')

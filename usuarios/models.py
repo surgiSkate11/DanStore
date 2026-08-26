@@ -1,8 +1,7 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 from empresas.models import Empresa
-from django.utils import timezone
-from datetime import timedelta
 
 
 class ModuloSaaS(models.Model):
@@ -41,7 +40,16 @@ class RolEmpresa(models.Model):
 
 
 class UserProfile(models.Model):
-    """Perfil extendido del usuario con información del negocio"""
+    """
+    Perfil de usuario del dominio de NEGOCIO — exclusivo para dueño de
+    empresa, empleado o cliente final.
+
+    Un superadmin (is_superuser=True) NUNCA tiene fila en esta tabla.
+    No pertenece al dominio empresarial, pertenece al sistema: su
+    identidad y permisos se resuelven 100% desde ``User.is_superuser``
+    (ver ``usuarios.utils.es_superadmin``). No crear un UserProfile
+    "vacío" para representarlo — simplemente no existe fila para él.
+    """
 
     TIPO_NEGOCIO_CHOICES = [
         ('ropa', 'Ropa'),
@@ -52,7 +60,6 @@ class UserProfile(models.Model):
     ]
 
     ROLES = (
-        ('superadmin', 'Dueño del Software'),
         ('owner', 'Dueño de Empresa (Tenant Owner)'),
         ('employee', 'Empleado de Empresa'),
         ('cliente', 'Cliente Final'),
@@ -62,7 +69,16 @@ class UserProfile(models.Model):
 
     # Sistema Multi-tenant
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='empleados')
-    rol = models.CharField(max_length=20, choices=ROLES, default='owner')
+
+    rol = models.CharField(
+        max_length=20,
+        choices=ROLES,
+        default='owner',
+        blank=True,
+        help_text="Rol dentro de una empresa. Queda vacío momentáneamente solo durante la "
+                   "creación del usuario, hasta que el flujo que lo crea le asigna el rol "
+                   "real (owner/employee/cliente) en la misma transacción."
+    )
 
     # Si el usuario es EMPLEADO, aquí se asigna qué rol tiene dentro de la empresa
     rol_empresa = models.ForeignKey(RolEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
@@ -117,6 +133,24 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"Perfil de {self.user.username}"
 
+    def clean(self):
+        """
+        Un RolEmpresa (permisos granulares por módulo) solo tiene sentido
+        para un empleado. Un 'owner' ya tiene acceso total y un 'cliente'
+        no navega módulos internos, así que ninguno de los dos debería
+        tener rol_empresa asignado.
+
+        NOTA: Django no llama clean() automáticamente en .save() — solo
+        lo dispara un ModelForm (por eso /admin/ ya queda protegido
+        gratis). Para guardados directos desde una vista, hay que llamar
+        profile.full_clean() a mano antes de perfil.save() si se quiere
+        que esta validación se aplique ahí también.
+        """
+        if self.rol_empresa_id and self.rol != 'employee':
+            raise ValidationError(
+                {'rol_empresa': "Un rol de empresa (RolEmpresa) solo puede asignarse a un usuario con rol 'employee'."}
+            )
+
     def get_vocabulario(self):
         """Retorna diccionario de términos según el tipo de negocio"""
         vocabularios = {
@@ -157,59 +191,3 @@ class UserProfile(models.Model):
             },
         }
         return vocabularios.get(self.negocio_tipo, vocabularios['otro'])
-
-
-class AdminActionRequest(models.Model):
-    """Modelo para gestionar el Protocolo de Consenso entre Administradores"""
-    ACTION_CHOICES = (
-        ('solicitar_suspension', 'Suspender Administrador'),
-        ('solicitar_eliminacion', 'Eliminar Administrador'),
-    )
-    STATUS_CHOICES = (
-        ('pending', 'Pendiente de Votación'),
-        ('approved', 'Aprobado y Ejecutado'),
-        ('rejected', 'Rechazado'),
-        ('expired', 'Expirado por tiempo'),
-    )
-
-    target_admin = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='targeted_actions')
-    requester = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='requested_actions')
-    action_type = models.CharField(max_length=30, choices=ACTION_CHOICES)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-
-    votes_approve = models.ManyToManyField(UserProfile, related_name='approved_actions', blank=True)
-    votes_reject = models.ManyToManyField(UserProfile, related_name='rejected_actions', blank=True)
-
-    def save(self, *args, **kwargs):
-        if not self.expires_at:
-            self.expires_at = timezone.now() + timedelta(hours=48)
-        super().save(*args, **kwargs)
-
-    def check_and_execute(self):
-        if self.status != 'pending':
-            return
-
-        # 1. Expiración: Si pasaron las 48 horas sin decisión unánime, expira y no se ejecuta.
-        if timezone.now() > self.expires_at:
-            self.status = 'expired'
-            self.save()
-            return
-
-        total_admins = UserProfile.objects.filter(rol='superadmin').exclude(id=self.target_admin.id).count()
-        total_votes = self.votes_approve.count() + self.votes_reject.count()
-
-        # 2. Si todos los administradores elegibles ya votaron
-        if total_votes >= total_admins:
-            if self.votes_approve.count() > self.votes_reject.count():
-                self.status = 'approved'
-                if self.action_type == 'solicitar_suspension':
-                    self.target_admin.user.is_active = False
-                    self.target_admin.user.save()
-                elif self.action_type == 'solicitar_eliminacion':
-                    self.target_admin.user.delete()
-            else:
-                self.status = 'rejected'
-            self.save()
