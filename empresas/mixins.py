@@ -85,10 +85,14 @@ def requiere_modulo(modulo_codigo, accion='ver'):
                 return view_func(request, *args, **kwargs)
 
             if perfil and perfil.rol == 'employee':
-                if perfil.rol_empresa and perfil.rol_empresa.modulos_permitidos.filter(codigo__iexact=modulo_codigo).exists():
-                    permisos = perfil.rol_empresa.permisos_detallados.get(modulo_codigo, None)
+                # 'cargo' (antes 'rol_empresa'): el puesto/RolEmpresa asignado
+                # al empleado dentro de la empresa. No confundir con
+                # UserProfile.rol, que es la categoría amplia de cuenta
+                # (owner/employee/cliente).
+                if perfil.cargo and perfil.cargo.modulos_permitidos.filter(codigo__iexact=modulo_codigo).exists():
+                    permisos = perfil.cargo.permisos_detallados.get(modulo_codigo, None)
 
-                    # Si es un rol antiguo sin JSON de permisos explícito, por retrocompatibilidad lo dejamos pasar
+                    # Si es un cargo antiguo sin JSON de permisos explícito, por retrocompatibilidad lo dejamos pasar
                     if permisos is not None and accion not in permisos:
                         raise PermissionDenied(f"Tu rol no tiene permiso de '{accion}' en el módulo '{modulo_codigo}'.")
 

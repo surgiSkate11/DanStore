@@ -365,11 +365,6 @@
            CATEGORY STRIP
         ============================================================ */
         .category-strip-wrap {
-            /* Antes: background idéntico al header (var(--header-bg) a secas),
-               lo que hacía que header + franja de categorías se vieran como
-               un solo bloque plano repetido. Ahora se mezcla con un toque
-               del color de marca: sigue siendo parte de la misma "familia"
-               visual que el header, pero se distingue como su propia capa. */
             background: color-mix(in srgb, var(--header-bg) 94%, var(--brand) 6%);
             border-bottom: 1px solid var(--border);
             box-shadow: 0 1px 0 var(--border), 0 6px 16px -12px rgba(0,0,0,0.18);
@@ -891,6 +886,7 @@
             align-items: center;
             gap: 10px;
             white-space: nowrap;
+            max-width: calc(100vw - 32px);
             box-shadow: var(--shadow-md);
             animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
@@ -1048,6 +1044,16 @@
             50% { transform: scale(1.15); }
         }
         .cart-badge.pulse { animation: pulse 0.4s var(--easing); }
+
+        /* Respeta la preferencia de "reducir movimiento" del sistema operativo */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
     <script>
         // Auto-calculador de Contraste Inteligente
@@ -1192,7 +1198,7 @@
              data-id="{{ producto.id }}"
              data-name="{{ producto.nombre }}"
              data-price="{{ producto.precio }}"
-             data-category="{{ producto.tipo_producto.nombre|default:'' }}"
+             data-category="{{ producto.categoria|default:'' }}"
              data-img="{% if producto.imagen %}{{ producto.imagen.url }}{% endif %}"
              data-status="{{ producto.estado }}"
              data-whatsapp="{{ empresa.telefono_whatsapp }}">

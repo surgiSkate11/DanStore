@@ -1,5 +1,6 @@
 import csv
 import json
+import logging
 import threading
 from decimal import Decimal
 from datetime import timedelta
@@ -15,8 +16,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Avg, Case, Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value, When
+from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth
 from django.forms import modelform_factory
 from django.http import HttpResponse, JsonResponse
@@ -32,9 +34,11 @@ from empresas.mixins import requiere_modulo
 from empresas.models import Empresa, SuscripcionEmpresa, Plan, Ticket, MensajeTicket, ConfiguracionSaaS
 from productos.models import Producto
 from tiendita_project.utils import form_errors_to_messages
-from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
+from usuarios.models import ModuloSaaS, RolEmpresa
 from usuarios.utils import es_superadmin
 from ventas.models import Venta, DetalleVenta
+
+logger = logging.getLogger(__name__)
 
 # Identificadores internos de roles de TENANT (Mejor mantenibilidad).
 # No hay un ROLE_SUPERADMIN acá: is_superuser es la única fuente de
@@ -165,26 +169,55 @@ def home(request):
 
 @login_required
 def dashboard_router(request):
-    """
-    ESTRATEGIA DE DASHBOARDS: Enrutador Inteligente.
-    Redirige al usuario a su ecosistema correspondiente según su rol.
-    """
     usuario = request.user
     perfil = getattr(usuario, 'profile', None)
-    
-    # El onboarding es estrictamente para los DUEÑOS
+
     if perfil and perfil.rol == ROLE_OWNER and not perfil.onboarding_completado:
         return redirect('onboarding')
-        
-    if perfil and es_superadmin(usuario):
+
+    if es_superadmin(usuario):
         return redirect('dashboard_saas')
-    elif perfil and perfil.rol in [ROLE_OWNER, ROLE_EMPLOYEE]:
+    elif not perfil:
+        config = ConfiguracionSaaS.objects.first()
+        return render(
+            request,
+            '403.html',
+            status=403,
+            context={
+                'message': 'Tu cuenta aún no está configurada. Contacta al administrador del sistema.',
+                'sin_perfil': True,
+                'support_email': config.support_email if config else '',
+            },
+        )
+    elif perfil.rol in [ROLE_OWNER, ROLE_EMPLOYEE]:
+        # CORRECCIÓN: antes se redirigía directo a dashboard_tenant sin
+        # chequear empresa acá. dashboard_tenant SÍ chequea empresa, pero
+        # su fallback es redirect('onboarding') — y onboarding() solo
+        # sabe manejar a un 'owner' que todavía NO completó el onboarding.
+        # Para un 'employee' sin empresa, o un 'owner' con
+        # onboarding_completado=True pero empresa=None (posible desde que
+        # el panel de Control de BD permite editar esos campos por
+        # separado sin que estén atados entre sí), esto producía un
+        # bucle infinito: dashboard_router → dashboard_tenant →
+        # onboarding → dashboard_router → ... Ahora se corta acá mismo,
+        # antes de llegar a dashboard_tenant.
+        if not perfil.empresa:
+            config = ConfiguracionSaaS.objects.first()
+            return render(
+                request,
+                '403.html',
+                status=403,
+                context={
+                    'message': 'Tu perfil todavía no tiene una empresa asignada. Contacta al administrador del sistema.',
+                    'sin_empresa': True,
+                    'support_email': config.support_email if config else '',
+                },
+            )
         return redirect('dashboard_tenant')
     else:
-        # Si es cliente final, va al catálogo de su empresa
-        if perfil and getattr(perfil, 'empresa', None):
+        if getattr(perfil, 'empresa', None):
             return redirect('tienda_publica', slug=perfil.empresa.slug)
-        return redirect('home')  # Fallback
+        return redirect('home')
 
 
 @login_required
@@ -367,6 +400,7 @@ def saas_configuracion(request):
         config.save()
         
         cache.delete('saas_app_name')
+        cache.delete('saas_support_email')
 
         tab_activa = request.POST.get('active_tab', 'branding')
         messages.success(request, 'Ajustes del sistema guardados correctamente.')
@@ -590,14 +624,27 @@ def saas_crear_registro(request, app_label, model_name):
             form.add_error(None, "La contraseña es obligatoria.")
 
         if form.is_valid() and not (es_modelo_user and not password_nueva):
-            instancia = form.save(commit=False)
-            if es_modelo_user:
-                instancia.set_password(password_nueva)
-            instancia.save()
-            if hasattr(form, 'save_m2m'):
-                form.save_m2m()
-            messages.success(request, f"¡Registro creado exitosamente en {Modelo._meta.verbose_name.title()}!")
-            return redirect('saas_control_panel')
+            try:
+                with transaction.atomic():
+                    instancia = form.save(commit=False)
+                    if es_modelo_user:
+                        instancia.set_password(password_nueva)
+                    instancia.save()
+                    if hasattr(form, 'save_m2m'):
+                        form.save_m2m()
+                messages.success(request, f"¡Registro creado exitosamente en {Modelo._meta.verbose_name.title()}!")
+                return redirect('saas_control_panel')
+            except IntegrityError:
+                # El ModelForm ya valida duplicados/campos vacíos ANTES de llegar
+                # acá (eso cae en el 'else' de abajo). Esto solo atrapa lo que la
+                # validación de Django no puede prever — ej. una restricción de la
+                # base de datos, o una condición de carrera con otro guardado
+                # simultáneo — para que nunca se vea una página de error técnica.
+                logger.warning("IntegrityError creando %s.%s", app_label, model_name, exc_info=True)
+                messages.error(request, "No se pudo guardar: ya existe un registro con esos mismos datos, o falta completar una relación obligatoria.")
+            except Exception:
+                logger.exception("Error inesperado creando %s.%s", app_label, model_name)
+                messages.error(request, "Ocurrió un error inesperado al guardar el registro. Verifica los datos e intenta nuevamente.")
         else:
             form_errors_to_messages(request, form)
     else:
@@ -709,15 +756,23 @@ def saas_editar_registro(request, app_label, model_name, object_id):
         password_nueva = request.POST.get('password', '').strip() if es_modelo_user else None
 
         if form.is_valid():
-            instancia_guardada = form.save(commit=False)
-            if es_modelo_user and password_nueva:
-                # Solo se cambia la contraseña si el admin escribió algo en el campo.
-                instancia_guardada.set_password(password_nueva)
-            instancia_guardada.save()
-            if hasattr(form, 'save_m2m'):
-                form.save_m2m()
-            messages.success(request, f"¡Registro actualizado exitosamente en {Modelo._meta.verbose_name.title()}!")
-            return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
+            try:
+                with transaction.atomic():
+                    instancia_guardada = form.save(commit=False)
+                    if es_modelo_user and password_nueva:
+                        # Solo se cambia la contraseña si el admin escribió algo en el campo.
+                        instancia_guardada.set_password(password_nueva)
+                    instancia_guardada.save()
+                    if hasattr(form, 'save_m2m'):
+                        form.save_m2m()
+                messages.success(request, f"¡Registro actualizado exitosamente en {Modelo._meta.verbose_name.title()}!")
+                return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
+            except IntegrityError:
+                logger.warning("IntegrityError editando %s.%s #%s", app_label, model_name, object_id, exc_info=True)
+                messages.error(request, "No se pudo guardar: ese cambio genera un dato duplicado, o falta completar una relación obligatoria.")
+            except Exception:
+                logger.exception("Error inesperado editando %s.%s #%s", app_label, model_name, object_id)
+                messages.error(request, "Ocurrió un error inesperado al guardar los cambios. Verifica los datos e intenta nuevamente.")
         else:
             form_errors_to_messages(request, form)
     else:
@@ -757,9 +812,22 @@ def saas_eliminar_registro(request, app_label, model_name, object_id):
 
     instancia = get_object_or_404(Modelo, id=object_id)
     if request.method == 'POST':
-        instancia.delete()
-        messages.success(request, f"Registro eliminado exitosamente.")
-        
+        try:
+            instancia.delete()
+            messages.success(request, "Registro eliminado exitosamente.")
+        except ProtectedError:
+            # El modelo tiene on_delete=PROTECT/RESTRICT en alguna FK que apunta
+            # a este registro (ej. un Plan con empresas todavía suscritas a él).
+            # Sin este try/except, Django mostraba la página de error técnica en
+            # vez de explicar por qué no se puede borrar.
+            messages.error(request, "No se puede eliminar: hay otros registros del sistema que dependen de este.")
+        except IntegrityError:
+            logger.warning("IntegrityError eliminando %s.%s #%s", app_label, model_name, object_id, exc_info=True)
+            messages.error(request, "No se pudo eliminar el registro por una restricción de la base de datos.")
+        except Exception:
+            logger.exception("Error inesperado eliminando %s.%s #%s", app_label, model_name, object_id)
+            messages.error(request, "Ocurrió un error inesperado al eliminar el registro.")
+
     return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
 
 
@@ -1061,12 +1129,7 @@ def tienda_publica(request, slug):
 def saas_equipo(request):
     """
     Gestión de administradores globales del sistema (SaaS).
-
-    Sin protocolo de votación: dar de alta o de baja a un administrador
-    es una acción directa. La seguridad de quién puede llegar a esta
-    vista ya la da es_superadmin() (solo superusers entran acá); no hace
-    falta una capa extra de consenso entre pares para una operación que
-    ya está detrás de ese gate.
+    
     """
     if not es_superadmin(request.user):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
@@ -1084,18 +1147,15 @@ def saas_equipo(request):
             if username and email and password:
                 try:
                     with transaction.atomic():
-                        # 1. Crear el usuario nativo de Django como superusuario.
-                        #    is_superuser=True es lo único que lo convierte en
-                        #    administrador global; el signal crea_perfil_usuario
-                        #    se encarga de darle un perfil SIN rol de tenant.
+                        # is_superuser=True es lo único que convierte a este User en
+                        # administrador global — es_superadmin() es la única fuente
+                        # de verdad (ver usuarios.utils.es_superadmin). Un superadmin
+                        # NUNCA tiene fila en UserProfile: no hay nada más que crear
+                        # ni inicializar acá además del User nativo de Django.
                         user = User.objects.create_user(username=username, email=email, password=password)
                         user.is_staff = True  # Para que puedan acceder al /admin/ nativo si se requiere
                         user.is_superuser = True
                         user.save()
-
-                        profile = user.profile
-                        profile.onboarding_completado = True
-                        profile.save(update_fields=['onboarding_completado'])
 
                         messages.success(request, f"Administrador {username} añadido exitosamente al Equipo del Sistema.")
                 except Exception:

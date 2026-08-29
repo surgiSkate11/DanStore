@@ -24,18 +24,33 @@ def empresa_actual(request):
     if hasattr(request, 'user') and request.user.is_authenticated:
         context['es_superadmin'] = es_superadmin(request.user)
 
-    # OPTIMIZACIÓN EXTREMA: Leer el nombre de la app desde la memoria RAM (Caché)
-    # en lugar de consultar la base de datos en cada recarga de página
+    # OPTIMIZACIÓN EXTREMA: Leer nombre de la app y correo de soporte desde
+    # la memoria RAM (Caché) en lugar de consultar la base de datos en cada
+    # recarga de página. Los dos valores viven en el MISMO registro
+    # ConfiguracionSaaS (singleton), así que si falta cualquiera de los dos
+    # en caché se hace UNA sola consulta y se rellenan ambos huecos juntos
+    # — nunca dos SELECT separados para leer el mismo objeto.
+    #
+    # 'saas_app_name' es también leído directamente (sin pasar por este
+    # context processor) desde empresas/views.py y usuarios/views.py para
+    # armar asuntos de correo — por eso se mantiene como su propia key,
+    # en vez de fusionarla con support_email en un único diccionario.
     app_name = cache.get('saas_app_name')
-    if not app_name:
+    support_email = cache.get('saas_support_email')
+
+    if app_name is None or support_email is None:
         try:
             from .models import ConfiguracionSaaS
             config = ConfiguracionSaaS.objects.first()
             app_name = config.nombre_plataforma if config and config.nombre_plataforma else "Tiendita SaaS"
-            cache.set('saas_app_name', app_name, 3600)  # Guardar en memoria por 1 hora
+            support_email = config.support_email if config and config.support_email else ""
         except Exception:
-            app_name = "Tiendita SaaS"
+            app_name = app_name or "Tiendita SaaS"
+            support_email = support_email or ""
+        cache.set('saas_app_name', app_name, 3600)
+        cache.set('saas_support_email', support_email, 3600)
 
     context['app_name'] = app_name
+    context['support_email'] = support_email
 
     return context

@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofile',
             name='rol',
-            field=models.CharField(blank=True, choices=[('owner', 'Dueño de Empresa (Tenant Owner)'), ('employee', 'Empleado de Empresa'), ('cliente', 'Cliente Final')], default='owner', help_text='Rol dentro de una empresa. Queda vacío momentáneamente solo durante la creación del usuario, hasta que el flujo que lo crea le asigna el rol real (owner/employee/cliente) en la misma transacción.', max_length=20),
+            field=models.CharField(blank=True, choices=[('owner', 'Dueño de Empresa (Tenant Owner)'), ('employee', 'Empleado de Empresa'), ('cliente', 'Cliente Final')], default='owner', max_length=20),
         ),
         migrations.DeleteModel(
             name='AdminActionRequest',

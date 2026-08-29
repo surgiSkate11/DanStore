@@ -12,7 +12,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.sessions.models import Session
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -22,18 +21,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
 
+from tiendita_project.utils import cerrar_sesiones_de_usuario
 from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
 from .mail_utils import enviar_correo_saas
 from .mixins import requiere_modulo, requiere_rol_dueño
 from .models import ConfiguracionSaaS, Empresa, MensajeTicket, Plan, SuscripcionEmpresa, Ticket
-
-
-def _invalidar_sesiones_de_usuario(user):
-    """Cierra cualquier sesión activa de un usuario (usado al desactivar/eliminar empleados)."""
-    for session in Session.objects.filter(expire_date__gte=timezone.now()):
-        data = session.get_decoded()
-        if str(data.get('_auth_user_id')) == str(user.id):
-            session.delete()
 
 
 @login_required
@@ -103,7 +95,7 @@ def lista_roles(request):
 @requiere_rol_dueño
 def lista_empleados(request):
     """Gestión de empleados de la empresa"""
-    empleados = UserProfile.objects.filter(empresa=request.empresa, rol='employee').select_related('user', 'rol_empresa')
+    empleados = UserProfile.objects.filter(empresa=request.empresa, rol='employee').select_related('user', 'cargo')
     roles = RolEmpresa.objects.filter(empresa=request.empresa)
 
     if request.method == 'POST':
@@ -141,8 +133,8 @@ def lista_empleados(request):
                 messages.error(request, f"La contraseña no es segura: {' '.join(e.messages)}")
                 return redirect('lista_empleados')
 
-            # --- CORRECCIÓN: el rol de empresa se valida contra request.empresa (ya estaba bien aquí) ---
-            rol_empresa = get_object_or_404(RolEmpresa, id=rol_id, empresa=request.empresa)
+            # --- CORRECCIÓN: el cargo se valida contra request.empresa (ya estaba bien aquí) ---
+            cargo_seleccionado = get_object_or_404(RolEmpresa, id=rol_id, empresa=request.empresa)
 
             try:
                 with transaction.atomic():
@@ -153,7 +145,7 @@ def lista_empleados(request):
                     profile, _ = UserProfile.objects.get_or_create(user=user)
                     profile.empresa = request.empresa
                     profile.rol = 'employee'
-                    profile.rol_empresa = rol_empresa
+                    profile.cargo = cargo_seleccionado
                     profile.onboarding_completado = True  # Bypass de onboarding
                     # --- CORRECCIÓN: forzar cambio de contraseña en el primer login ---
                     # Requiere el campo UserProfile.debe_cambiar_password (ver nota aparte).
@@ -176,7 +168,7 @@ def lista_empleados(request):
 
             # --- CORRECCIÓN: si se desactiva, cerrar cualquier sesión activa del empleado ---
             if not user.is_active:
-                _invalidar_sesiones_de_usuario(user)
+                cerrar_sesiones_de_usuario(user)
 
             estado_txt = "reactivado" if user.is_active else "suspendido"
             messages.success(request, f"El acceso del empleado '{user.username}' ha sido {estado_txt}.")
@@ -188,7 +180,7 @@ def lista_empleados(request):
             user = perfil.user
 
             # --- CORRECCIÓN: cerrar sesiones activas antes de eliminar ---
-            _invalidar_sesiones_de_usuario(user)
+            cerrar_sesiones_de_usuario(user)
             user.delete()  # Elimina el usuario y su perfil en cascada
             messages.success(request, f"El empleado '{username}' ha sido eliminado definitivamente del sistema.")
 

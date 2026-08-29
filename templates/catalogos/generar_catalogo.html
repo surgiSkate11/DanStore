@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Generar Catálogo - Tiendita{% endblock %}
+{% block title %}Generar Catálogo - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

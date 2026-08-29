@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard | {{ empresa.nombre }}{% endblock %}
+{% block title %}Dashboard | {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -290,6 +290,37 @@
         font-weight: 600;
         margin-bottom: 0.25rem;
         color: #0f172a;
+    }
+
+    /* ===================================================================
+       RESPONSIVE: welcome-banner tiene padding fijo grande y un título
+       (avatar 56px + texto 1.875rem) en una fila sin wrap, más el botón
+       "Exportar Clientes" compitiendo por espacio. En móvil esto desborda.
+       =================================================================== */
+    @media (max-width: 768px) {
+        .ui-v2 .welcome-banner {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+        .ui-v2 .welcome-title {
+            font-size: 1.35rem;
+            flex-wrap: wrap;
+        }
+        .ui-v2 .welcome-avatar {
+            width: 44px;
+            height: 44px;
+            font-size: 1.35rem;
+        }
+        .ui-v2 .welcome-subtitle {
+            padding-left: 0;
+            font-size: 0.95rem;
+        }
+        .ui-v2 .btn-premium {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 {% endblock %}

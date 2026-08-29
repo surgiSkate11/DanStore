@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Reportes y Estadísticas | {{ empresa.nombre }}{% endblock %}
+{% block title %}Reportes y Estadísticas | {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

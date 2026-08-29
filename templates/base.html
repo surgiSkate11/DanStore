@@ -274,6 +274,46 @@
         }
 
         /* ============================================================
+           NAVBAR MÓVIL: los submenús (Productos, Catálogo, Ventas,
+           Sorteos, Tienda) usan el dropdown de Bootstrap tal cual, que
+           por defecto es "position: absolute" — incluso dentro del menú
+           colapsado. En el celular eso hace que el submenú se abra
+           flotando ENCIMA del resto de los enlaces en vez de empujarlos
+           hacia abajo. Por debajo del breakpoint "lg" (donde el navbar
+           está colapsado a hamburguesa) lo convertimos en un acordeón
+           real: el submenú pasa a ocupar su lugar en el flujo normal.
+           ============================================================ */
+        @media (max-width: 1199.98px) {
+            .navbar-collapse .dropdown-menu {
+                position: static;
+                float: none;
+                width: 100%;
+                margin-top: 0;
+                border: none;
+                box-shadow: none;
+                background: #f8fafc;
+                border-radius: 10px;
+                padding: 0.4rem 0.5rem 0.4rem 1.25rem;
+            }
+            .navbar-collapse .dropdown-item {
+                padding-top: 0.55rem;
+                padding-bottom: 0.55rem;
+                border-radius: 8px;
+            }
+            .navbar-collapse .nav-item {
+                border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+            }
+            .navbar-collapse .nav-item:last-child {
+                border-bottom: none;
+            }
+            .navbar-collapse .nav-link,
+            .navbar-collapse .dropdown-toggle {
+                padding-top: 0.65rem;
+                padding-bottom: 0.65rem;
+            }
+        }
+
+        /* ============================================================
            TOUR GUIADO (Shepherd.js) — tema visual acorde a la app
            ============================================================ */
         .shepherd-element {
@@ -356,7 +396,7 @@
 <body>
     {% if user.is_authenticated %}
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light navbar-saas sticky-top" style="z-index: 1031;">
+    <nav class="navbar navbar-expand-xl navbar-light navbar-saas sticky-top" style="z-index: 1031;">
         <div class="container-fluid">
             <a class="navbar-brand text-primary" href="{% url 'dashboard_router' %}" style="letter-spacing: -0.5px;">
                 <i class="bi bi-layers-fill me-1"></i> <span class="text-dark">{{ app_name|default:"Tiendita SaaS" }}</span>

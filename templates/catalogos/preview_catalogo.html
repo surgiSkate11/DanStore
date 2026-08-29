@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Vista Previa - Catálogo{% endblock %}
+{% block title %}Vista Previa - Catálogo - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

@@ -2,7 +2,7 @@
 {% load static %}
 {% load catalogo_extras %}
 
-{% block title %}Personalizar Catálogo{% endblock %}
+{% block title %}Personalizar Catálogo - {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
 <style>

@@ -13,7 +13,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.core.cache import cache
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
-from django.contrib.sessions.models import Session
 from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse, NoReverseMatch
@@ -23,22 +22,11 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 from empresas.mail_utils import enviar_correo_saas
-from productos.models import Producto, TipoProducto
-from tiendita_project.utils import form_errors_to_messages
+from productos.models import Producto
+from tiendita_project.utils import cerrar_sesiones_de_usuario, form_errors_to_messages
 from .models import UserProfile
 
 logger = logging.getLogger(__name__)
-
-
-def cerrar_todas_las_sesiones(user):
-    """
-    Busca y elimina de la base de datos todas las sesiones activas del usuario.
-    """
-    sesiones_activas = Session.objects.filter(expire_date__gte=timezone.now())
-    for sesion in sesiones_activas:
-        data = sesion.get_decoded()
-        if str(user.pk) == str(data.get('_auth_user_id', '')):
-            sesion.delete()
 
 
 @login_required
@@ -92,7 +80,7 @@ def perfil(request):
                     # Se elimina la comprobación previa. La unicidad se valida en el enlace de confirmación.
                     signer = TimestampSigner()
                     token = signer.sign_object({'user_id': usuario.id, 'new_email': nuevo_email})
-                    verification_url = f"{request.scheme}://{request.get_host()}/usuarios/verificar-email/{token}/"
+                    verification_url = request.build_absolute_uri(reverse('verificar_cambio_email', kwargs={'token': token}))
                     
                     app_name = cache.get('saas_app_name', 'Tiendita SaaS')
                     mensaje_txt = f"Hola {usuario.username},\n\nHas solicitado cambiar tu correo a {nuevo_email}.\nPor favor visita este enlace para confirmar (válido por 24 horas): {verification_url}\n\nSi no fuiste tú, ignora este correo."
@@ -133,7 +121,7 @@ def perfil(request):
                         empresa.save()
 
                 if requiere_relogin:
-                    cerrar_todas_las_sesiones(usuario)
+                    cerrar_sesiones_de_usuario(usuario)
                     logout(request) # Limpiamos la petición actual en memoria
                     messages.success(request, "Tu nombre de usuario ha sido actualizado. Por seguridad, hemos cerrado tus sesiones activas. Por favor, inicia sesión nuevamente.")
                     return redirect(getattr(settings, 'LOGIN_URL', '/'))
@@ -161,7 +149,7 @@ def verificar_cambio_email(request, token):
             user.email = new_email
             user.save()
             
-            cerrar_todas_las_sesiones(user)
+            cerrar_sesiones_de_usuario(user)
             if request.user.is_authenticated and request.user.id == user.id:
                 logout(request)
             messages.success(request, "¡Tu correo electrónico ha sido actualizado exitosamente! Por seguridad, hemos cerrado tus sesiones activas. Inicia sesión de nuevo.")
@@ -204,7 +192,7 @@ def forzar_cambio_password(request):
             perfil.debe_cambiar_password = False
             perfil.save()
 
-            cerrar_todas_las_sesiones(request.user)
+            cerrar_sesiones_de_usuario(request.user)
             logout(request)
             messages.success(request, "Tu contraseña ha sido actualizada. Por favor, inicia sesión de nuevo.")
             return redirect(getattr(settings, 'LOGIN_URL', '/'))
@@ -377,32 +365,17 @@ def _construir_contexto_onboarding(perfil, empresa):
 @login_required
 def onboarding(request):
     """
-    Pantalla de bienvenida al primer login. YA NO pide nombre/tipo de
-    negocio (eso ahora se edita desde 'Mi Perfil', ver vista perfil()).
-
-    En este diseño (Opción B: el superadmin crea la Empresa desde el
-    panel SaaS y asigna al dueño), esta vista solo necesita:
-    1. Verificar que el admin ya le haya asignado una Empresa. Si no,
-       mostrar una pantalla de espera en vez de dejarlo "completar" el
-       onboarding sin negocio real conectado — que era exactamente el
-       bug que rompía todo el sistema después.
-    2. Marcar onboarding_completado=True al VISUALIZAR la pantalla (GET),
-       no al hacer clic en un botón. Así los accesos rápidos (Crear venta,
-       Agregar producto, etc.) pueden ser links normales sin lógica extra.
-    3. Armar el contexto de forma 100% defensiva: ningún dato faltante,
-       módulo inexistente o url no encontrada puede tirar un 500 acá.
-
+    Pantalla de bienvenida al primer login. 
     El superadmin se saca de acá ANTES de tocar UserProfile.objects,
-    porque un superadmin no tiene (ni debe tener) fila en UserProfile.
     """
     usuario = request.user
 
     if usuario.is_superuser:
         return redirect('dashboard_router')
 
-    perfil, _ = UserProfile.objects.get_or_create(user=usuario)
+    perfil = getattr(usuario, 'profile', None)
 
-    if perfil.rol != 'owner':
+    if not perfil or perfil.rol != 'owner':
         return redirect('dashboard_router')
 
     # Si ya completó el onboarding antes, no tiene que volver a verlo
@@ -447,54 +420,6 @@ def onboarding(request):
         }
 
     return render(request, 'usuarios/onboarding.html', contexto)
-
-
-@login_required
-def limpiar_demo(request):
-    """
-    Desactiva el modo demo para el usuario actual.
-
-    Un superadmin no tiene UserProfile ni datos demo que limpiar.
-    """
-    perfil = getattr(request.user, 'profile', None)
-    if perfil and perfil.usa_demo_data:
-        perfil.usa_demo_data = False
-        perfil.save()
-        messages.success(request, "Modo demostración desactivado correctamente.")
-    return redirect('dashboard_router')
-
-
-@login_required
-def cargar_demo(request):
-    """
-    Activa el modo demo y genera algunos datos de prueba básicos.
-
-    Un superadmin no tiene UserProfile, así que nunca puede cargar demo.
-    """
-    if request.method == 'POST':
-        perfil = getattr(request.user, 'profile', None)
-        empresa = getattr(request, 'empresa', None)
-        
-        if perfil and not perfil.usa_demo_data and empresa:
-            # Crear una categoría y un par de productos de demostración
-            tipo_demo, _ = TipoProducto.objects.get_or_create(nombre="Demo", empresa=empresa)
-            
-            Producto.objects.get_or_create(
-                nombre="Producto de Demostración 1",
-                empresa=empresa,
-                defaults={'tipo_producto': tipo_demo, 'precio': 199.99, 'stock': 10, 'estado': 'disponible'}
-            )
-            Producto.objects.get_or_create(
-                nombre="Producto de Demostración 2",
-                empresa=empresa,
-                defaults={'tipo_producto': tipo_demo, 'precio': 45.50, 'stock': 5, 'estado': 'disponible'}
-            )
-            
-            perfil.usa_demo_data = True
-            perfil.save()
-            messages.success(request, "Datos de demostración cargados exitosamente.")
-            
-    return redirect('dashboard_router')
 
 
 # ====================================================================

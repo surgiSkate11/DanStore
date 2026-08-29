@@ -49,6 +49,14 @@ class UserProfile(models.Model):
     identidad y permisos se resuelven 100% desde ``User.is_superuser``
     (ver ``usuarios.utils.es_superadmin``). No crear un UserProfile
     "vacío" para representarlo — simplemente no existe fila para él.
+
+    CREAR UN User NO CREA UN UserProfile. Son dos procesos deliberadamente
+    independientes (ver el panel de Control de BD, que es hoy el único
+    lugar del sistema que crea filas de este modelo para un dueño/cliente
+    nuevo — el alta de empleados en empresas/views.py::lista_empleados es
+    la otra vía, y ya asigna rol='employee' explícitamente en el mismo
+    flujo). Un User sin UserProfile es un estado válido: intentar entrar
+    a un módulo que requiere perfil debe dar 403, nunca crear uno solo.
     """
 
     TIPO_NEGOCIO_CHOICES = [
@@ -60,6 +68,16 @@ class UserProfile(models.Model):
     ]
 
     ROLES = (
+        # CORRECCIÓN DE SEGURIDAD: placeholder explícito como PRIMERA opción.
+        # Un <select> HTML sin opción vacía siempre queda con la primera
+        # opción real preseleccionada visualmente — eso era el problema
+        # original (quedaba "Dueño" marcado aunque nadie lo eligiera). Con
+        # este placeholder como opción 0 y el campo marcado como
+        # obligatorio (blank=False más abajo), el navegador y
+        # full_clean() bloquean el guardado hasta que se elija un rol
+        # real. No es un rol de negocio válido — nunca debe usarse como
+        # valor guardado.
+        ('', 'Selecciona un rol...'),
         ('owner', 'Dueño de Empresa (Tenant Owner)'),
         ('employee', 'Empleado de Empresa'),
         ('cliente', 'Cliente Final'),
@@ -70,18 +88,36 @@ class UserProfile(models.Model):
     # Sistema Multi-tenant
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='empleados')
 
+    # CORRECCIÓN DE SEGURIDAD (punto 8): antes default='owner', blank=True.
+    # Un olvido al crear el perfil NUNCA debe convertir a alguien en dueño
+    # por omisión. Ahora no hay valor por defecto seguro: el rol es
+    # OBLIGATORIO y debe elegirse conscientemente en el formulario que lo
+    # crea. Si se deja el placeholder ('') o no se envía, el guardado se
+    # rechaza (a través del ModelForm, que valida esto en full_clean())
+    # y el error ya llega al usuario por el sistema de mensajes existente
+    # (ver form_errors_to_messages en dashboard/views.py::saas_crear_registro).
+    #
+    # El superadmin/dueño del software es un concepto TOTALMENTE aparte:
+    # se determina por User.is_superuser (ver usuarios.utils.es_superadmin)
+    # y nunca depende de este campo ni de este modelo.
     rol = models.CharField(
         max_length=20,
         choices=ROLES,
-        default='owner',
-        blank=True,
-        help_text="Rol dentro de una empresa. Queda vacío momentáneamente solo durante la "
-                   "creación del usuario, hasta que el flujo que lo crea le asigna el rol "
-                   "real (owner/employee/cliente) en la misma transacción."
+        default='',
+        blank=False,
+        help_text="Rol de negocio dentro de una empresa. Es obligatorio elegirlo "
+                   "explícitamente — no existe (ni debe existir) un valor por "
+                   "defecto seguro para este campo."
     )
 
-    # Si el usuario es EMPLEADO, aquí se asigna qué rol tiene dentro de la empresa
-    rol_empresa = models.ForeignKey(RolEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
+    # Si el usuario es EMPLEADO, aquí se asigna qué cargo/puesto tiene
+    # dentro de la empresa (ej. "Cajero", "Gerente de Ventas"). Antes se
+    # llamaba 'rol_empresa', pero ese nombre confundía con 'rol' de arriba
+    # (que es la categoría amplia de sistema: owner/employee/cliente).
+    # 'cargo' deja claro que son dos conceptos distintos: 'rol' = qué TIPO
+    # de cuenta es, 'cargo' = qué PUESTO ocupa dentro de la empresa (solo
+    # aplica si rol == 'employee').
+    cargo = models.ForeignKey(RolEmpresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='usuarios')
 
     # Tipo de negocio (define vocabulario dinámico)
     negocio_tipo = models.CharField(
@@ -116,12 +152,6 @@ class UserProfile(models.Model):
         help_text="Se activa al crear un empleado con contraseña temporal; se desactiva cuando el usuario la cambia."
     )
 
-    # Demo data
-    usa_demo_data = models.BooleanField(
-        default=False,
-        verbose_name="Usando datos de demostración"
-    )
-
     # Auditoría
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
@@ -135,20 +165,36 @@ class UserProfile(models.Model):
 
     def clean(self):
         """
-        Un RolEmpresa (permisos granulares por módulo) solo tiene sentido
-        para un empleado. Un 'owner' ya tiene acceso total y un 'cliente'
-        no navega módulos internos, así que ninguno de los dos debería
-        tener rol_empresa asignado.
+        Dos reglas de integridad del dominio de negocio:
+
+        1. Un superadmin (is_superuser=True) NUNCA puede tener fila en
+           UserProfile — ni creada por código, ni a mano desde el botón
+           "Add" de /admin/. Esta validación cierra ese camino también
+           para una creación manual desde el admin eligiendo un user
+           existente (eso nunca dispara un signal de User).
+
+        2. Un RolEmpresa (permisos granulares por módulo, asignado vía el
+           campo 'cargo') solo tiene sentido para un empleado. Un 'owner'
+           ya tiene acceso total y un 'cliente' no navega módulos
+           internos, así que ninguno de los dos debería tener un cargo
+           asignado.
 
         NOTA: Django no llama clean() automáticamente en .save() — solo
-        lo dispara un ModelForm (por eso /admin/ ya queda protegido
-        gratis). Para guardados directos desde una vista, hay que llamar
-        profile.full_clean() a mano antes de perfil.save() si se quiere
-        que esta validación se aplique ahí también.
+        lo dispara un ModelForm (por eso /admin/ y el panel de Control de
+        BD ya quedan protegidos gratis en ambos casos). Para guardados
+        directos desde una vista, hay que llamar profile.full_clean() a
+        mano antes de perfil.save() si se quiere que esta validación se
+        aplique ahí también.
         """
-        if self.rol_empresa_id and self.rol != 'employee':
+        if self.user_id and self.user.is_superuser:
             raise ValidationError(
-                {'rol_empresa': "Un rol de empresa (RolEmpresa) solo puede asignarse a un usuario con rol 'employee'."}
+                "Un superadministrador (is_superuser=True) no puede tener un UserProfile: "
+                "is_superuser ya es su única fuente de verdad, no pertenece al dominio de negocio."
+            )
+
+        if self.cargo_id and self.rol != 'employee':
+            raise ValidationError(
+                {'cargo': "Un cargo de empresa (RolEmpresa) solo puede asignarse a un usuario con rol 'employee'."}
             )
 
     def get_vocabulario(self):

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ titulo }} | SaaS Control Base de Datos{% endblock %}
+{% block title %}{{ titulo }} | {{ app_name|default:"Tiendita SaaS" }} Control BD{% endblock %}
 
 {% block extra_css %}
 <style>
