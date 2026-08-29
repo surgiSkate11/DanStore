@@ -833,6 +833,18 @@ def saas_eliminar_registro(request, app_label, model_name, object_id):
 @login_required
 def dashboard_tenant(request):
     """Dashboard OPERATIVO exclusivo para la Empresa (Dueño y Empleados)"""
+    # CORRECCIÓN: un superadmin NUNCA debe poder ver el dashboard de
+    # negocio de un tenant. Antes esta vista solo chequeaba
+    # request.empresa — que en teoría nunca debería estar seteado para
+    # un superadmin (TenantMiddleware no se lo asigna), PERO un
+    # UserProfile legado/fantasma (de antes del fix del context
+    # processor que los creaba automáticamente) puede tener una empresa
+    # asociada, filtrando acá igual. is_superuser es la única fuente de
+    # verdad y se chequea primero, sin importar qué diga cualquier
+    # UserProfile — fantasma o no.
+    if es_superadmin(request.user):
+        return redirect('dashboard_saas')
+
     empresa = getattr(request, 'empresa', None)
     if not empresa:
         return redirect('onboarding')
@@ -886,6 +898,12 @@ def dashboard_tenant(request):
 @requiere_modulo('reportes')
 def tenant_reportes(request):
     """Módulo Avanzado de Reportes y Estadísticas para el Dueño"""
+    # CORRECCIÓN: mismo caso que dashboard_tenant — un superadmin nunca
+    # debe ver reportes de negocio de un tenant, sin importar qué diga
+    # un UserProfile legado/fantasma.
+    if es_superadmin(request.user):
+        return redirect('dashboard_saas')
+
     empresa = getattr(request, 'empresa', None)
     if not empresa:
         return redirect('onboarding')

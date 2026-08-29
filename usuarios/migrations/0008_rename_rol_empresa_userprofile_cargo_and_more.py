@@ -22,6 +22,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofile',
             name='rol',
-            field=models.CharField(choices=[('', 'Selecciona un rol...'), ('owner', 'Dueño de Empresa (Tenant Owner)'), ('employee', 'Empleado de Empresa'), ('cliente', 'Cliente Final')], default='', help_text='Rol de negocio dentro de una empresa. Es obligatorio elegirlo explícitamente — no existe (ni debe existir) un valor por defecto seguro para este campo.', max_length=20),
+            field=models.CharField(choices=[('', 'Selecciona un rol...'), ('owner', 'Dueño de Empresa (Tenant Owner)'), ('employee', 'Empleado de Empresa'), ('cliente', 'Cliente Final')], default='', max_length=20),
         ),
     ]

@@ -105,9 +105,7 @@ class UserProfile(models.Model):
         choices=ROLES,
         default='',
         blank=False,
-        help_text="Rol de negocio dentro de una empresa. Es obligatorio elegirlo "
-                   "explícitamente — no existe (ni debe existir) un valor por "
-                   "defecto seguro para este campo."
+        help_text="Rol de negocio dentro de una empresa"
     )
 
     # Si el usuario es EMPLEADO, aquí se asigna qué cargo/puesto tiene
