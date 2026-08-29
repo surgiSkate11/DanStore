@@ -65,7 +65,9 @@
                     </div>
                     
                     {% if perfil.rol != 'owner' %}
-                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm mt-3">Guardar Cambios</button>
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow-sm" style="border-radius: 12px;">Guardar Cambios</button>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -99,37 +101,37 @@
                         <small class="text-muted">Define el vocabulario que usa la app (ej: "Prendas" para ropa, "Productos" para tecnología).</small>
                     </div>
 
-                    <div class="mb-0">
+                    <div class="mb-4">
                         <label class="form-label">Descripción del negocio</label>
                         <textarea name="descripcion_negocio" class="form-control" rows="2" placeholder="Breve descripción de tu negocio (opcional)">{{ perfil.descripcion_negocio }}</textarea>
                     </div>
-                </div>
 
-                <!-- Tarjeta de Suscripción SaaS -->
-                <div class="section-card mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: white; border: none;">
+                    <hr class="my-4">
+
+                    <!-- Plan de Suscripción (mismo estilo que el resto de la tarjeta) -->
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="fw-bold mb-0"><i class="bi bi-star-fill text-warning me-2"></i> Plan de Suscripción</h5>
+                        <h4 class="fw-bold mb-0" style="color: #1f2937;"><i class="bi bi-star-fill text-primary me-2"></i> Plan de Suscripción</h4>
                         {% if empresa.activa %}
-                            <span class="badge bg-success px-3 py-2 rounded-pill" style="box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);">Activa</span>
+                            <span class="badge bg-success px-3 py-2 rounded-pill">Activa</span>
                         {% else %}
-                            <span class="badge bg-danger px-3 py-2 rounded-pill" style="box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);">Suspendida</span>
+                            <span class="badge bg-danger px-3 py-2 rounded-pill">Suspendida</span>
                         {% endif %}
                     </div>
                     <div class="d-flex align-items-end gap-3 mb-3">
-                        <h2 class="display-6 fw-bold mb-0" style="background: linear-gradient(to right, #fcd34d, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ suscripcion.plan.nombre|default:"Plan Básico" }}</h2>
-                        <span class="badge bg-white text-dark mb-2 px-3 py-1 rounded-pill">{{ suscripcion.get_tipo_plan_display|default:"Mensual" }}</span>
+                        <h2 class="fw-bold mb-0" style="color: #1d4ed8;">{{ suscripcion.plan.nombre|default:"Plan Básico" }}</h2>
+                        <span class="badge bg-light text-dark border mb-2 px-3 py-1 rounded-pill">{{ suscripcion.get_tipo_plan_display|default:"Mensual" }}</span>
                     </div>
-                    
+
                     {% if suscripcion %}
-                    <div class="mt-4">
-                        <div class="d-flex justify-content-between small mb-2 opacity-90 fw-semibold">
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between small mb-2 text-muted fw-semibold">
                             <span>Progreso del plan</span>
                             <span>{{ suscripcion.dias_restantes }} días restantes</span>
                         </div>
-                        <div class="progress" style="height: 10px; background-color: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
+                        <div class="progress" style="height: 10px; border-radius: 10px;">
                             <div class="progress-bar bg-{{ suscripcion.estado_color }}" role="progressbar" style="width: {{ suscripcion.porcentaje_consumido }}%; transition: width 1s ease;" aria-valuenow="{{ suscripcion.porcentaje_consumido }}" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <div class="text-end small mt-2 opacity-75">Vence: {{ suscripcion.fecha_vencimiento|date:"d M Y" }}</div>
+                        <div class="text-end small text-muted mt-2">Vence: {{ suscripcion.fecha_vencimiento|date:"d M Y" }}</div>
                     </div>
                     {% endif %}
                 </div>
