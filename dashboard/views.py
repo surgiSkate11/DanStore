@@ -171,12 +171,11 @@ def home(request):
 def dashboard_router(request):
     usuario = request.user
     perfil = getattr(usuario, 'profile', None)
-
-    if perfil and perfil.rol == ROLE_OWNER and not perfil.onboarding_completado:
-        return redirect('onboarding')
-
+    
     if es_superadmin(usuario):
         return redirect('dashboard_saas')
+    elif perfil and perfil.rol == ROLE_OWNER and not perfil.onboarding_completado:
+        return redirect('onboarding')
     elif not perfil:
         config = ConfiguracionSaaS.objects.first()
         return render(
