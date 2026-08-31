@@ -411,28 +411,28 @@
                 <form id="formFoto" enctype="multipart/form-data">
                     {% csrf_token %}
                     <input type="hidden" id="productoIdFoto" name="producto_id">
-                    
-                    <!-- Vista previa de la imagen -->
-                    <div class="text-center mb-3 mb-md-4">
-                        <div id="vistaPrevia" style="display: none; max-height: 250px; overflow: hidden; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+                    <!-- Zona de arrastrar / pegar / seleccionar -->
+                    <div id="dropZoneFoto" class="text-center mb-3 mb-md-4" style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 0.5rem; cursor: pointer; transition: border-color .15s ease, background-color .15s ease;">
+                        <div id="vistaPrevia" style="display: none; max-height: 250px; overflow: hidden; border-radius: 6px;">
                             <img id="imagenPrevia" src="" alt="Vista previa" style="max-width: 100%; max-height: 250px; object-fit: contain;">
                         </div>
                         <div id="iconoInicial" class="py-4 py-md-5">
                             <i class="bi bi-image" style="font-size: 3rem; color: #d1d5db;"></i>
-                            <p class="text-muted mt-2 mb-0 small">Selecciona o toma una foto</p>
+                            <p class="text-muted mt-2 mb-0 small" id="textoDropZone">Selecciona una imagen</p>
                         </div>
                     </div>
-                    
+
                     <!-- Botones de acción -->
                     <div class="row g-2 g-md-3">
-                        <!-- Subir desde dispositivo -->
+                        <!-- Subir / pegar desde dispositivo -->
                         <div class="col-12">
                             <label for="inputFotoArchivo" class="btn btn-outline-primary w-100 py-2 py-md-3" style="border-radius: 8px; border-width: 2px;">
-                                <i class="bi bi-upload"></i> Subir desde dispositivo
+                                <i class="bi bi-upload"></i> <span id="textoBtnSubir">Subir imagen</span>
                             </label>
                             <input type="file" id="inputFotoArchivo" name="imagen" accept="image/*" style="display: none;" onchange="previsualizarImagen(this)">
                         </div>
-                        
+
                         <!-- Tomar foto (solo dispositivos con cámara) -->
                         <div class="col-12" id="btnContainerCamara" style="display: none;">
                             <label for="inputFotoCamara" class="btn btn-outline-success w-100 py-2 py-md-3" style="border-radius: 8px; border-width: 2px;">
@@ -441,7 +441,7 @@
                             <input type="file" id="inputFotoCamara" name="imagen" accept="image/*" capture="environment" style="display: none;" onchange="previsualizarImagen(this)">
                         </div>
                     </div>
-                    
+
                     <div class="alert alert-info mt-3 mb-0 small" style="border-radius: 8px;" id="tipCamaraContainer">
                         <i class="bi bi-info-circle"></i> <strong>Tip:</strong> En celulares, "Tomar foto" abrirá la cámara directamente
                     </div>
@@ -476,20 +476,96 @@
 let productoActualId = null;
 let modalFoto = null;
 
-// Inicializar modal al cargar página y detectar dispositivo celular
+// Detectar si el usuario está en un dispositivo celular/móvil
+const esCelular = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+// Inicializar modal al cargar página y ajustar textos según el dispositivo
 document.addEventListener('DOMContentLoaded', function() {
     modalFoto = new bootstrap.Modal(document.getElementById('modalFoto'));
-    
-    // Detectar si el usuario está en un dispositivo celular/móvil
-    const esCelular = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+    const textoBtnSubir = document.getElementById('textoBtnSubir');
+    const textoDropZone = document.getElementById('textoDropZone');
+
     if (esCelular) {
         document.getElementById('btnContainerCamara').style.display = 'block';
         document.getElementById('tipCamaraContainer').style.display = 'block';
+        textoBtnSubir.textContent = 'Subir imagen';
+        textoDropZone.textContent = 'Toca para elegir una foto';
     } else {
         document.getElementById('btnContainerCamara').style.display = 'none';
         document.getElementById('tipCamaraContainer').style.display = 'none';
+        textoBtnSubir.textContent = 'Subir/Pegar imagen';
+        textoDropZone.textContent = 'Arrastra una imagen, pégala con Ctrl+V o haz clic para seleccionarla';
     }
+
+    inicializarDropZone();
 });
+
+// Zona de arrastrar / soltar / pegar (solo tiene sentido en PC, pero no estorba en móvil)
+function inicializarDropZone() {
+    const dropZone = document.getElementById('dropZoneFoto');
+    const inputArchivo = document.getElementById('inputFotoArchivo');
+
+    // Clic en la zona -> abrir selector de archivos
+    dropZone.addEventListener('click', function() {
+        inputArchivo.click();
+    });
+
+    // Resaltar la zona mientras se arrastra un archivo encima
+    ['dragenter', 'dragover'].forEach(function(evento) {
+        dropZone.addEventListener(evento, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = '#667eea';
+            dropZone.style.backgroundColor = 'rgba(102, 126, 234, 0.05)';
+        });
+    });
+
+    ['dragleave', 'dragend'].forEach(function(evento) {
+        dropZone.addEventListener(evento, function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropZone.style.borderColor = '#cbd5e1';
+            dropZone.style.backgroundColor = 'transparent';
+        });
+    });
+
+    // Soltar el archivo
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.style.borderColor = '#cbd5e1';
+        dropZone.style.backgroundColor = 'transparent';
+
+        const archivos = e.dataTransfer.files;
+        if (archivos && archivos[0] && archivos[0].type.startsWith('image/')) {
+            inputArchivo.files = archivos;
+            previsualizarImagen(inputArchivo);
+        } else {
+            mostrarToast('Solo se permiten archivos de imagen', 'warning');
+        }
+    });
+
+    // Pegar imagen con Ctrl+V (mientras el modal esté abierto)
+    document.addEventListener('paste', function(e) {
+        const modalAbierto = document.getElementById('modalFoto').classList.contains('show');
+        if (!modalAbierto) return;
+
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                const archivo = items[i].getAsFile();
+                const dt = new DataTransfer();
+                dt.items.add(archivo);
+                inputArchivo.files = dt.files;
+                previsualizarImagen(inputArchivo);
+                break;
+            }
+        }
+    });
+}
 
 // Abrir modal para subir foto
 function abrirModalFoto(productoId) {
@@ -553,7 +629,7 @@ function guardarFoto() {
     btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subiendo...';
     
     // Enviar mediante AJAX
-    fetch(`/productos/subir-foto/${productoActualId}/subir-foto/`, {
+    fetch(`/productos/subir-foto/${productoActualId}/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken
