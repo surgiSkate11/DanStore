@@ -284,7 +284,13 @@
            real: el submenú pasa a ocupar su lugar en el flujo normal.
            ============================================================ */
         @media (max-width: 1199.98px) {
-            .navbar-collapse .dropdown-menu {
+            /* :not(.dropdown-menu-premium) — la regla genérica de acordeón
+               es para los submenús normales del navbar (Productos, Catálogo,
+               Ventas, Sorteos, Tienda). El dropdown premium del perfil tiene
+               su propio diseño de tarjeta flotante (ver .dropdown-menu-premium
+               más arriba) y NO debe convertirse en acordeón: debe seguir
+               siendo position:absolute con su tarjeta, sombra y degradado. */
+            .navbar-collapse .dropdown-menu:not(.dropdown-menu-premium) {
                 position: static;
                 float: none;
                 width: 100%;
@@ -295,7 +301,7 @@
                 border-radius: 10px;
                 padding: 0.4rem 0.5rem 0.4rem 1.25rem;
             }
-            .navbar-collapse .dropdown-item {
+            .navbar-collapse .dropdown-item:not(.dropdown-item-premium) {
                 padding-top: 0.55rem;
                 padding-bottom: 0.55rem;
                 border-radius: 8px;
@@ -310,6 +316,40 @@
             .navbar-collapse .dropdown-toggle {
                 padding-top: 0.65rem;
                 padding-bottom: 0.65rem;
+            }
+        }
+
+        /* ============================================================
+           DROPDOWN PREMIUM DEL PERFIL — versión responsive.
+           Mantiene la tarjeta flotante (position: absolute, vía Bootstrap/
+           Popper) en todos los tamaños; aquí solo ajustamos el ancho para
+           que en pantallas angostas no se salga de la ventana ni provoque
+           scroll horizontal, sin tocar su diseño (degradado, avatar,
+           badges, sombra, bordes).
+           ============================================================ */
+        @media (max-width: 575.98px) {
+            .dropdown-menu-premium {
+                min-width: 0;
+                width: calc(100vw - 2rem);
+                max-width: 320px;
+                right: 0.5rem !important;
+                left: auto !important;
+            }
+        }
+
+        @media (max-width: 359.98px) {
+            .dropdown-menu-premium {
+                width: calc(100vw - 1rem);
+                right: 0.5rem !important;
+            }
+
+            .dropdown-header-premium {
+                padding: 16px 10px;
+            }
+
+            .dropdown-item-premium {
+                padding: 10px 12px;
+                font-size: 0.85rem;
             }
         }
 
@@ -700,8 +740,8 @@
     {% if user.is_authenticated and request.resolver_match.url_name != 'gestionar_premios' %}
     <footer class="mt-2">
         <div class="container text-center">
-            <p class="text-white mb-0" style="font-size: 0.875rem; opacity: 0.9;">
-                &copy; 2025 {{ app_name|default:"Tiendita SaaS" }} - Sistema de Gestión de Inventario
+            <p class="mb-0" style="font-size: 0.875rem; color: #6b7280;">
+                &copy; {% now "Y" %} <strong style="color: #3b82f6;">{{ app_name|default:"Tiendita SaaS" }}</strong> - Sistema de Gestión de Inventario
             </p>
         </div>
     </footer>

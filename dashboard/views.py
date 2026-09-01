@@ -356,15 +356,19 @@ def saas_configuracion(request):
         config.smtp_last_test_at = timezone.now()
         
         # Pasarelas de Pago
+        config.stripe_active = request.POST.get('stripe_active') == 'on'
+        config.stripe_public_key = request.POST.get('stripe_public_key', '')
         stripe_secret = request.POST.get('stripe_secret', '')
         if stripe_secret:
             config.stripe_secret_key = stripe_secret
-            
+
+        config.paypal_active = request.POST.get('paypal_active') == 'on'
         config.paypal_client_id = request.POST.get('paypal_client_id', '')
         paypal_secret = request.POST.get('paypal_secret', '')
         if paypal_secret:
             config.paypal_secret_key = paypal_secret
-            
+
+        config.payphone_active = request.POST.get('payphone_active') == 'on'
         payphone_token = request.POST.get('payphone_token', '')
         if payphone_token:
             config.payphone_token = payphone_token
@@ -392,14 +396,39 @@ def saas_configuracion(request):
         config.banco_guayaquil = request.POST.get('banco_guayaquil', '')
         config.banco_jep = request.POST.get('banco_jep', '')
 
-        # NOTA: Los siguientes campos no existen en el modelo ConfiguracionSaaS y causarían un error.
-        # config.theme_color, config.stripe_active, config.stripe_public_key, config.paypal_active,
-        # config.payphone_active, config.force_2fa, config.session_timeout
+        # Ajustes Globales (Settings)
+        theme_color_raw = request.POST.get('theme_color', '').strip()
+        if theme_color_raw:
+            config.theme_color = theme_color_raw
+
+        config.force_2fa = request.POST.get('force_2fa') == 'on'
+
+        # Duración de sesión (minutos). Se valida antes de asignar: un valor
+        # vacío/no numérico o menor al mínimo permitido (ver
+        # ConfiguracionSaaS.session_timeout) no debe tumbar el resto del
+        # guardado, así que si es inválido se conserva el valor previo y se
+        # avisa al admin con un mensaje de error.
+        session_timeout_raw = request.POST.get('session_timeout', '').strip()
+        try:
+            session_timeout_val = int(session_timeout_raw)
+            if session_timeout_val < 5:
+                raise ValueError
+            config.session_timeout = session_timeout_val
+        except (TypeError, ValueError):
+            messages.error(
+                request,
+                "La duración de sesión no es válida: debe ser un número entero de minutos, mínimo 5. "
+                "Se mantuvo el valor anterior."
+            )
 
         config.save()
         
         cache.delete('saas_app_name')
         cache.delete('saas_support_email')
+        # El middleware cachea la duración de sesión para no consultar la
+        # base de datos en cada request; al guardar, invalidamos esa caché
+        # para que el nuevo valor se aplique de inmediato.
+        cache.delete('saas_session_timeout')
 
         tab_activa = request.POST.get('active_tab', 'branding')
         messages.success(request, 'Ajustes del sistema guardados correctamente.')

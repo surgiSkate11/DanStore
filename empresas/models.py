@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -194,6 +195,42 @@ class ConfiguracionSaaS(models.Model):
     support_email = models.EmailField(blank=True, null=True, verbose_name="Email de Soporte", help_text="Correo para recibir y enviar notificaciones de tickets")
     nombre_plataforma = models.CharField(max_length=100, default="Tiendita SaaS", verbose_name="Nombre de la Plataforma")
 
+    # --- AJUSTES GLOBALES (Settings) ---
+    # Estos campos corresponden a la pestaña "Ajustes Globales" del panel
+    # SaaS. Antes el formulario los enviaba por POST pero el modelo no los
+    # tenía, así que se perdían en silencio al guardar (ver comentario que
+    # existía en saas_configuracion antes de esta corrección).
+
+    # Color de marca del panel de administración SaaS (no confundir con
+    # Empresa.color_primario, que es el color de la TIENDA de cada tenant).
+    theme_color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="#0d6efd",
+        verbose_name="Color del Tema (SaaS)",
+        help_text="Color Hexadecimal del panel de administración. Ej: #0d6efd"
+    )
+
+    # Seguridad: obligar verificación en dos pasos a todos los usuarios
+    # (SuperAdmin, dueños y empleados) del sistema.
+    force_2fa = models.BooleanField(
+        default=False,
+        verbose_name="Forzar Verificación en Dos Pasos (2FA)",
+        help_text="Si está activo, todos los usuarios deberán configurar 2FA para poder iniciar sesión."
+    )
+
+    # Duración de sesión (minutos). Es una configuración GLOBAL del SaaS
+    # (singleton, id=1), igual que el resto de ConfiguracionSaaS: no
+    # depende de la empresa/tenant. Se aplica en TenantMiddleware mediante
+    # request.session.set_expiry(session_timeout * 60).
+    session_timeout = models.PositiveIntegerField(
+        default=1440,
+        validators=[MinValueValidator(5)],
+        verbose_name="Duración de sesión (minutos)",
+        help_text="Minutos de inactividad antes de cerrar la sesión automáticamente. Valor mínimo: 5 minutos. Ej: 1440 = 24 horas."
+    )
+    # -----------------------------------
+
     SMTP_ENCRYPTION_CHOICES = [
         ('none', 'Sin cifrado'),
         ('starttls', 'STARTTLS'),
@@ -234,6 +271,20 @@ class ConfiguracionSaaS(models.Model):
     # -----------------------------------------
 
     # --- PASARELAS DE PAGO ADICIONALES ---
+
+    # Stripe: le faltaba el toggle de activación y la clave pública
+    # (publishable key), que NO es secreta y por eso no usa
+    # EncryptedTextField — igual que paypal_client_id y razorpay_key_id.
+    stripe_active = models.BooleanField(default=False, verbose_name="Activar Stripe")
+    stripe_public_key = models.CharField(max_length=255, blank=True, verbose_name="Stripe Publishable Key")
+
+    # PayPal: le faltaba el toggle de activación (ya tenía client_id y
+    # secret_key).
+    paypal_active = models.BooleanField(default=False, verbose_name="Activar PayPal")
+
+    # PayPhone: le faltaba el toggle de activación (ya tenía el token).
+    payphone_active = models.BooleanField(default=False, verbose_name="Activar PayPhone")
+
     mercadopago_active = models.BooleanField(default=False, verbose_name="Activar MercadoPago")
     mercadopago_token = EncryptedTextField(blank=True, verbose_name="MercadoPago Access Token")
 

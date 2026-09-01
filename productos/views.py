@@ -108,10 +108,17 @@ def lista_productos(request):
 def crear_producto(request):
     """Crea un nuevo producto — genérico para cualquier negocio"""
     if request.method == 'POST':
+        if not getattr(request, 'empresa', None):
+            logger.warning('Intento de crear producto sin empresa asignada. Usuario: %s', request.user.id)
+            messages.error(request, 'No se encontró una empresa asociada a tu cuenta. Contacta al administrador.')
+            return redirect('lista_productos')
+            
         form = ProductoForm(request.POST, request.FILES, empresa=request.empresa)
         if form.is_valid():
             try:
-                form.save()
+                instancia = form.save(commit=False)
+                instancia.empresa = request.empresa
+                instancia.save()
             except Exception:
                 logger.exception('Error creando producto (empresa %s, usuario %s)', request.empresa.id, request.user.id)
                 messages.error(request, 'No se pudo guardar el producto. Intenta nuevamente en unos minutos; si el problema persiste, contacta a soporte.')

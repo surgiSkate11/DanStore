@@ -1,6 +1,31 @@
+from django.core.cache import cache
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.deprecation import MiddlewareMixin
+
+
+# --- Duración de sesión configurable por el SuperAdmin (ConfiguracionSaaS.session_timeout) ---
+# Es una configuración GLOBAL del SaaS (singleton, id=1), igual que el resto de
+# ConfiguracionSaaS: no depende de la empresa/tenant, aplica a todos por igual.
+SESSION_TIMEOUT_CACHE_KEY = 'saas_session_timeout'
+SESSION_TIMEOUT_CACHE_TTL_SEGUNDOS = 300  # 5 minutos: evita ir a BD en cada request
+SESSION_TIMEOUT_DEFAULT_MINUTOS = 1440  # Mismo default que el modelo, por si aún no existe fila
+
+def _obtener_session_timeout_minutos():
+    """
+    Devuelve la duración de sesión configurada (en MINUTOS), leyendo de una
+    caché de corta duración para no golpear la base de datos en cada
+    request. La vista `saas_configuracion` invalida esta caché
+    (cache.delete('saas_session_timeout')) al guardar un nuevo valor, así
+    que el cambio se aplica como máximo con unos minutos de retraso, o de
+    inmediato si el admin acaba de guardar.
+    """
+    def _leer_de_bd():
+        from .models import ConfiguracionSaaS
+        valor = ConfiguracionSaaS.objects.values_list('session_timeout', flat=True).first()
+        return valor or SESSION_TIMEOUT_DEFAULT_MINUTOS
+
+    return cache.get_or_set(SESSION_TIMEOUT_CACHE_KEY, _leer_de_bd, SESSION_TIMEOUT_CACHE_TTL_SEGUNDOS)
 
 
 class TenantMiddleware(MiddlewareMixin):
@@ -16,6 +41,22 @@ class TenantMiddleware(MiddlewareMixin):
 
         if not request.user.is_authenticated:
             return
+
+        # Aplica la duración de sesión configurada en ConfiguracionSaaS a
+        # CUALQUIER usuario autenticado (superadmin, dueños y empleados).
+        # set_expiry() reinicia el conteo en cada request ("rolling
+        # session"), por lo que la sesión expira tras N minutos de
+        # INACTIVIDAD, no N minutos desde el login. No usamos
+        # SESSION_COOKIE_AGE porque esa constante es fija a nivel de
+        # settings.py y no puede recargarse en caliente desde este modelo.
+        try:
+            minutos = _obtener_session_timeout_minutos()
+            request.session.set_expiry(minutos * 60)
+        except Exception:
+            # Nunca debe tumbar la petición por un problema leyendo la
+            # configuración de sesión; en el peor caso, Django usa el
+            # comportamiento de sesión por defecto.
+            pass
 
         if request.user.is_superuser and request.path.startswith('/admin/'):
             return
