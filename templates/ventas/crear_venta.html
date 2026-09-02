@@ -1822,18 +1822,43 @@ if (facturaSinDatosCheckbox) {
     const syncClienteRequired = () => {
         const selectCliente = document.getElementById('selectCliente');
         const searchInput = document.getElementById('searchClienteInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const newClientBtn = document.querySelector('[data-bs-target="#crearClienteModal"]');
         const infoCliente = document.getElementById('infoClienteSeleccionado');
+        const clienteWrapper = document.querySelector('.search-cliente-wrapper');
         
         if (!selectCliente) return;
-        if (facturaSinDatosCheckbox.checked) {
-            // Modo consumidor final: limpiar todo
+        const isConsumerFinal = facturaSinDatosCheckbox.checked;
+
+        if (isConsumerFinal) {
+            // Modo consumidor final: limpiar y bloquear búsqueda de cliente
             selectCliente.required = false;
+            selectCliente.disabled = true;
             selectCliente.value = '';
-            if (searchInput) searchInput.value = '';
+
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.disabled = true;
+                searchInput.setAttribute('aria-disabled', 'true');
+            }
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+                clearBtn.disabled = true;
+            }
+            if (newClientBtn) newClientBtn.disabled = true;
+            if (clienteWrapper) clienteWrapper.classList.add('cliente-bloqueado');
             if (infoCliente) infoCliente.style.display = 'none';
         } else {
             // Modo con cliente: requerir cliente
             selectCliente.required = true;
+            selectCliente.disabled = false;
+            if (searchInput) {
+                searchInput.disabled = false;
+                searchInput.removeAttribute('aria-disabled');
+            }
+            if (clearBtn) clearBtn.disabled = false;
+            if (newClientBtn) newClientBtn.disabled = false;
+            if (clienteWrapper) clienteWrapper.classList.remove('cliente-bloqueado');
         }
         actualizarContador();
     };
@@ -2045,17 +2070,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function seleccionarCliente(clienteObj) {
             searchInput.value = clienteObj.nombre;
-            selectCliente.value = clienteObj.nombre; 
+            selectCliente.value = clienteObj.nombre;
             searchDropdown.classList.remove('show');
             clearBtn.style.display = 'block';
-            
-            // Desactivar "Factura sin datos" cuando se selecciona un cliente
+
             const facturaSinDatos = document.getElementById('facturaSinDatos');
             if (facturaSinDatos && facturaSinDatos.checked) {
                 facturaSinDatos.checked = false;
                 facturaSinDatos.dispatchEvent(new Event('change'));
             }
-            
+
             if (infoCliente) {
                 const cedulaInfo = document.getElementById('cedulaClienteInfo');
                 if (cedulaInfo) cedulaInfo.textContent = clienteObj.ruc_cedula || 'No disponible';
@@ -2114,13 +2138,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         clearBtn.addEventListener('click', function() {
+            if (facturaSinDatosCheckbox && facturaSinDatosCheckbox.checked) return;
             searchInput.value = '';
             selectCliente.value = '';
             this.style.display = 'none';
-            
+
             const top5 = [...clientesData].sort((a, b) => (b.compras || 0) - (a.compras || 0)).slice(0, 5);
             renderDropdown(top5, '', true);
-            
+
             if (infoCliente) infoCliente.style.display = 'none';
             actualizarContador();
             searchInput.focus();
