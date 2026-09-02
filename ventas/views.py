@@ -235,9 +235,17 @@ def crear_venta(request):
                     producto=producto,
                     precio_unitario=producto.precio or 0
                 )
-                producto.estado = 'vendido'
-                producto.stock = max(0, producto.stock - 1)
-                producto.vendido_a = cliente.nombre
+
+                nuevo_stock = max(0, producto.stock - 1)
+                producto.stock = nuevo_stock
+
+                if nuevo_stock <= 0:
+                    producto.estado = 'vendido'
+                    producto.vendido_a = cliente.nombre
+                else:
+                    producto.estado = 'disponible'
+                    producto.vendido_a = ''
+
                 producto.save(update_fields=['estado', 'stock', 'vendido_a', 'actualizado_en'])
             except Producto.DoesNotExist:
                 continue

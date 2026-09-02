@@ -115,6 +115,40 @@ class VentaFlowTests(TestCase):
         self.assertEqual(venta.cliente.nombre, 'CONSUMIDOR FINAL')
         self.assertEqual(venta.ruc_cliente, '9999999999')
 
+    def test_productos_con_stock_restante_no_quedan_en_estado_vendido(self):
+        """Si aún queda stock, el producto debe seguir disponible."""
+        self.producto.stock = 5
+        self.producto.estado = 'disponible'
+        self.producto.save(update_fields=['stock', 'estado'])
+
+        factory = RequestFactory()
+        request = factory.post(
+            reverse('crear_venta'),
+            {
+                'cliente_id': str(self.cliente.id),
+                'productos': [str(self.producto.id)],
+                'descuento': '0',
+                'envio': '0',
+                'otros_gastos': '0',
+                'descripcion_otros': '',
+                'notas': '',
+                'metodo_pago': 'efectivo',
+                'ruc_cliente': '',
+            },
+        )
+        SessionMiddleware(lambda req: None).process_request(request)
+        request.session.save()
+        request._messages = FallbackStorage(request)
+        request.user = self.user
+        request.empresa = self.empresa
+
+        response = crear_venta(request)
+
+        self.assertEqual(response.status_code, 302)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 4)
+        self.assertEqual(self.producto.estado, 'disponible')
+
     def test_no_puede_vender_mas_stock_del_disponible(self):
         """Validar que no se puede vender más productos del stock disponible"""
         factory = RequestFactory()
