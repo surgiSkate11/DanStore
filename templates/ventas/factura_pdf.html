@@ -190,13 +190,13 @@
     <div class="divider-solid"></div>
 
     <script>
-        // Auto-ejecutar el diálogo de impresión web tan pronto como cargue el ticket
+        // No se dispara impresión automática. La factura solo se abre como vista previa
+        // para que el usuario imprima manualmente si tiene impresora conectada.
         window.onload = function() {
-            window.print();
-            // Opcional: Cerrar la ventana o pestaña automáticamente después de imprimir
-            window.onafterprint = function() {
-                window.close();
-            };
+            const hasPrintSupport = typeof window.print === 'function';
+            if (!hasPrintSupport) {
+                console.log('La impresión no está disponible en este navegador.');
+            }
         };
     </script>
 </body>

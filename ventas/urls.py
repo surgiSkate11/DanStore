@@ -19,6 +19,7 @@ urlpatterns = [
     
     # Generar PDF
     path('<int:venta_id>/factura/', views.factura_pdf, name='factura_pdf'),
+    path('<int:venta_id>/factura/', views.factura_pdf, name='generar_factura_pdf'),
     
     # Generar PDF de deuda por cliente
     path('deudas/<str:cliente_nombre>/comprobante/', views.generar_comprobante_deuda_pdf, name='generar_comprobante_deuda_pdf'),

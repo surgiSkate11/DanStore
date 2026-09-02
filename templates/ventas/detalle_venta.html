@@ -215,7 +215,7 @@
             {% endif %}
             
             <button type="button" 
-                    data-url="{% url 'generar_factura_pdf' venta.id %}"
+                    data-url="{% url 'factura_pdf' venta.id %}"
                     data-filename="Factura_{{ venta.numero_factura }}.pdf"
                     data-title="Factura {{ venta.numero_factura }}"
                     data-text="Hola, te comparto el comprobante/factura de tu compra."
@@ -224,11 +224,11 @@
                 <i class="bi bi-share-fill"></i> Compartir
             </button>
             
-            <a href="{% url 'generar_factura_pdf' venta.id %}?html=1" class="btn btn-secondary fw-semibold rounded-pill px-3" target="_blank">
+            <a href="{% url 'factura_pdf' venta.id %}?html=1" class="btn btn-secondary fw-semibold rounded-pill px-3" target="_blank">
                 <i class="bi bi-printer"></i> Imprimir Ticket
             </a>
             
-            <a href="{% url 'generar_factura_pdf' venta.id %}" class="btn fw-semibold rounded-pill px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);" target="_blank">
+            <a href="{% url 'factura_pdf' venta.id %}" class="btn fw-semibold rounded-pill px-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);" target="_blank">
                 <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
             </a>
         </div>
@@ -397,9 +397,18 @@ document.addEventListener("DOMContentLoaded", function() {
     // Comprobar si venimos de crear una venta (parámetro auto_print=1)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auto_print') === '1') {
-        // Abrir la versión HTML del ticket térmico en una nueva pestaña para auto-impresión
-        const urlImpresion = "{% url 'generar_factura_pdf' venta.id %}?html=1";
-        window.open(urlImpresion, '_blank');
+        const urlImpresion = "{% url 'factura_pdf' venta.id %}?html=1";
+        const nuevaVentana = window.open(urlImpresion, '_blank', 'noopener,noreferrer');
+
+        if (typeof showDjangoToast === 'function') {
+            showDjangoToast('Factura generada. Se abrió la vista previa para imprimirla manualmente si tu impresora está conectada.', 'info');
+        }
+
+        if (!nuevaVentana) {
+            if (typeof showDjangoToast === 'function') {
+                showDjangoToast('La factura se generó, pero el navegador bloqueó la ventana emergente. Puedes abrirla desde el botón de vista previa.', 'warning');
+            }
+        }
     }
 });
 </script>
