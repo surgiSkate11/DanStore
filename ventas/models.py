@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
 from django.db import transaction
@@ -41,6 +43,7 @@ class Venta(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='ventas', verbose_name="Cliente")
     fecha = models.DateTimeField(default=timezone.now, verbose_name="Fecha de venta")
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Subtotal")
+    iva = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="IVA")
     descuento = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Descuento")
     envio = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Costo de envío")
     otros_gastos = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Otros gastos")
@@ -102,15 +105,20 @@ class Venta(models.Model):
             return f"FAC-{str(ultimo_num + 1).zfill(6)}"
     
     def calcular_total(self):
-        """Calcula el total de la venta"""
-        # OPTIMIZACIÓN 1: Delegar la suma al motor SQL en lugar de usar RAM en Python
+        """Calcula el subtotal, IVA y total final de la venta."""
         resultado = self.detalles.aggregate(suma_total=models.Sum('precio_unitario'))
         self.subtotal = resultado['suma_total'] or 0
-        
-        self.total = self.subtotal - self.descuento + self.envio + self.otros_gastos
-        
-        # OPTIMIZACIÓN 2: Solo escribir las columnas que cambiaron (update_fields)
-        self.save(update_fields=['subtotal', 'total', 'actualizado_en'])
+
+        empresa_id = self.empresa_id or (self.empresa.id if self.empresa else None)
+        porcentaje_iva = Decimal('0')
+        if empresa_id:
+            config = ConfiguracionFactura.obtener_configuracion(empresa_id)
+            porcentaje_iva = Decimal(str(config.porcentaje_iva or '0'))
+
+        self.iva = (self.subtotal * porcentaje_iva / Decimal('100')).quantize(Decimal('0.01'))
+        self.total = self.subtotal + self.iva - self.descuento + self.envio + self.otros_gastos
+
+        self.save(update_fields=['subtotal', 'iva', 'total', 'actualizado_en'])
     
     
     def cantidad_productos(self):

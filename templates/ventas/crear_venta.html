@@ -345,6 +345,62 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.12);
         transform: translateY(-2px);
     }
+
+    .client-condition-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        margin-top: 1rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.04));
+        max-width: 470px;
+    }
+
+    .client-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        margin: 0;
+        width: 100%;
+    }
+
+    .client-switch .form-check-input {
+        width: 3rem;
+        height: 1.6rem;
+        margin-top: 0.12rem;
+        border-radius: 999px;
+        border: 2px solid rgba(102, 126, 234, 0.45);
+        background-color: #f3f4f6;
+        box-shadow: none;
+    }
+
+    .client-switch .form-check-input:checked {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+    }
+
+    .client-switch .form-check-label {
+        font-size: 0.96rem;
+        color: #1f2937;
+        font-weight: 700;
+        letter-spacing: 0.1px;
+        cursor: pointer;
+    }
+
+    .client-info-panel {
+        margin-top: 1rem;
+        border-radius: 14px !important;
+        border: 1px solid #bae6fd;
+        background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+        color: #0f172a;
+        box-shadow: 0 8px 18px rgba(14, 116, 144, 0.08);
+    }
+
+    .client-info-panel .bi {
+        color: #0284c7;
+    }
     
     /* Z-index fix for Client Search */
     .form-section-cliente {
@@ -720,12 +776,28 @@
     
     /* Tabla de Facturación Profesional */
     .facturacion-section {
-        background: white;
-        border-radius: 16px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+        border-radius: 18px;
         padding: 2rem;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
         border: 1px solid #e5e7eb;
         margin-top: 0;
+    }
+
+    .facturacion-section .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 1.28rem;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 1.2rem;
+        letter-spacing: -0.3px;
+    }
+
+    .facturacion-section .section-title i {
+        color: #667eea;
+        font-size: 1.45rem;
     }
     
     .factura-tabla {
@@ -992,6 +1064,7 @@
     </div>
     
     <form method="post" id="formVenta">
+        {% csrf_token %}
         <!-- SECCIÓN 1: Información del Cliente -->
         <div class="row">
             <div class="col-12">
@@ -1046,11 +1119,20 @@
                                 <input type="hidden" name="cliente_id" id="selectCliente" required>
                             </div>
                         </div>
+
+                        <div class="client-condition-wrap">
+                            <div class="form-check form-switch client-switch">
+                                <input class="form-check-input" type="checkbox" id="facturaSinDatos" name="factura_sin_datos" value="1">
+                                <label class="form-check-label" for="facturaSinDatos">
+                                    Factura sin datos del cliente (consumidor final)
+                                </label>
+                            </div>
+                        </div>
                         
                         <!-- Información adicional del cliente (teléfono/dirección) -->
-                        <div id="infoClienteSeleccionado" style="display: none; border-radius: 10px !important;" class="mt-3 p-3 bg-light rounded">
+                        <div id="infoClienteSeleccionado" style="display: none;" class="client-info-panel mt-3 p-3">
                             <div class="d-flex align-items-start">
-                                <i class="bi bi-info-circle-fill text-primary me-2" style="font-size: 1.2rem;"></i>
+                                <i class="bi bi-info-circle-fill me-2" style="font-size: 1.2rem;"></i>
                                 <div>
                                     <p class="mb-1"><strong>CI/RUC:</strong> <span id="cedulaClienteInfo">-</span></p>
                                     <p class="mb-1"><strong>Teléfono:</strong> <span id="telefonoClienteInfo">-</span></p>
@@ -1180,6 +1262,7 @@
                         <div class="card producto-seleccionable" 
                              data-producto-id="{{ producto.id }}" 
                              data-precio="{{ producto.precio }}"
+                             data-stock="{{ producto.stock }}"
                          data-categoria="{{ producto.categoria }}"
                          data-nombre="{{ producto.tipo_producto|lower }} {{ producto.nombre|lower }}">
                             <div class="position-relative">
@@ -1190,6 +1273,11 @@
                                 <div class="bg-light d-flex align-items-center justify-content-center" 
                                      style="height: 150px;">
                                     <i class="bi bi-image" style="font-size: 2rem; color: #d1d5db;"></i>
+                                </div>
+                                {% endif %}
+                                {% if producto.stock %}
+                                <div style="position: absolute; top: 8px; right: 8px; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-box2" style="margin-right: 0.3rem;"></i>Stock: {{ producto.stock }}
                                 </div>
                                 {% endif %}
                             </div>
@@ -1233,8 +1321,8 @@
         <div class="row" style="margin-top: 0;">
             <div class="col-12">
                 <div class="facturacion-section" style="padding-top: 1rem;">
-                    <h5 style="font-size: 1.25rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; letter-spacing: -0.3px;">
-                        <i class="bi bi-receipt-cutoff" style="color: #667eea; margin-right: 0.5rem;"></i>
+                    <h5 class="section-title">
+                        <i class="bi bi-receipt-cutoff"></i>
                         Detalle de Facturación
                     </h5>
                     
@@ -1270,10 +1358,10 @@
                     <div class="row mt-4">
                         <div class="col-md-6">
                             <!-- Gastos Adicionales -->
-                            <div style="background: #ffffff; padding: 2rem; border-radius: 16px; border: 2px solid #e5e7eb; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); position: relative; overflow: hidden;">
+                            <div style="background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%); padding: 2rem; border-radius: 16px; border: 2px solid #e5e7eb; box-shadow: 0 10px 28px rgba(59, 130, 246, 0.08); position: relative; overflow: hidden;">
                                 <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);"></div>
-                                <h6 style="font-weight: 700; margin-bottom: 1.5rem; color: #111827; font-size: 1.15rem; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; letter-spacing: -0.3px;">
-                                    <i class="bi bi-calculator" style="color: #3b82f6; margin-right: 0.5rem; font-size: 1.2rem;"></i> Gastos Adicionales
+                                <h6 style="font-weight: 800; margin-bottom: 1.5rem; color: #111827; font-size: 1.18rem; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; letter-spacing: -0.3px; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="bi bi-calculator" style="color: #3b82f6; font-size: 1.2rem;"></i> Gastos Adicionales
                                 </h6>
                                 
                                 <div class="mb-3">
@@ -1337,6 +1425,13 @@
                                     <span style="font-weight: 800; color: #059669; font-size: 1.1rem; font-family: 'Courier New', monospace;" id="subtotalDisplay">$0.00</span>
                                 </div>
                                 
+                                <div class="resumen-fila" id="ivaRow" style="display: flex;">
+                                    <span style="font-weight: 600; color: #374151; font-size: 0.95rem;">
+                                        <i class="bi bi-percent" style="color: #f59e0b;"></i> IVA:
+                                    </span>
+                                    <span style="font-weight: 800; color: #f59e0b; font-size: 1.1rem; font-family: 'Courier New', monospace;" id="ivaDisplay">+$0.00</span>
+                                </div>
+
                                 <div class="resumen-fila" id="descuentoRow" style="display: none;">
                                     <span style="font-weight: 600; color: #374151; font-size: 0.95rem;">
                                         <i class="bi bi-dash-circle" style="color: #dc2626;"></i> Descuento (<span id="descuentoPorcentaje">0</span>%):
@@ -1399,6 +1494,7 @@
 
 <script>
 let productosSeleccionados = new Set();
+const productosCountMap = new Map(); // Mapa de producto_id -> cantidad seleccionada
 const PRODUCTOS_POR_PAGINA = 12;
 let paginaActual = 1;
 let categoriaActual = 'todos';
@@ -1602,6 +1698,21 @@ function eliminarProductoTabla(productoId) {
         setTimeout(() => {
             fila.remove();
             
+            // Actualizar contador del producto
+            const cantidadActual = productosCountMap.get(productoId) || 1;
+            productosCountMap.set(productoId, cantidadActual - 1);
+            
+            // Verificar si hay más filas de este producto en la tabla
+            const filasDelProducto = tbody.querySelectorAll(`tr[data-producto-id="${productoId}"]`);
+            if (filasDelProducto.length === 0) {
+                productosSeleccionados.delete(productoId);
+                // Deseleccionar el producto en el grid
+                const card = document.querySelector(`.producto-seleccionable[data-producto-id="${productoId}"]`);
+                if (card) {
+                    card.classList.remove('producto-seleccionado');
+                }
+            }
+            
             // Renumerar filas
             const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
             filas.forEach((f, index) => {
@@ -1625,14 +1736,7 @@ function eliminarProductoTabla(productoId) {
             }
             
             calcularTotales();
-            
-            // Deseleccionar el producto en el grid
-            const card = document.querySelector(`.producto-seleccionable[data-producto-id="${productoId}"]`);
-            if (card) {
-                card.classList.remove('producto-seleccionado');
-                productosSeleccionados.delete(productoId);
-                actualizarContador();
-            }
+            actualizarContador();
         }, 300);
     }
 }
@@ -1643,27 +1747,36 @@ document.getElementById('productosGrid').addEventListener('click', function(e) {
     if (!card) return;
     
     const productoId = card.dataset.productoId;
+    const stock = parseInt(card.dataset.stock) || 0;
+    const cantidadActual = productosCountMap.get(productoId) || 0;
     
-    if (productosSeleccionados.has(productoId)) {
-        productosSeleccionados.delete(productoId);
-        card.classList.remove('producto-seleccionado');
-        eliminarProductoTabla(productoId);
-    } else {
-        productosSeleccionados.add(productoId);
-        card.classList.add('producto-seleccionado');
-        agregarProductoTabla(productoId);
+    // Si ya se seleccionó este producto el máximo de veces disponibles, mostrar error
+    if (stock > 0 && cantidadActual >= stock) {
+        showDjangoToast(`No hay más stock disponible. Máximo: ${stock} unidades de este producto.`, 'warning');
+        return;
     }
     
+    // Agregar el producto a la tabla (permitir duplicados)
+    productosSeleccionados.add(productoId);
+    productosCountMap.set(productoId, cantidadActual + 1);
+    card.classList.add('producto-seleccionado');
+    agregarProductoTabla(productoId);
     actualizarContador();
 });
 
 function actualizarContador() {
     const contador = document.getElementById('contadorProductos');
     const badge = document.getElementById('badgeContador');
-    if (contador) contador.textContent = productosSeleccionados.size;
+    const facturaSinDatosCheckbox = document.getElementById('facturaSinDatos');
+    
+    // Contar el total de filas en la tabla (incluyendo duplicados)
+    const tbody = document.getElementById('tablaProductosSeleccionados');
+    const totalProductos = tbody.querySelectorAll('tr:not(.tabla-vacia)').length;
+    
+    if (contador) contador.textContent = totalProductos;
     
     // Animación del badge
-    if (badge && productosSeleccionados.size > 0) {
+    if (badge && totalProductos > 0) {
         badge.classList.add('tiene-productos');
         setTimeout(() => badge.classList.remove('tiene-productos'), 600);
     }
@@ -1673,16 +1786,33 @@ function actualizarContador() {
     if (btnCrear) {
         const modoEdicion = "{{ modo_edicion|yesno:'true,false' }}" === "true";
         if (modoEdicion) {
-            btnCrear.disabled = !(productosSeleccionados.size > 0);
+            btnCrear.disabled = !(totalProductos > 0);
         } else {
             const selectCliente = document.getElementById('selectCliente');
             const tieneCliente = selectCliente && selectCliente.value;
-            btnCrear.disabled = !(productosSeleccionados.size > 0 && tieneCliente);
+            const clientePermitido = facturaSinDatosCheckbox && facturaSinDatosCheckbox.checked;
+            btnCrear.disabled = !(totalProductos > 0 && (tieneCliente || clientePermitido));
         }
     }
 }
 
 // Agregar productos seleccionados al formulario antes de enviar
+const facturaSinDatosCheckbox = document.getElementById('facturaSinDatos');
+if (facturaSinDatosCheckbox) {
+    const syncClienteRequired = () => {
+        const selectCliente = document.getElementById('selectCliente');
+        if (!selectCliente) return;
+        if (facturaSinDatosCheckbox.checked) {
+            selectCliente.required = false;
+            selectCliente.value = '';
+        } else {
+            selectCliente.required = true;
+        }
+    };
+    facturaSinDatosCheckbox.addEventListener('change', syncClienteRequired);
+    syncClienteRequired();
+}
+
 document.getElementById('formVenta').addEventListener('submit', function(e) {
     // Validación HTML5 personalizada sin alertas de navegador
     if (!this.checkValidity()) {
@@ -1714,8 +1844,11 @@ document.getElementById('formVenta').addEventListener('submit', function(e) {
     // Limpiar inputs previos
     document.querySelectorAll('input[name="productos"]').forEach(input => input.remove());
     
-    // Agregar productos seleccionados
-    productosSeleccionados.forEach(productoId => {
+    // Agregar productos seleccionados - una entrada por cada fila en la tabla
+    const tbody = document.getElementById('tablaProductosSeleccionados');
+    const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
+    filas.forEach(fila => {
+        const productoId = fila.dataset.productoId;
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'productos';
@@ -1729,6 +1862,7 @@ const inputDescuento = document.getElementById('inputDescuento');
 const inputEnvio = document.getElementById('inputEnvio');
 const inputOtrosGastos = document.getElementById('inputOtrosGastos');
 const hiddenDescuento = document.getElementById('hiddenDescuento');
+const ivaPorcentaje = Number('{{ config.porcentaje_iva|default:15.00 }}') || 15;
 
 // Objeto para almacenar precios de productos
 const preciosProductos = {};
@@ -1747,8 +1881,15 @@ function calcularTotales() {
             subtotal += parseFloat(elem.dataset.precio) || 0;
         });
     } else {
-        productosSeleccionados.forEach(productoId => {
-            subtotal += preciosProductos[productoId] || 0;
+        // Contar subtotal basado en las filas de la tabla (incluyendo duplicados)
+        const tbody = document.getElementById('tablaProductosSeleccionados');
+        const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
+        filas.forEach(fila => {
+            const precioCell = fila.querySelector('td:nth-child(4)');
+            if (precioCell) {
+                const precioText = precioCell.textContent.replace('$', '').trim();
+                subtotal += parseFloat(precioText) || 0;
+            }
         });
     }
     
@@ -1758,15 +1899,17 @@ function calcularTotales() {
     
     // Calcular descuento en dinero
     const descuentoDinero = (subtotal * descuentoPorcentaje) / 100;
-    
+    const iva = (subtotal * ivaPorcentaje) / 100;
+
     // Guardar el descuento en dinero en el campo hidden
     hiddenDescuento.value = descuentoDinero.toFixed(2);
-    
+
     // Calcular total
-    const total = subtotal - descuentoDinero + envio + otrosGastos;
-    
+    const total = subtotal + iva - descuentoDinero + envio + otrosGastos;
+
     // Actualizar display
     document.getElementById('subtotalDisplay').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('ivaDisplay').textContent = `+$${iva.toFixed(2)}`;
     document.getElementById('totalDisplay').textContent = `$${total.toFixed(2)}`;
     
     // Mostrar/ocultar filas según valores
@@ -1798,10 +1941,9 @@ function calcularTotales() {
 }
 
 // Event listeners para cálculo en tiempo real
-inputDescuento.addEventListener('input', calcularTotales);
-inputEnvio.addEventListener('input', calcularTotales);
-inputOtrosGastos.addEventListener('input', calcularTotales);
-
+    if (inputDescuento) inputDescuento.addEventListener('input', calcularTotales);
+    if (inputEnvio) inputEnvio.addEventListener('input', calcularTotales);
+    if (inputOtrosGastos) inputOtrosGastos.addEventListener('input', calcularTotales);
 // Actualizar también al agregar/quitar productos
 const originalActualizarContador = actualizarContador;
 actualizarContador = function() {
@@ -1987,6 +2129,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputEnvio = document.getElementById('inputEnvio');
     const inputOtrosGastos = document.getElementById('inputOtrosGastos');
     const hiddenDescuento = document.getElementById('hiddenDescuento');
+    const ivaPorcentaje = parseFloat('{{ config.porcentaje_iva|default:15.00 }}') || 15;
     
     // Poblar la tabla con los productos de la venta
     const tbody = document.getElementById('tablaProductosSeleccionados');
@@ -2053,8 +2196,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const envio = parseFloat(inputEnvio.value) || 0;
         const otrosGastos = parseFloat(inputOtrosGastos.value) || 0;
         
-        // Calcular descuento en dinero
+        // Calcular descuento y IVA
         const descuentoDinero = (subtotal * descuentoPorcentaje) / 100;
+        const iva = (subtotal * ivaPorcentaje) / 100;
         
         // Guardar el descuento en dinero en el campo hidden
         if (hiddenDescuento) {
@@ -2062,16 +2206,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Calcular total
-        const total = subtotal - descuentoDinero + envio + otrosGastos;
+        const total = subtotal + iva - descuentoDinero + envio + otrosGastos;
         
         console.log('Total calculado:', total);
         
         // Actualizar display
         const subtotalDisplay = document.getElementById('subtotalDisplay');
+        const ivaDisplay = document.getElementById('ivaDisplay');
         const totalDisplay = document.getElementById('totalDisplay');
         
         if (subtotalDisplay) {
             subtotalDisplay.textContent = `$${subtotal.toFixed(2)}`;
+        }
+        if (ivaDisplay) {
+            ivaDisplay.textContent = `+$${iva.toFixed(2)}`;
         }
         if (totalDisplay) {
             totalDisplay.textContent = `$${total.toFixed(2)}`;
@@ -2081,7 +2229,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const descuentoRow = document.getElementById('descuentoRow');
         const envioRow = document.getElementById('envioRow');
         const otrosRow = document.getElementById('otrosRow');
+        const ivaRow = document.getElementById('ivaRow');
         
+        if (ivaRow) {
+            ivaRow.style.display = 'flex';
+        }
+
         if (descuentoPorcentaje > 0) {
             descuentoRow.style.display = 'flex';
             document.getElementById('descuentoPorcentaje').textContent = descuentoPorcentaje;

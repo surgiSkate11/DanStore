@@ -96,7 +96,6 @@ def crear_venta(request):
     """Crea una nueva venta/factura"""
 
     if request.method == 'POST':
-        
         # Interceptar petición AJAX del modal de Creación de Cliente
         if request.POST.get('action') == 'crear_cliente':
             nombre = request.POST.get('nombre', '').strip()
@@ -104,12 +103,12 @@ def crear_venta(request):
             email = request.POST.get('email', '').strip().lower()
             telefono = request.POST.get('telefono', '').strip()
             direccion = request.POST.get('direccion', '').strip()
-            
+
             if not nombre or not ruc_cedula:
                 return JsonResponse({'success': False, 'error': 'El Nombre y RUC/Cédula son obligatorios.'})
 
             ruc_cedula = re.sub(r'[^a-zA-Z0-9-]', '', ruc_cedula)
-            
+
             cliente = Cliente.objects.filter(ruc_cedula=ruc_cedula).first()
             if cliente:
                 if hasattr(request, 'empresa') and request.empresa:
@@ -139,7 +138,7 @@ def crear_venta(request):
                 )
                 if hasattr(request, 'empresa') and request.empresa:
                     cliente.empresas.add(request.empresa)
-                    
+
                 return JsonResponse({
                     'success': True,
                     'cliente': {
@@ -154,10 +153,25 @@ def crear_venta(request):
             except Exception as e:
                 return JsonResponse({'success': False, 'error': str(e)})
 
+        empresa = getattr(request, 'empresa', None)
+        empresa_id = empresa.id if empresa else 1
+        config = ConfiguracionFactura.obtener_configuracion(empresa_id)
+
+        factura_sin_datos = request.POST.get('factura_sin_datos') == '1'
         cliente_id_o_nombre = request.POST.get('cliente_id', '').strip()
         nombre_cliente = request.POST.get('nombre_cliente', '').strip()
 
-        if cliente_id_o_nombre:
+        if factura_sin_datos:
+            cliente_nombre = (config.texto_consumidor_final or 'CONSUMIDOR FINAL').strip() or 'CONSUMIDOR FINAL'
+            cliente_ruc = (request.POST.get('ruc_cliente') or config.id_consumidor_final or '9999999999').strip() or '9999999999'
+            cliente, _ = Cliente.objects.get_or_create(
+                ruc_cedula=cliente_ruc,
+                defaults={'nombre': cliente_nombre, 'telefono': '', 'direccion': '', 'email': None}
+            )
+            if cliente.nombre != cliente_nombre:
+                cliente.nombre = cliente_nombre
+                cliente.save(update_fields=['nombre'])
+        elif cliente_id_o_nombre:
             if cliente_id_o_nombre.isdigit():
                 try:
                     cliente = Cliente.objects.get(pk=cliente_id_o_nombre)
@@ -170,23 +184,50 @@ def crear_venta(request):
         else:
             messages.error(request, 'Debes seleccionar o crear un cliente')
             return redirect('crear_venta')
-            
-        empresa = getattr(request, 'empresa', None)
+
         if empresa:
             cliente.empresas.add(empresa)
 
+        productos_seleccionados = request.POST.getlist('productos')
+        if not productos_seleccionados:
+            messages.error(request, 'Debes seleccionar al menos un producto para la venta.')
+            return redirect('crear_venta')
+
+        productos_a_vender = []
+        for producto_id in productos_seleccionados:
+            try:
+                producto = Producto.objects.get(pk=producto_id)
+            except Producto.DoesNotExist:
+                continue
+
+            if producto.estado != 'disponible':
+                messages.error(request, f'El producto "{producto.nombre}" ya no está disponible.')
+                return redirect('crear_venta')
+            productos_a_vender.append(producto)
+
+        if productos_a_vender:
+            cantidades = {}
+            for producto in productos_a_vender:
+                cantidades[producto.id] = cantidades.get(producto.id, 0) + 1
+            for producto_id, cantidad in cantidades.items():
+                producto = Producto.objects.get(pk=producto_id)
+                if producto.stock and cantidad > producto.stock:
+                    messages.error(request, f'No puedes vender {cantidad} unidades de "{producto.nombre}" porque solo quedan {producto.stock} en stock.')
+                    return redirect('crear_venta')
+
         venta = Venta.objects.create(
+            empresa=empresa or Empresa.objects.get(pk=empresa_id),
             cliente=cliente,
-            descuento=Decimal(request.POST.get('descuento', 0)),
-            envio=Decimal(request.POST.get('envio', 0)),
-            otros_gastos=Decimal(request.POST.get('otros_gastos', 0)),
+            descuento=Decimal(request.POST.get('descuento', 0) or 0),
+            envio=Decimal(request.POST.get('envio', 0) or 0),
+            otros_gastos=Decimal(request.POST.get('otros_gastos', 0) or 0),
             descripcion_otros=request.POST.get('descripcion_otros', ''),
             notas=request.POST.get('notas', ''),
             metodo_pago=request.POST.get('metodo_pago', 'efectivo'),
-            ruc_cliente=request.POST.get('ruc_cliente', ''),
+            ruc_cliente=request.POST.get('ruc_cliente', '') or (config.id_consumidor_final if factura_sin_datos else ''),
         )
 
-        for producto_id in request.POST.getlist('productos'):
+        for producto_id in productos_seleccionados:
             try:
                 producto = Producto.objects.get(pk=producto_id)
                 DetalleVenta.objects.create(
@@ -195,14 +236,14 @@ def crear_venta(request):
                     precio_unitario=producto.precio or 0
                 )
                 producto.estado = 'vendido'
+                producto.stock = max(0, producto.stock - 1)
                 producto.vendido_a = cliente.nombre
-                producto.save()
+                producto.save(update_fields=['estado', 'stock', 'vendido_a', 'actualizado_en'])
             except Producto.DoesNotExist:
                 continue
 
         venta.calcular_total()
 
-        # CORRECTO: numero_factura es campo, sin paréntesis
         messages.success(request, f'Venta {venta.numero_factura} creada exitosamente')
         return redirect(f"{reverse('detalle_venta', args=[venta.id])}?auto_print=1")
 
@@ -406,26 +447,24 @@ def configuracion_facturas(request):
 
     if request.method == 'POST':
         nuevo_nombre = request.POST.get('nombre_empresa', '').strip()
-        
-        # Usar el nombre del perfil como respaldo si no hay empresa asignada
+
         nombre_base = empresa.nombre if empresa else getattr(request.user.profile, 'nombre_negocio', 'Tiendita')
-        
+
         if nuevo_nombre:
             config.nombre_empresa = nuevo_nombre
-            # Desacoplarlo si lo escribió diferente al nombre global del perfil
             config.nombre_personalizado = (nuevo_nombre != nombre_base)
         else:
             config.nombre_empresa = nombre_base
             config.nombre_personalizado = False
-            
+
         config.direccion_empresa = request.POST.get('direccion_empresa', '')
         config.telefono_empresa = request.POST.get('telefono_empresa', '')
         config.email_empresa = request.POST.get('email_empresa', '')
         config.mensaje_factura = request.POST.get('mensaje_factura', '')
         config.mensaje_deuda = request.POST.get('mensaje_deuda', '')
-        config.color_principal = request.POST.get('color_principal', '#667eea')
-        config.color_borde = request.POST.get('color_borde', '#667eea')
-        config.color_texto = request.POST.get('color_texto', '#333333')
+        config.porcentaje_iva = Decimal(request.POST.get('porcentaje_iva', config.porcentaje_iva or 15))
+        config.texto_consumidor_final = request.POST.get('texto_consumidor_final', config.texto_consumidor_final or 'CONSUMIDOR FINAL')
+        config.id_consumidor_final = request.POST.get('id_consumidor_final', config.id_consumidor_final or '9999999999')
 
         config.save()
         messages.success(request, 'Configuración actualizada correctamente')
