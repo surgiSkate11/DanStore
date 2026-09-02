@@ -59,7 +59,7 @@ def lista_clientes(request):
     empresa = getattr(request, 'empresa', None)
     
     if not empresa:
-        return render(request, 'clientes/clientes.html', {
+        return render(request, 'clientes/lista_clientes.html', {
             'clientes_data': [], 'clientes_incompletos': [], 'total_clientes': 0,
             'total_ventas': 0, 'total_deudas': 0, 'clientes_con_deuda': 0
         })
@@ -110,7 +110,7 @@ def lista_clientes(request):
         'total_deudas': total_deuda_general,
         'clientes_con_deuda': sum(1 for c in clientes_data if c['deuda'] > 0)
     }
-    return render(request, 'clientes/clientes.html', context)
+    return render(request, 'clientes/lista_clientes.html', context)
 
 
 @login_required

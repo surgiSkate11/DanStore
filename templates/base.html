@@ -499,9 +499,11 @@
                             <i class="bi bi-box"></i> Productos
                         </a>
                         <ul class="dropdown-menu">
+                        {% if 'ver' in permisos.productos or 'crear' in permisos.productos %}
                             <li><a class="dropdown-item" href="{% url 'lista_productos' %}">
                                 <i class="bi bi-list-ul"></i> Ver Todos
                             </a></li>
+                        {% endif %}
                         {% if 'crear' in permisos.productos %}
                             <li><a class="dropdown-item" href="{% url 'crear_producto' %}">
                                 <i class="bi bi-plus-circle"></i> Agregar Producto
@@ -546,17 +548,19 @@
                             <i class="bi bi-star"></i> Clientes
                         </a>
                         <ul class="dropdown-menu">
+                        {% if 'ver' in permisos.clientes or 'crear' in permisos.clientes %}
                             <li><a class="dropdown-item" href="{% url 'lista_clientes' %}">
                                 <i class="bi bi-list-ul"></i> Ver Clientes
-                            </a></li>
-                        {% if 'crear' in permisos.clientes or 'ver' in permisos.clientes %}
-                            <li><a class="dropdown-item" href="{% url 'exportar_clientes_csv' %}">
-                                <i class="bi bi-cloud-download"></i> Exportar CSV
                             </a></li>
                         {% endif %}
                         {% if 'crear' in permisos.clientes %}
                             <li><a class="dropdown-item" href="{% url 'crear_cliente' %}">
                                 <i class="bi bi-plus-circle"></i> Crear Cliente
+                            </a></li>
+                        {% endif %}
+                        {% if 'ver' in permisos.clientes or 'crear' in permisos.clientes %}
+                            <li><a class="dropdown-item" href="{% url 'exportar_clientes_csv' %}">
+                                <i class="bi bi-cloud-download"></i> Exportar CSV
                             </a></li>
                         {% endif %}
                         </ul>
@@ -568,9 +572,11 @@
                             <i class="bi bi-receipt"></i> Ventas/Facturas
                         </a>
                         <ul class="dropdown-menu">
+                        {% if 'ver' in permisos.ventas or 'crear' in permisos.ventas %}
                             <li><a class="dropdown-item" href="{% url 'lista_ventas' %}">
                                 <i class="bi bi-list-ul"></i> Ver Facturas
                             </a></li>
+                        {% endif %}
                         {% if 'crear' in permisos.ventas %}
                             <li><a class="dropdown-item" href="{% url 'crear_venta' %}">
                                 <i class="bi bi-plus-circle"></i> Crear Factura
@@ -591,9 +597,11 @@
                             <i class="bi bi-trophy"></i> Sorteos
                         </a>
                         <ul class="dropdown-menu">
+                        {% if 'ver' in permisos.sorteos or 'crear' in permisos.sorteos %}
                             <li><a class="dropdown-item" href="{% url 'lista_sorteos' %}">
                                 <i class="bi bi-list-ul"></i> Ver Sorteos
                             </a></li>
+                        {% endif %}
                         {% if 'crear' in permisos.sorteos %}
                             <li><a class="dropdown-item" href="{% url 'crear_sorteo' %}">
                                 <i class="bi bi-plus-circle"></i> Nuevo Sorteo
