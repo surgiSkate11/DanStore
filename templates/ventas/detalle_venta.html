@@ -396,16 +396,8 @@
 document.addEventListener("DOMContentLoaded", function() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auto_print') === '1') {
-        const urlImpresion = "{% url 'factura_pdf' venta.id %}?html=1";
-        const nuevaVentana = window.open(urlImpresion, '_blank', 'noopener,noreferrer');
-
-        if (!nuevaVentana) {
-            window.location.href = urlImpresion;
-            return;
-        }
-
         if (typeof showDjangoToast === 'function') {
-            showDjangoToast('Factura generada. Puedes imprimirla o descargarla desde la vista previa.', 'success');
+            showDjangoToast('Factura generada. Puedes revisarla, imprimirla o descargarla desde los botones disponibles.', 'success');
         }
     }
 });

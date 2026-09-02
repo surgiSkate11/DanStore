@@ -115,6 +115,34 @@ class VentaFlowTests(TestCase):
         self.assertEqual(venta.cliente.nombre, 'CONSUMIDOR FINAL')
         self.assertEqual(venta.ruc_cliente, '9999999999')
 
+    def test_crear_venta_redirige_al_detalle_sin_abrir_previa_automatica(self):
+        """Después de crear la venta, debe quedarse en el detalle con opciones y no forzar la vista previa."""
+        factory = RequestFactory()
+        request = factory.post(
+            reverse('crear_venta'),
+            {
+                'cliente_id': str(self.cliente.id),
+                'productos': [str(self.producto.id)],
+                'descuento': '0',
+                'envio': '0',
+                'otros_gastos': '0',
+                'descripcion_otros': '',
+                'notas': '',
+                'metodo_pago': 'efectivo',
+                'ruc_cliente': '',
+            },
+        )
+        SessionMiddleware(lambda req: None).process_request(request)
+        request.session.save()
+        request._messages = FallbackStorage(request)
+        request.user = self.user
+        request.empresa = self.empresa
+
+        response = crear_venta(request)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('detalle_venta', args=[Venta.objects.latest('id').id]))
+
     def test_productos_con_stock_restante_no_quedan_en_estado_vendido(self):
         """Si aún queda stock, el producto debe seguir disponible."""
         self.producto.stock = 5

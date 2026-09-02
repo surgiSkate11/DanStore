@@ -253,7 +253,7 @@ def crear_venta(request):
         venta.calcular_total()
 
         messages.success(request, f'Venta {venta.numero_factura} creada exitosamente')
-        return redirect(f"{reverse('detalle_venta', args=[venta.id])}?auto_print=1")
+        return redirect('detalle_venta', venta_id=venta.id)
 
     # GET
     cliente_nombre_param = request.GET.get('cliente')
