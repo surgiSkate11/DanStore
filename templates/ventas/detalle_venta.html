@@ -394,20 +394,18 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Comprobar si venimos de crear una venta (parámetro auto_print=1)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('auto_print') === '1') {
         const urlImpresion = "{% url 'factura_pdf' venta.id %}?html=1";
         const nuevaVentana = window.open(urlImpresion, '_blank', 'noopener,noreferrer');
 
-        if (typeof showDjangoToast === 'function') {
-            showDjangoToast('Factura generada. Se abrió la vista previa para imprimirla manualmente si tu impresora está conectada.', 'info');
+        if (!nuevaVentana) {
+            window.location.href = urlImpresion;
+            return;
         }
 
-        if (!nuevaVentana) {
-            if (typeof showDjangoToast === 'function') {
-                showDjangoToast('La factura se generó, pero el navegador bloqueó la ventana emergente. Puedes abrirla desde el botón de vista previa.', 'warning');
-            }
+        if (typeof showDjangoToast === 'function') {
+            showDjangoToast('Factura generada. Puedes imprimirla o descargarla desde la vista previa.', 'success');
         }
     }
 });
