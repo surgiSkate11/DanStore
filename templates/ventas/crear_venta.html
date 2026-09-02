@@ -351,11 +351,17 @@
         align-items: center;
         justify-content: flex-start;
         margin-top: 1rem;
-        padding: 0.35rem 0.6rem;
+        padding: 0.75rem 1rem;
         border-radius: 12px;
         border: 1px solid #e5e7eb;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.04));
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.03), rgba(118, 75, 162, 0.02));
         max-width: 470px;
+        transition: all 0.3s ease;
+    }
+
+    .client-condition-wrap:hover {
+        border-color: #d1d5db;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.03));
     }
 
     .client-switch {
@@ -371,22 +377,36 @@
         height: 1.6rem;
         margin-top: 0.12rem;
         border-radius: 999px;
-        border: 2px solid rgba(102, 126, 234, 0.45);
-        background-color: #f3f4f6;
-        box-shadow: none;
+        border: 2px solid #d1d5db;
+        background-color: #f9fafb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+    }
+
+    .client-switch .form-check-input:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.15);
     }
 
     .client-switch .form-check-input:checked {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
     }
 
     .client-switch .form-check-label {
-        font-size: 0.96rem;
-        color: #1f2937;
-        font-weight: 700;
-        letter-spacing: 0.1px;
+        font-size: 0.95rem;
+        color: #4b5563;
+        font-weight: 500;
+        letter-spacing: 0px;
         cursor: pointer;
+        user-select: none;
+        transition: color 0.3s ease;
+    }
+
+    .client-switch .form-check-input:checked + .form-check-label {
+        color: #667eea;
+        font-weight: 600;
     }
 
     .client-info-panel {
@@ -1801,13 +1821,21 @@ const facturaSinDatosCheckbox = document.getElementById('facturaSinDatos');
 if (facturaSinDatosCheckbox) {
     const syncClienteRequired = () => {
         const selectCliente = document.getElementById('selectCliente');
+        const searchInput = document.getElementById('searchClienteInput');
+        const infoCliente = document.getElementById('infoClienteSeleccionado');
+        
         if (!selectCliente) return;
         if (facturaSinDatosCheckbox.checked) {
+            // Modo consumidor final: limpiar todo
             selectCliente.required = false;
             selectCliente.value = '';
+            if (searchInput) searchInput.value = '';
+            if (infoCliente) infoCliente.style.display = 'none';
         } else {
+            // Modo con cliente: requerir cliente
             selectCliente.required = true;
         }
+        actualizarContador();
     };
     facturaSinDatosCheckbox.addEventListener('change', syncClienteRequired);
     syncClienteRequired();
@@ -2020,6 +2048,13 @@ document.addEventListener('DOMContentLoaded', function() {
             selectCliente.value = clienteObj.nombre; 
             searchDropdown.classList.remove('show');
             clearBtn.style.display = 'block';
+            
+            // Desactivar "Factura sin datos" cuando se selecciona un cliente
+            const facturaSinDatos = document.getElementById('facturaSinDatos');
+            if (facturaSinDatos && facturaSinDatos.checked) {
+                facturaSinDatos.checked = false;
+                facturaSinDatos.dispatchEvent(new Event('change'));
+            }
             
             if (infoCliente) {
                 const cedulaInfo = document.getElementById('cedulaClienteInfo');
