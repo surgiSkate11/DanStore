@@ -322,36 +322,31 @@
         /* ============================================================
            DROPDOWN PREMIUM DEL PERFIL — versión responsive.
            En escritorio conserva el comportamiento normal de Bootstrap
-           (position:absolute junto al toggle). En móvil/tablet lo
-           convertimos en un panel `fixed` centrado en la pantalla, con
-           scroll interno propio: así queda SIEMPRE completo y visible
-           ("Cerrar sesión" incluido) sin importar la altura del
-           contenido ni en qué punto del acordeón de navegación quede el
-           botón que lo abre — deja de depender de la posición del
-           toggle o de que algún ancestro no recorte el overflow.
+           (position:absolute junto al toggle). En móvil/tablet pasa a
+           formar parte del FLUJO normal del acordeón (position:static),
+           igual que los demás submenús del navbar: al abrirse empuja
+           hacia abajo el contenido de la página en vez de flotar encima
+           y taparlo. Conserva su diseño propio (degradado, avatar,
+           badges, sombra, bordes redondeados) porque esta regla solo
+           toca posición/ancho, no toca .dropdown-header-premium ni
+           .dropdown-item-premium.
            ============================================================ */
         @media (max-width: 1199.98px) {
             .dropdown-menu-premium {
-                position: fixed !important;
-                top: 50% !important;
-                left: 50% !important;
+                position: static !important;
+                top: auto !important;
+                left: auto !important;
                 right: auto !important;
                 bottom: auto !important;
-                transform: translate(-50%, -50%) !important;
-                width: calc(100vw - 2rem);
-                max-width: 340px;
-                max-height: calc(100vh - 2rem);
-                overflow-y: auto;
-                margin: 0;
+                transform: none !important;
+                width: 100%;
+                max-width: 100%;
+                max-height: none;
+                margin: 0.5rem 0 0.25rem 0 !important;
             }
         }
 
         @media (max-width: 359.98px) {
-            .dropdown-menu-premium {
-                width: calc(100vw - 1rem);
-                max-height: calc(100vh - 1rem);
-            }
-
             .dropdown-header-premium {
                 padding: 16px 10px;
             }
@@ -546,10 +541,25 @@
                     </li>
                     {% endif %}
                     {% if 'clientes' in modulos_permitidos %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'lista_clientes' %}" id="tour-clientes">
-                            <i class="bi bi-star"></i> Clientes 
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="tour-clientes" role="button" data-bs-toggle="dropdown" data-bs-display="static">
+                            <i class="bi bi-star"></i> Clientes
                         </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'lista_clientes' %}">
+                                <i class="bi bi-list-ul"></i> Ver Clientes
+                            </a></li>
+                        {% if 'crear' in permisos.clientes or 'ver' in permisos.clientes %}
+                            <li><a class="dropdown-item" href="{% url 'exportar_clientes_csv' %}">
+                                <i class="bi bi-cloud-download"></i> Exportar CSV
+                            </a></li>
+                        {% endif %}
+                        {% if 'crear' in permisos.clientes %}
+                            <li><a class="dropdown-item" href="{% url 'crear_cliente' %}">
+                                <i class="bi bi-plus-circle"></i> Crear Cliente
+                            </a></li>
+                        {% endif %}
+                        </ul>
                     </li>
                     {% endif %}
                     {% if 'ventas' in modulos_permitidos %}

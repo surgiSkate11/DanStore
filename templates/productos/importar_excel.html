@@ -12,6 +12,23 @@
         margin-bottom: 2rem;
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
+
+    .btn-primary-soft {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary-soft:hover,
+    .btn-primary-soft:focus {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #fff;
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
+    }
 </style>
 {% endblock %}
 
@@ -30,7 +47,7 @@
                             <p class="mb-0 opacity-90">Sube un archivo Excel o CSV con tu inventario.</p>
                         </div>
                         <div class="col-auto">
-                            <a href="{% url 'descargar_plantilla' %}" class="btn btn-light btn-lg shadow-sm">
+                            <a href="{% url 'descargar_plantilla' %}" class="btn btn-primary-soft btn-lg">
                                 <i class="bi bi-file-earmark-excel-fill"></i> Descargar Plantilla
                             </a>
                         </div>
@@ -218,7 +235,7 @@
                             <button type="submit" class="btn btn-primary btn-lg" style="border-radius: 8px; padding-left: 2rem; padding-right: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
                                 <i class="bi bi-cloud-upload-fill me-1"></i> Importar Datos
                             </button>
-                            <a href="{% url 'descargar_plantilla' %}" class="btn btn-outline-primary btn-lg" style="border-radius: 8px;">
+                            <a href="{% url 'descargar_plantilla' %}" class="btn btn-primary-soft btn-lg" style="border-radius: 8px;">
                                 <i class="bi bi-file-earmark-excel-fill me-1"></i> Descargar Plantilla
                             </a>
                             <a href="{% url 'lista_productos' %}" class="btn btn-light btn-lg ms-md-auto" style="border-radius: 8px; font-weight: 500; color: #475569; border: 1px solid #e2e8f0;">

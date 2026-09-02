@@ -54,6 +54,21 @@
         transform: translateY(-4px);
         box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
+
+    .btn-action-edit {
+        background: #f8fafc;
+        color: #4338ca;
+        border: 1px solid rgba(67, 56, 202, 0.28);
+        transition: all 0.2s ease;
+    }
+
+    .btn-action-edit:hover,
+    .btn-action-edit:focus {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        color: #fff;
+        border-color: #4338ca;
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.22);
+    }
 </style>
 {% endblock %}
 
@@ -167,7 +182,7 @@
                                 </a>
                                 {% if venta.origen != 'sheets' %}
                                 <a href="{% url 'editar_venta' venta.id %}"
-                                   class="btn btn-sm btn-outline-warning"
+                                   class="btn btn-sm btn-action-edit"
                                    title="Editar venta">
                                     <i class="bi bi-pencil-square"></i><span class="d-none d-xl-inline ms-1">Editar</span>
                                 </a>

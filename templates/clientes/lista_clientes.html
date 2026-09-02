@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Lista de Clientes - Tiendita{% endblock %}
+{% block title %}Directorio de Clientes - Tiendita{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -12,69 +12,112 @@
         margin-bottom: 2rem;
         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
-    
-    .stat-card {
+
+    .stats-card {
         background: white;
         border-radius: 12px;
         padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    }
-    
-    .cliente-item {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
+        text-align: center;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
         border-left: 4px solid #667eea;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     
-    .cliente-item:hover {
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        transform: translateX(5px);
+    .stats-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .btn-action-historial {
+        background: #f8fafc;
+        color: #2563eb;
+        border: 1px solid rgba(37, 99, 235, 0.28);
+        transition: all 0.2s ease;
+    }
+
+    .btn-action-historial:hover,
+    .btn-action-historial:focus {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #fff;
+        border-color: #2563eb;
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.22);
+    }
+
+    .btn-action-edit {
+        background: #f8fafc;
+        color: #4338ca;
+        border: 1px solid rgba(67, 56, 202, 0.28);
+        transition: all 0.2s ease;
+    }
+
+    .btn-action-edit:hover,
+    .btn-action-edit:focus {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        color: #fff;
+        border-color: #4338ca;
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.24);
+    }
+
+    .cliente-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+        background: white;
     }
     
-    .trophy-gold {
-        background: linear-gradient(135deg, #fbbf24, #f59e0b);
-        color: white;
+    .cliente-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+    }
+    
+    .cliente-card.con-deuda {
+        border-left: 4px solid #f59e0b;
+    }
+    
+    /* Trofeos y Ranking */
+    .trophy-gold, .trophy-silver, .trophy-bronze {
         width: 50px;
         height: 50px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
-    }
-    
-    .trophy-silver {
-        background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+        font-size: 22px;
+        margin: 0 auto;
         color: white;
-        width: 50px;
-        height: 50px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .trophy-gold { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .trophy-silver { background: linear-gradient(135deg, #e5e7eb, #9ca3af); }
+    .trophy-bronze { background: linear-gradient(135deg, #f97316, #ea580c); }
+    
+    .rank-badge {
+        width: 45px;
+        height: 45px;
+        background: #f3f4f6;
+        color: #6b7280;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 0 auto;
+        border: 2px solid #e5e7eb;
     }
-    
-    .trophy-bronze {
-        background: linear-gradient(135deg, #f97316, #ea580c);
-        color: white;
-        width: 50px;
-        height: 50px;
+
+    .avatar-circle {
+        width: 46px;
+        height: 46px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-weight: 700;
+        font-size: 1.3rem;
+        flex-shrink: 0;
     }
 </style>
 {% endblock %}
@@ -87,216 +130,144 @@
             <div class="row align-items-center">
                 <div class="col">
                     <h1 class="mb-2">
-                        <i class="bi bi-trophy"></i> Top Clientes Destacados
+                        <i class="bi bi-people-fill"></i> Clientes
                     </h1>
-                    <p class="mb-0 opacity-90">Reconocimientos y estadísticas de nuestros mejores clientes</p>
+                    <p class="mb-0 opacity-90">Gestión general, ranking de compras y control de deudas en un solo lugar.</p>
                 </div>
                 <div class="col-auto d-flex gap-2">
-                    {% if 'crear' in permisos.clientes %}
                     <a href="{% url 'crear_cliente' %}" class="btn btn-light btn-lg shadow-sm">
                         <i class="bi bi-plus-circle"></i> Crear Cliente
                     </a>
-                    {% endif %}
+                    <a href="{% url 'exportar_clientes_csv' %}" class="btn btn-outline-light btn-lg shadow-sm">
+                        <i class="bi bi-cloud-download"></i> Exportar CSV
+                    </a>
                 </div>
             </div>
         </div>
     </div>
     
+    <!-- Alerta de Sincronización Google Sheets -->
+    {% if clientes_incompletos %}
+    <div class="alert alert-warning shadow-sm mb-4" style="border-radius: 12px; border-left: 6px solid #f59e0b; background-color: #fffbeb;">
+        <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></i>
+            <div>
+                <h5 class="mb-1 fw-bold" style="color: #b45309;">Requieren Atención ({{ clientes_incompletos|length }})</h5>
+                <p class="mb-0" style="color: #d97706;">Estos clientes importados tienen una cédula temporal. Edítalos para formalizar su registro.</p>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-2 ms-5">
+            {% for c in clientes_incompletos %}
+            <a href="{% url 'editar_cliente' c.id %}" class="badge bg-white text-warning border border-warning text-decoration-none py-2 px-3">
+                {{ c.nombre }} <i class="bi bi-pencil-square ms-1"></i>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Estadísticas Generales -->
-    <div class="row mb-4">
-        <div class="col-md-4 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-people" style="font-size: 24px; color: white;"></i>
-                        </div>
-                    </div>
-                    <div class="ms-3 d-flex flex-column justify-content-center">
-                        <p class="mb-1 text-muted small">Total Clientes</p>
-                        <h4 class="mb-0 fw-bold" style="color: #667eea;">{{ clientes|length }}</h4>
-                    </div>
-                </div>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="stats-card">
+                <i class="bi bi-person-lines-fill" style="font-size: 2.5rem; color: #667eea;"></i>
+                <h3 class="mt-3 mb-0" style="color: #667eea;">{{ total_clientes }}</h3>
+                <p class="text-muted mb-0 small">Total de Clientes</p>
             </div>
         </div>
-        
-        <div class="col-md-4 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-currency-dollar" style="font-size: 24px; color: white;"></i>
-                        </div>
-                    </div>
-                    <div class="ms-3 d-flex flex-column justify-content-center">
-                        <p class="mb-1 text-muted small">Total Vendido</p>
-                        <h4 class="mb-0 fw-bold" style="color: #10b981;">${{ total_ventas|floatformat:2 }}</h4>
-                    </div>
-                </div>
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="stats-card" style="border-left-color: #10b981;">
+                <i class="bi bi-bag-check-fill" style="font-size: 2.5rem; color: #10b981;"></i>
+                <h3 class="mt-3 mb-0" style="color: #10b981;">${{ total_ventas|floatformat:2 }}</h3>
+                <p class="text-muted mb-0 small">Total Histórico Vendido</p>
             </div>
         </div>
-        
-        <div class="col-md-4 mb-3">
-            <div class="stat-card">
-                <div class="d-flex align-items-center">
-                    <div class="flex-shrink-0">
-                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-receipt" style="font-size: 24px; color: white;"></i>
-                        </div>
-                    </div>
-                    <div class="ms-3 d-flex flex-column justify-content-center">
-                        <p class="mb-1 text-muted small">Total Facturas</p>
-                        <h4 class="mb-0 fw-bold" style="color: #f59e0b;">{{ total_ventas_count }}</h4>
-                    </div>
-                </div>
+        <div class="col-12 col-sm-6 col-lg-4">
+            <div class="stats-card" style="border-left-color: #f59e0b;">
+                <i class="bi bi-cash-coin" style="font-size: 2.5rem; color: #f59e0b;"></i>
+                <h3 class="mt-3 mb-0" style="color: #f59e0b;">${{ total_deudas|floatformat:2 }}</h3>
+                <p class="text-muted mb-0 small">{{ clientes_con_deuda }} Clientes con Deuda</p>
+                <small class="text-muted mt-2 d-block">Estado general del saldo</small>
             </div>
         </div>
     </div>
     
-    <!-- Ranking de Clientes -->
-    <div class="mb-4">
-        <h4 class="mb-3">
-            <i class="bi bi-award"></i> Ranking de Clientes
-        </h4>
-        
-        {% if clientes %}
-            {% for cliente in clientes %}
-            <div class="cliente-item">
-                <div class="row align-items-center">
-                    <!-- Posición y Trofeo -->
-                    <div class="col-md-1 text-center">
-                        {% if forloop.counter == 1 %}
-                        <div class="trophy-gold">
-                            <i class="bi bi-trophy-fill"></i>
+    <!-- Lista/Ranking de Clientes -->
+    {% if clientes_data %}
+    <div class="row">
+        <div class="col-12">
+            {% for data in clientes_data %}
+            <div class="card cliente-card {% if data.deuda > 0 %}con-deuda{% endif %}">
+                <div class="card-body py-3">
+                    <div class="row align-items-center g-3">
+                        
+                        <!-- Ranking y Trofeo -->
+                        <div class="col-2 col-sm-1 text-center">
+                            {% if data.ranking == 1 and data.total_comprado > 0 %}
+                                <div class="trophy-gold" title="Top 1"><i class="bi bi-trophy-fill"></i></div>
+                            {% elif data.ranking == 2 and data.total_comprado > 0 %}
+                                <div class="trophy-silver" title="Top 2"><i class="bi bi-trophy-fill"></i></div>
+                            {% elif data.ranking == 3 and data.total_comprado > 0 %}
+                                <div class="trophy-bronze" title="Top 3"><i class="bi bi-trophy-fill"></i></div>
+                            {% else %}
+                                <div class="rank-badge">#{{ data.ranking }}</div>
+                            {% endif %}
                         </div>
-                        <small class="text-muted d-block mt-1">#1</small>
-                        {% elif forloop.counter == 2 %}
-                        <div class="trophy-silver">
-                            <i class="bi bi-trophy-fill"></i>
-                        </div>
-                        <small class="text-muted d-block mt-1">#2</small>
-                        {% elif forloop.counter == 3 %}
-                        <div class="trophy-bronze">
-                            <i class="bi bi-trophy-fill"></i>
-                        </div>
-                        <small class="text-muted d-block mt-1">#3</small>
-                        {% else %}
-                        <div style="width: 50px; height: 50px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #9ca3af; font-weight: bold;">
-                            {{ forloop.counter }}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Nombre del Cliente -->
-                    <div class="col-md-3">
-                        <h5 class="mb-1">{{ cliente.cliente.nombre }}</h5>
-                        <p class="mb-0 text-muted small">
-                            <i class="bi bi-fingerprint"></i> {{ cliente.cliente.ruc_cedula|default:"Sin Identificación" }}
-                        </p>
-                    </div>
-                    
-                    <!-- Estadísticas -->
-                    <div class="col-md-5">
-                        <div class="row text-center">
-                            <div class="col">
-                                <div style="background: #eff6ff; border-radius: 8px; padding: 0.5rem;">
-                                    <small class="text-muted d-block">Compras</small>
-                                    <strong style="color: #667eea;">{{ cliente.cantidad_compras }}</strong>
+                        
+                        <!-- Info Cliente -->
+                        <div class="col-10 col-sm-4 col-md-3">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-3 bg-primary bg-opacity-10 text-primary d-none d-md-flex">
+                                    {{ data.cliente.nombre|make_list|first|upper }}
                                 </div>
-                            </div>
-                            <div class="col">
-                                <div style="background: #f0fdf4; border-radius: 8px; padding: 0.5rem;">
-                                    <small class="text-muted d-block">Total</small>
-                                    <strong style="color: #10b981;">${{ cliente.total_comprado|floatformat:2 }}</strong>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div style="background: #fef3c7; border-radius: 8px; padding: 0.5rem;">
-                                    <small class="text-muted d-block">Promedio</small>
-                                    {% if cliente.cantidad_compras > 0 %}
-                                        <strong style="color: #f59e0b;">${% widthratio cliente.total_comprado cliente.cantidad_compras 1 %}.00</strong>
-                                    {% else %}
-                                        <strong style="color: #f59e0b;">$0.00</strong>
+                                <div>
+                                    <h5 class="mb-1 text-dark fw-bold text-truncate" style="max-width: 200px;" title="{{ data.cliente.nombre }}">{{ data.cliente.nombre }}</h5>
+                                    <small class="text-muted d-block"><i class="bi bi-person-vcard"></i> {{ data.cliente.ruc_cedula }}</small>
+                                    {% if data.cliente.telefono %}
+                                    <small class="text-muted d-block"><i class="bi bi-telephone"></i> {{ data.cliente.telefono }}</small>
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Badges y Acciones -->
-                    <div class="col-md-2 text-center">
-                        {% if forloop.counter <= 3 %}
-                        <span class="badge bg-warning mb-2">
-                            <i class="bi bi-star-fill"></i> VIP
-                        </span>
-                        <br>
-                        {% endif %}
-                        {% if cliente.total_comprado >= 100 %}
-                        <span class="badge bg-success mb-2">
-                            <i class="bi bi-gem"></i> Oro
-                        </span>
-                        <br>
-                        {% elif cliente.total_comprado >= 50 %}
-                        <span class="badge bg-info mb-2">
-                            <i class="bi bi-award"></i> Plata
-                        </span>
-                        <br>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Botón Ver y Eliminar -->
-                    <div class="col-md-1 text-end d-flex justify-content-end gap-2">
-                        <a href="{% url 'detalle_cliente' cliente.cliente.id %}" 
-                           class="btn btn-primary btn-sm" title="Ver Detalles">
-                            <i class="bi bi-eye"></i>
-                        </a>
                         
-                        {% if 'eliminar' in permisos.clientes %}
-                        <form action="{% url 'eliminar_cliente' cliente.cliente.id %}" method="POST" class="m-0">
-                            {% csrf_token %}
-                            <button type="button" class="btn btn-outline-danger btn-sm" title="Eliminar Cliente" onclick="confirmarEliminarCliente(this, '{{ cliente.cliente.nombre|escapejs }}', {{ cliente.cantidad_compras }})">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </form>
-                        {% endif %}
+                        <!-- Compras (Métricas) -->
+                        <div class="col-6 col-sm-3 col-md-3 text-center" style="border-left: 1px solid #f3f4f6;">
+                            <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Total Compras</small>
+                            <h4 class="mb-0 mt-1" style="color: #10b981;">${{ data.total_comprado|floatformat:2 }}</h4>
+                            <span class="badge bg-light text-secondary mt-1">{{ data.cantidad_compras }} factura{{ data.cantidad_compras|pluralize }}</span>
+                        </div>
+                        
+                        <!-- Deudas -->
+                        <div class="col-6 col-sm-4 col-md-2 text-center" style="border-left: 1px solid #f3f4f6;">
+                            <small class="text-muted d-block text-uppercase fw-semibold" style="font-size: 0.7rem;">Estado de Cuenta</small>
+                            {% if data.deuda > 0 %}
+                                <h5 class="mb-1 mt-1 fw-bold" style="color: #f59e0b;">-${{ data.deuda|floatformat:2 }}</h5>
+                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2">Con deuda</span>
+                            {% else %}
+                                <div class="mt-2">
+                                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2"><i class="bi bi-check-circle-fill"></i> Al día</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Acciones -->
+                        <div class="col-12 col-md-3 text-center text-md-end mt-3 mt-md-0">
+                            <div class="btn-group shadow-sm">
+                                <a href="{% url 'detalle_cliente' data.cliente.id %}" class="btn btn-action-historial" title="Ver Historial">
+                                    <i class="bi bi-eye"></i><span class="d-none d-lg-inline ms-1">Historial</span>
+                                </a>
+                                <a href="{% url 'editar_cliente' data.cliente.id %}" class="btn btn-action-edit" title="Editar Información">
+                                    <i class="bi bi-pencil-square"></i><span class="d-none d-lg-inline ms-1">Editar</span>
+                                </a>
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
             </div>
             {% endfor %}
-        {% else %}
-            <!-- Sin clientes -->
-            <div class="text-center py-5">
-                <i class="bi bi-people" style="font-size: 4rem; color: #d1d5db;"></i>
-                <h5 class="mt-3 text-muted">Sin clientes registrados</h5>
-                <p class="text-muted">Los clientes aparecerán automáticamente al sincronizar con Google Sheets.</p>
-                <a href="{% url 'sincronizar_sheets' %}" class="btn btn-primary">
-                    <i class="bi bi-cloud-download"></i> Sincronizar Google Sheets
-                </a>
-            </div>
-        {% endif %}
+        </div>
     </div>
+    {% endif %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    function confirmarEliminarCliente(btn, nombre, ventas) {
-        let warningMsg = '';
-        if (ventas > 0) {
-            warningMsg = `<br><br><span class="text-warning small fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> Este cliente tiene <strong>${ventas} compra(s)</strong> registradas. Será ocultado de este directorio, pero su historial se mantendrá en el sistema para no afectar tus reportes financieros.</span>`;
-        } else {
-            warningMsg = `<br><br><span class="text-danger small fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> Esta acción borrará al cliente de la base de datos de manera irreversible.</span>`;
-        }
-        
-        showConfirmationModal({
-            title: 'Eliminar Cliente',
-            message: `¿Estás seguro de que deseas eliminar a <strong>${nombre}</strong>?${warningMsg}`,
-            icon: '<div style="font-size: 3.5rem;"><i class="bi bi-person-x-fill text-danger"></i></div>',
-            confirmText: 'Sí, Eliminar',
-            onConfirm: function() {
-                btn.closest('form').submit();
-            }
-        });
-    }
-</script>
 {% endblock %}

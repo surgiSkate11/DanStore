@@ -18,6 +18,23 @@
         overflow: hidden;
         margin-bottom: 2rem;
     }
+
+    .btn-primary-soft {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary-soft:hover,
+    .btn-primary-soft:focus {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #fff;
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.26);
+    }
     
     .page-header::before {
         content: '';
@@ -305,7 +322,7 @@
                 </p>
             </div>
             <div class="col-md-4 text-end" style="position: relative; z-index: 1;">
-                <a href="{% url 'crear_sorteo' %}" class="btn btn-outline-light btn-lg">
+                <a href="{% url 'crear_sorteo' %}" class="btn btn-primary-soft btn-lg">
                     <i class="bi bi-plus-circle-fill"></i> Crear Sorteo
                 </a>
             </div>
@@ -461,7 +478,7 @@
                             </span>
                         </td>
                         <td class="text-center" style="vertical-align: middle; padding: 0.85rem 1rem;">
-                            <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-sm btn-outline-primary" style="min-width: 110px; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 600;">
+                            <a href="{% url 'detalle_sorteo' sorteo.id %}" class="btn btn-sm btn-primary-soft" style="min-width: 110px; padding: 0.4rem 0.75rem; border-radius: 8px; font-weight: 600;">
                                 <i class="bi bi-eye"></i> Ver Detalles
                             </a>
                         </td>

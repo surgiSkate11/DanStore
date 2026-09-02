@@ -22,6 +22,19 @@
         flex-wrap: wrap;
         gap: 1rem;
     }
+    .btn-action-add {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        color: #fff;
+        border: none;
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+        transition: all 0.2s ease;
+    }
+    .btn-action-add:hover,
+    .btn-action-add:focus {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+        color: #fff;
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
+    }
     .table-saas { margin-bottom: 0; width: 100%; border-collapse: separate; border-spacing: 0; }
     .table-saas thead th {
         background: #fafbfc; color: #64748b; font-size: 0.75rem; font-weight: 700;
@@ -49,7 +62,7 @@
                 <h2 class="fw-bolder mb-1" style="letter-spacing: -0.5px;">{{ titulo }}</h2>
                 <p class="mb-0 opacity-75">Visualizando los registros más recientes en el sistema.</p>
             </div>
-            <a href="{% url 'saas_crear_registro' app_label model_name %}" class="btn btn-light text-primary px-4 py-2 rounded-pill fw-bold shadow-sm">
+            <a href="{% url 'saas_crear_registro' app_label model_name %}" class="btn btn-action-add px-4 py-2 rounded-pill fw-bold shadow-sm">
                 <i class="bi bi-plus-lg me-1"></i> Añadir Nuevo
             </a>
         </div>

@@ -93,6 +93,24 @@
         box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
         color: white;
     }
+
+    .btn-action-secondary {
+        background: #f8fafc;
+        color: #4338ca;
+        border: 1px solid rgba(67, 56, 202, 0.28);
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .btn-action-secondary:hover,
+    .btn-action-secondary:focus {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        color: #fff;
+        border-color: #4338ca;
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.2);
+    }
     
     .participante-item {
         padding: 0.85rem 1rem;
@@ -444,7 +462,7 @@
     
     <!-- Acciones -->
     <div class="d-flex justify-content-between align-items-center mb-4" style="gap: 1rem;">
-        <a href="{% url 'lista_sorteos' %}" class="btn btn-outline-secondary" style="min-width: 150px; padding: 0.75rem 1.5rem; border-radius: 10px; font-weight: 600; border-width: 2px;">
+        <a href="{% url 'lista_sorteos' %}" class="btn btn-action-secondary" style="min-width: 150px;">
             <i class="bi bi-arrow-left"></i> Volver
         </a>
         
