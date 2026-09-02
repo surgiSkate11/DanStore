@@ -321,26 +321,35 @@
 
         /* ============================================================
            DROPDOWN PREMIUM DEL PERFIL — versión responsive.
-           Mantiene la tarjeta flotante (position: absolute, vía Bootstrap/
-           Popper) en todos los tamaños; aquí solo ajustamos el ancho para
-           que en pantallas angostas no se salga de la ventana ni provoque
-           scroll horizontal, sin tocar su diseño (degradado, avatar,
-           badges, sombra, bordes).
+           En escritorio conserva el comportamiento normal de Bootstrap
+           (position:absolute junto al toggle). En móvil/tablet lo
+           convertimos en un panel `fixed` centrado en la pantalla, con
+           scroll interno propio: así queda SIEMPRE completo y visible
+           ("Cerrar sesión" incluido) sin importar la altura del
+           contenido ni en qué punto del acordeón de navegación quede el
+           botón que lo abre — deja de depender de la posición del
+           toggle o de que algún ancestro no recorte el overflow.
            ============================================================ */
-        @media (max-width: 575.98px) {
+        @media (max-width: 1199.98px) {
             .dropdown-menu-premium {
-                min-width: 0;
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important;
+                right: auto !important;
+                bottom: auto !important;
+                transform: translate(-50%, -50%) !important;
                 width: calc(100vw - 2rem);
-                max-width: 320px;
-                right: 0.5rem !important;
-                left: auto !important;
+                max-width: 340px;
+                max-height: calc(100vh - 2rem);
+                overflow-y: auto;
+                margin: 0;
             }
         }
 
         @media (max-width: 359.98px) {
             .dropdown-menu-premium {
                 width: calc(100vw - 1rem);
-                right: 0.5rem !important;
+                max-height: calc(100vh - 1rem);
             }
 
             .dropdown-header-premium {
@@ -352,6 +361,7 @@
                 font-size: 0.85rem;
             }
         }
+
 
         /* ============================================================
            TOUR GUIADO (Shepherd.js) — tema visual acorde a la app
@@ -490,7 +500,7 @@
                     {% endif %}
                     {% if 'productos' in modulos_permitidos %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="productosDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="productosDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                             <i class="bi bi-box"></i> Productos
                         </a>
                         <ul class="dropdown-menu">
@@ -522,7 +532,7 @@
                     {% endif %}
                     {% if 'catalogos' in modulos_permitidos %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="catalogoDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="catalogoDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                             <i class="bi bi-file-earmark-pdf"></i> Catálogo
                         </a>
                         <ul class="dropdown-menu">
@@ -544,7 +554,7 @@
                     {% endif %}
                     {% if 'ventas' in modulos_permitidos %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="ventasDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="ventasDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                             <i class="bi bi-receipt"></i> Ventas/Facturas
                         </a>
                         <ul class="dropdown-menu">
@@ -567,7 +577,7 @@
                     
                     {% if 'sorteos' in modulos_permitidos %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="sorteosDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="sorteosDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                             <i class="bi bi-trophy"></i> Sorteos
                         </a>
                         <ul class="dropdown-menu">
@@ -585,7 +595,7 @@
                     
                     {% if empresa and 'tienda' in modulos_permitidos %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="tiendaDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="tiendaDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                             <i class="bi bi-shop-window text-dark"></i> Tienda Online
                         </a>
                         <ul class="dropdown-menu">
@@ -601,7 +611,7 @@
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle fw-bold" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle fw-bold" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" data-bs-display="static">
                             <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary rounded-circle me-1" style="width: 32px; height: 32px;"><i class="bi bi-person-fill"></i></div> {{ user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end dropdown-menu-premium" style="margin-top: 12px;">
