@@ -441,14 +441,19 @@ def sincronizar_sheets(request):
             
             # OPTIMIZACIÓN: Ejecutar bulk operations (solo 2 queries en total)
             if productos_a_crear:
+                for producto in productos_a_crear:
+                    producto.actualizar_texto_busqueda()
                 Producto.objects.bulk_create(productos_a_crear, batch_size=500)
                 productos_creados = len(productos_a_crear)
             
             if productos_a_actualizar:
+                for producto in productos_a_actualizar:
+                    producto.actualizar_texto_busqueda()
                 Producto.objects.bulk_update(
                     productos_a_actualizar,
-                    ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante', 
-                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado', 'origen'],
+                    ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante',
+                     'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado',
+                     'origen', 'texto_busqueda'],
                     batch_size=500
                 )
                 productos_actualizados = len(productos_a_actualizar)

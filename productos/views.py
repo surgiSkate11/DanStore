@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from openpyxl.styles import Font, PatternFill, Alignment
 
-from .models import Producto, TipoProducto
+from .models import Producto, TipoProducto, normalizar_busqueda
 from .forms import ProductoForm
 from empresas.mixins import requiere_modulo
 from tiendita_project.utils import form_errors_to_messages
@@ -63,17 +63,12 @@ def lista_productos(request):
     if estado and estado in dict(Producto.ESTADO_CHOICES):
         productos = productos.filter(estado=estado)
 
-    # Búsqueda general — busca en nombre, descripción, marca, categoría, variante
+    # Búsqueda general sin acentos y por palabras para tolerar consultas parciales.
     busqueda = request.GET.get('busqueda', '').strip()
     if busqueda:
-        productos = productos.filter(
-            Q(nombre__icontains=busqueda) |
-            Q(descripcion__icontains=busqueda) |
-            Q(marca__icontains=busqueda) |
-            Q(categoria__icontains=busqueda) |
-            Q(variante__icontains=busqueda) |
-            Q(color__icontains=busqueda)
-        )
+        terminos = normalizar_busqueda(busqueda).split()
+        for termino in terminos:
+            productos = productos.filter(texto_busqueda__icontains=termino)
 
     # Paginación: 52 por página (divisible en 4 columnas)
     paginator = Paginator(productos, 52)

@@ -276,13 +276,33 @@ WSGI_APPLICATION = 'tiendita_project.wsgi.application'
 # DATABASE
 # ============================================================
 
-if DEBUG:
+# DATABASE_URL puede venir de Render, otra plataforma de despliegue,
+# una variable de entorno local o un archivo .env.
+DATABASE_URL = config(
+    'DATABASE_URL',
+    default=None
+)
+
+if DATABASE_URL:
+
+    DATABASES = {
+
+        'default': dj_database_url.config(
+
+            default=DATABASE_URL,
+
+            conn_max_age=600,
+
+        )
+
+    }
+
+elif DEBUG:
 
     # ========================================================
     # DESARROLLO LOCAL
     # ========================================================
-    # Cuando DEBUG=True se utiliza SQLite.
-    # No se necesita DATABASE_URL.
+    # Sin DATABASE_URL se utiliza SQLite.
     # ========================================================
 
     DATABASES = {
@@ -300,34 +320,14 @@ if DEBUG:
 else:
 
     # ========================================================
-    # PRODUCCIÓN - RENDER
+    # PRODUCCIÓN SIN DATABASE_URL
     # ========================================================
-    # Cuando DEBUG=False se utiliza PostgreSQL mediante
-    # DATABASE_URL configurada en Render.
+    # DATABASE_URL es necesaria para cualquier plataforma.
     # ========================================================
-
-    DATABASE_URL = config(
-        'DATABASE_URL',
-        default=None
+    raise ValueError(
+        'DATABASE_URL no está configurada en producción. '
+        'Debes agregarla como variable de entorno en tu plataforma.'
     )
-
-    if not DATABASE_URL:
-        raise ValueError(
-            'DATABASE_URL no está configurada en producción. '
-            'Debes agregarla en las Environment Variables de Render.'
-        )
-
-    DATABASES = {
-
-        'default': dj_database_url.config(
-
-            default=DATABASE_URL,
-
-            conn_max_age=600,
-
-        )
-
-    }
 
 
 # ============================================================

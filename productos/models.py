@@ -1,6 +1,17 @@
+import unicodedata
+
 from django.db import models
 from django.utils import timezone
 from empresas.models import Empresa
+
+
+def normalizar_busqueda(valor):
+    """Convierte texto a una forma comparable sin acentos ni diferencias de caso."""
+    texto = unicodedata.normalize('NFKD', str(valor or ''))
+    return ''.join(
+        caracter for caracter in texto
+        if not unicodedata.combining(caracter)
+    ).casefold()
 
 
 class TipoProducto(models.Model):
@@ -66,6 +77,14 @@ class Producto(models.Model):
         verbose_name='Descripción',
         blank=True,
         help_text='Descripción adicional del producto'
+    )
+
+    texto_busqueda = models.TextField(
+        blank=True,
+        default='',
+        editable=False,
+        db_index=True,
+        verbose_name='Texto de búsqueda normalizado'
     )
 
     # ── CATEGORÍA (libre, el usuario escribe la suya) ─────────────────────────
@@ -211,6 +230,35 @@ class Producto(models.Model):
         verbose_name = "Producto"
         verbose_name_plural = "Productos"
         ordering = ['-creado_en']
+
+    def actualizar_texto_busqueda(self):
+        """Agrupa los campos consultables en una versión sin acentos."""
+        valores = [
+            self.nombre,
+            self.descripcion,
+            self.marca,
+            self.categoria,
+            self.variante,
+            self.color,
+            self.vendido_a,
+        ]
+        if self.tipo_producto:
+            valores.append(self.tipo_producto.nombre)
+        self.texto_busqueda = normalizar_busqueda(' '.join(
+            str(valor or '') for valor in valores
+        ))
+
+    def save(self, *args, **kwargs):
+        campos_busqueda = {
+            'nombre', 'descripcion', 'marca', 'categoria', 'variante',
+            'color', 'vendido_a', 'tipo_producto',
+        }
+        update_fields = kwargs.get('update_fields')
+        if update_fields is None or campos_busqueda.intersection(update_fields):
+            self.actualizar_texto_busqueda()
+            if update_fields is not None:
+                kwargs['update_fields'] = set(update_fields) | {'texto_busqueda'}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         partes = []
