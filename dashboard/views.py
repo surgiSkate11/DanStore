@@ -945,6 +945,23 @@ def dashboard_tenant(request):
         empresa, hoy - timedelta(days=29)
     ) if es_dueno else {}
 
+    inventario_estados = list(
+        Producto.objects.filter(empresa=empresa)
+        .values('estado')
+        .annotate(cantidad=Count('id'))
+        .order_by('estado')
+    ) if es_dueno else []
+    productos_mas_vendidos = list(
+        DetalleVenta.objects.filter(
+            venta__empresa=empresa,
+            venta__fecha__gte=hace_30_dias,
+        )
+        .exclude(venta__estado='anulada')
+        .values('producto__nombre')
+        .annotate(cantidad=Count('id'), ingresos=Sum('precio_unitario'))
+        .order_by('-cantidad', '-ingresos')[:8]
+    ) if es_dueno else []
+
     context = {
         'empresa': empresa,
         'ventas_mes': ventas_mes,
@@ -955,6 +972,8 @@ def dashboard_tenant(request):
         'es_dueno': es_dueno,
         'metricas_rentabilidad': metricas_rentabilidad,
         'metricas_rentabilidad_json': _serializar_metricas_rentabilidad(metricas_rentabilidad),
+        'inventario_estados_json': json.dumps(inventario_estados),
+        'productos_mas_vendidos_json': json.dumps(productos_mas_vendidos, default=float),
     }
     return render(request, 'dashboard/tenant_dashboard.html', context)
 

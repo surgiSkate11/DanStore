@@ -439,14 +439,14 @@
     <div class="row g-4 mb-5">
         <div class="col-lg-6">
             <div class="premium-card" style="padding: 2rem;">
-                <h3 class="section-title"><i class="bi bi-bar-chart-fill text-warning"></i> Top Productos con Mayor Rentabilidad</h3>
+                <h3 class="section-title"><i class="bi bi-box-seam text-primary"></i> Estado del Inventario</h3>
                 <div class="chart-shell">
-                    <div id="rentabilidadChart" style="min-height: 320px;"></div>
-                    <div id="rentabilidadChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
+                    <div id="inventarioChart" style="min-height: 320px;"></div>
+                    <div id="inventarioChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
                         <div>
-                            <i class="bi bi-bar-chart-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Sin datos de rentabilidad</h4>
-                            <p class="mb-0 text-muted">Se mostrará aquí el ranking cuando existan costos registrados y ventas en el período.</p>
+                            <i class="bi bi-box-seam text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
+                            <h4 class="mt-3 mb-1">Sin productos registrados</h4>
+                            <p class="mb-0 text-muted">Aquí verás cuántos productos están disponibles, reservados o vendidos.</p>
                         </div>
                     </div>
                 </div>
@@ -454,31 +454,14 @@
         </div>
         <div class="col-lg-6">
             <div class="premium-card" style="padding: 2rem;">
-                <h3 class="section-title"><i class="bi bi-lightning-charge-fill text-warning"></i> Top Productos de Alta Rotación</h3>
+                <h3 class="section-title"><i class="bi bi-stars text-warning"></i> Productos Más Vendidos</h3>
                 <div class="chart-shell">
-                    <div id="rotacionChart" style="min-height: 320px;"></div>
-                    <div id="rotacionChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
+                    <div id="productosVendidosChart" style="min-height: 320px;"></div>
+                    <div id="productosVendidosChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
                         <div>
-                            <i class="bi bi-lightning-charge-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Sin datos de rotación</h4>
-                            <p class="mb-0 text-muted">Cuando existan ventas, aquí aparecerán los productos con mayor velocidad de salida.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row g-4 mb-5">
-        <div class="col-12">
-            <div class="premium-card" style="padding: 2rem;">
-                <h3 class="section-title"><i class="bi bi-pie-chart-fill text-success"></i> Categorías Más Rentables</h3>
-                <div class="chart-shell">
-                    <div id="categoriasRentablesChart" style="min-height: 320px;"></div>
-                    <div id="categoriasRentablesChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
-                        <div>
-                            <i class="bi bi-pie-chart-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Sin datos por categoría</h4>
-                            <p class="mb-0 text-muted">Se activará automáticamente cuando el sistema pueda agrupar utilidades por categoría.</p>
+                            <i class="bi bi-stars text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
+                            <h4 class="mt-3 mb-1">Aún no hay productos vendidos</h4>
+                            <p class="mb-0 text-muted">Aquí verás qué productos tienen mayor salida para priorizar reposición y promoción.</p>
                         </div>
                     </div>
                 </div>
@@ -577,71 +560,45 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     {% if es_dueno %}
-    const metricasRentabilidad = {{ metricas_rentabilidad_json|default:"{}"|safe }};
-    const rentabilidadSeries = metricasRentabilidad.top_rentabilidad || [];
-    const rotacionSeries = metricasRentabilidad.top_rotacion || [];
-    const categoriasSeries = metricasRentabilidad.categorias_rentables || [];
+    const inventarioSeries = {{ inventario_estados_json|default:"[]"|safe }};
+    const productosVendidosSeries = {{ productos_mas_vendidos_json|default:"[]"|safe }};
+    const estadoLabels = { disponible: 'Disponible', reservado: 'Reservado', vendido: 'Vendido' };
 
-    const hasRentabilidad = rentabilidadSeries.length > 0;
-    const hasRotacion = rotacionSeries.length > 0;
-    const hasCategorias = categoriasSeries.length > 0;
-
-    if (!hasRentabilidad) {
-        document.getElementById('rentabilidadChart').classList.add('d-none');
-        document.getElementById('rentabilidadChartEmpty').classList.remove('d-none');
+    if (!inventarioSeries.length) {
+        document.getElementById('inventarioChart').classList.add('d-none');
+        document.getElementById('inventarioChartEmpty').classList.remove('d-none');
     } else {
-        new ApexCharts(document.querySelector("#rentabilidadChart"), {
-            series: [{ name: 'Margen %', data: rentabilidadSeries.map(item => Number(item.margen_promedio || 0)) }],
-            chart: { type: 'bar', height: 320, fontFamily, toolbar: { show: false } },
-            colors: ['#d97706'],
-            plotOptions: { bar: { borderRadius: 8, horizontal: true, columnWidth: '55%' } },
-            dataLabels: { enabled: false },
-            xaxis: { categories: rentabilidadSeries.map(item => item.producto__nombre), labels: { style: { colors: muted } } },
-            yaxis: { labels: { style: { colors: muted } } },
-            tooltip: {
-                y: { formatter: val => val.toFixed(1) + '%' },
-                custom: function({ dataPointIndex }) {
-                    const item = rentabilidadSeries[dataPointIndex];
-                    return `<div style="padding:10px 12px"><strong>${item.producto__nombre}</strong><br>Margen: ${Number(item.margen_promedio || 0).toFixed(1)}%<br>Utilidad total: $${Number(item.utilidad_total || 0).toFixed(2)}</div>`;
-                }
-            }
-        }).render();
-    }
-
-    if (!hasRotacion) {
-        document.getElementById('rotacionChart').classList.add('d-none');
-        document.getElementById('rotacionChartEmpty').classList.remove('d-none');
-    } else {
-        new ApexCharts(document.querySelector("#rotacionChart"), {
-            series: [{ name: 'Rotación', data: rotacionSeries.map(item => Number(item.rotacion_score || 0)) }],
-            chart: { type: 'bar', height: 320, fontFamily, toolbar: { show: false } },
-            colors: ['#059669'],
-            plotOptions: { bar: { borderRadius: 8, horizontal: true, columnWidth: '55%' } },
-            dataLabels: { enabled: false },
-            xaxis: { categories: rotacionSeries.map(item => item.producto__nombre), labels: { style: { colors: muted } } },
-            yaxis: { labels: { style: { colors: muted } } },
-            tooltip: {
-                y: { formatter: val => val.toFixed(2) },
-                custom: function({ dataPointIndex }) {
-                    const item = rotacionSeries[dataPointIndex];
-                    return `<div style="padding:10px 12px"><strong>${item.producto__nombre}</strong><br>Ventas: ${Number(item.ventas_count || 0)}<br>Rotación: ${Number(item.rotacion_score || 0).toFixed(2)}</div>`;
-                }
-            }
-        }).render();
-    }
-
-    if (!hasCategorias) {
-        document.getElementById('categoriasRentablesChart').classList.add('d-none');
-        document.getElementById('categoriasRentablesChartEmpty').classList.remove('d-none');
-    } else {
-        new ApexCharts(document.querySelector("#categoriasRentablesChart"), {
-            series: [{ name: 'Utilidad total', data: categoriasSeries.map(item => Number(item.utilidad_total || 0)) }],
-            chart: { type: 'donut', height: 320, fontFamily, toolbar: { show: false } },
-            labels: categoriasSeries.map(item => item.producto__categoria || 'Sin categoría'),
-            colors: ['#2563eb', '#10b981', '#d97706', '#8b5cf6', '#ef4444', '#14b8a6'],
-            legend: { position: 'bottom' },
+        new ApexCharts(document.querySelector('#inventarioChart'), {
+            series: inventarioSeries.map(item => Number(item.cantidad || 0)),
+            chart: { type: 'donut', height: 320, fontFamily, toolbar: { show: false }, animations: { enabled: true, speed: 500 } },
+            labels: inventarioSeries.map(item => estadoLabels[item.estado] || item.estado),
+            colors: ['#2563eb', '#f59e0b', '#64748b'],
+            legend: { position: 'bottom', fontFamily },
             dataLabels: { enabled: true },
-            tooltip: { y: { formatter: val => "$" + val.toFixed(2) } }
+            tooltip: { y: { formatter: val => `${val} productos` } }
+        }).render();
+    }
+
+    if (!productosVendidosSeries.length) {
+        document.getElementById('productosVendidosChart').classList.add('d-none');
+        document.getElementById('productosVendidosChartEmpty').classList.remove('d-none');
+    } else {
+        new ApexCharts(document.querySelector('#productosVendidosChart'), {
+            series: [{ name: 'Unidades vendidas', data: productosVendidosSeries.map(item => Number(item.cantidad || 0)) }],
+            chart: { type: 'bar', height: 320, fontFamily, toolbar: { show: false }, animations: { enabled: true, speed: 500 } },
+            colors: ['#f59e0b'],
+            plotOptions: { bar: { borderRadius: 8, horizontal: true, barHeight: '55%' } },
+            dataLabels: { enabled: false },
+            xaxis: { categories: productosVendidosSeries.map(item => item.producto__nombre), labels: { style: { colors: muted } } },
+            yaxis: { labels: { style: { colors: muted } } },
+            grid: { borderColor: gridColor, strokeDashArray: 4 },
+            tooltip: {
+                y: { formatter: val => `${val} unidades` },
+                custom: function({ dataPointIndex }) {
+                    const item = productosVendidosSeries[dataPointIndex];
+                    return `<div style="padding:10px 12px"><strong>${item.producto__nombre}</strong><br>Vendidos: ${Number(item.cantidad || 0)}<br>Ingresos: $${Number(item.ingresos || 0).toFixed(2)}</div>`;
+                }
+            }
         }).render();
     }
     {% endif %}
