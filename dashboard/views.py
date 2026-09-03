@@ -160,6 +160,39 @@ def _calcular_metricas_rentabilidad(empresa, fecha_inicio, limite=10):
         'categorias_rentables': list(categorias_rentables),
     }
 
+
+def _serializar_metricas_rentabilidad(metricas):
+    """Convierte las metricas ORM a JSON valido para las graficas."""
+    return json.dumps(metricas, default=float)
+
+
+def _obtener_metricas_rentabilidad_seguras(empresa, fecha_inicio):
+    """Devuelve metricas o una estructura vacia si el reporte falla."""
+    cache_key = f"dashboard:rentabilidad:{empresa.pk}:{fecha_inicio.date().isoformat()}"
+    metricas = cache.get(cache_key)
+    if metricas is not None:
+        return metricas
+
+    try:
+        metricas = _calcular_metricas_rentabilidad(empresa, fecha_inicio)
+        cache.set(cache_key, metricas, 60)
+        return metricas
+    except Exception:
+        logger.exception("No se pudieron calcular metricas para la empresa %s", empresa.pk)
+        return {
+            'resumen': {
+                'rentabilidad_promedio': 0,
+                'utilidad_total': 0,
+                'unidades_vendidas': 0,
+                'ventas_registradas': 0,
+            },
+            'producto_mayor_rentabilidad': None,
+            'alta_rotacion_count': 0,
+            'top_rentabilidad': [],
+            'top_rotacion': [],
+            'categorias_rentables': [],
+        }
+
 def home(request):
     """
     Redirige la ruta principal (/) al nuevo enrutador inteligente de SaaS.
@@ -908,7 +941,9 @@ def dashboard_tenant(request):
         totales_chart.append(ventas_dict.get(fecha_iter, 0.0))
     # -------------------------------------------------------------
 
-    metricas_rentabilidad = _calcular_metricas_rentabilidad(empresa, hoy - timedelta(days=29)) if es_dueno else {}
+    metricas_rentabilidad = _obtener_metricas_rentabilidad_seguras(
+        empresa, hoy - timedelta(days=29)
+    ) if es_dueno else {}
 
     context = {
         'empresa': empresa,
@@ -919,6 +954,7 @@ def dashboard_tenant(request):
         'totales_chart': json.dumps(totales_chart),
         'es_dueno': es_dueno,
         'metricas_rentabilidad': metricas_rentabilidad,
+        'metricas_rentabilidad_json': _serializar_metricas_rentabilidad(metricas_rentabilidad),
     }
     return render(request, 'dashboard/tenant_dashboard.html', context)
 
@@ -948,7 +984,7 @@ def tenant_reportes(request):
     fecha_inicio = timezone.now() - timedelta(days=dias)
     
     ventas_periodo = Venta.objects.filter(empresa=empresa, fecha__gte=fecha_inicio).select_related('cliente')
-    metricas_rentabilidad = _calcular_metricas_rentabilidad(empresa, fecha_inicio) if es_dueno else {}
+    metricas_rentabilidad = _obtener_metricas_rentabilidad_seguras(empresa, fecha_inicio) if es_dueno else {}
     
     tipo_exportacion = request.GET.get('export')
     if tipo_exportacion in ['csv', 'excel']:
@@ -1135,6 +1171,7 @@ def tenant_reportes(request):
         'fechas_chart': json.dumps(fechas_chart), 'totales_chart': json.dumps(totales_chart),
         'es_dueno': es_dueno,
         'metricas_rentabilidad': metricas_rentabilidad,
+        'metricas_rentabilidad_json': _serializar_metricas_rentabilidad(metricas_rentabilidad),
         'rentabilidad_promedio': metricas_rentabilidad.get('resumen', {}).get('rentabilidad_promedio', 0),
         'utilidad_total': metricas_rentabilidad.get('resumen', {}).get('utilidad_total', 0),
         'producto_mayor_rentabilidad': metricas_rentabilidad.get('producto_mayor_rentabilidad'),

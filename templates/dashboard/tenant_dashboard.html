@@ -577,9 +577,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     {% if es_dueno %}
-    const rentabilidadSeries = {{ metricas_rentabilidad.top_rentabilidad|default:"[]"|safe }};
-    const rotacionSeries = {{ metricas_rentabilidad.top_rotacion|default:"[]"|safe }};
-    const categoriasSeries = {{ metricas_rentabilidad.categorias_rentables|default:"[]"|safe }};
+    const metricasRentabilidad = {{ metricas_rentabilidad_json|default:"{}"|safe }};
+    const rentabilidadSeries = metricasRentabilidad.top_rentabilidad || [];
+    const rotacionSeries = metricasRentabilidad.top_rotacion || [];
+    const categoriasSeries = metricasRentabilidad.categorias_rentables || [];
 
     const hasRentabilidad = rentabilidadSeries.length > 0;
     const hasRotacion = rotacionSeries.length > 0;

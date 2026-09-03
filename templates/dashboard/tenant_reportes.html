@@ -510,9 +510,10 @@
         }
 
         {% if es_dueno %}
-        const rentabilidadReportSeries = {{ top_productos_rentables|default:"[]"|safe }};
-        const rotacionReportSeries = {{ top_productos_rotacion|default:"[]"|safe }};
-        const categoriasRentablesSeries = {{ categorias_mas_rentables|default:"[]"|safe }};
+        const metricasRentabilidad = {{ metricas_rentabilidad_json|default:"{}"|safe }};
+        const rentabilidadReportSeries = metricasRentabilidad.top_rentabilidad || [];
+        const rotacionReportSeries = metricasRentabilidad.top_rotacion || [];
+        const categoriasRentablesSeries = metricasRentabilidad.categorias_rentables || [];
 
         if (rentabilidadReportSeries.length > 0) {
             new ApexCharts(document.querySelector("#rentabilidadReportChart"), {
