@@ -25,20 +25,23 @@ from empresas.mixins import requiere_modulo
 def lista_ventas(request):
     """Lista todas las ventas/facturas con estadísticas"""
 
-    ventas = Venta.objects.select_related('cliente').prefetch_related(
+    empresa = getattr(request, 'empresa', None)
+    ventas = Venta.objects.filter(empresa=empresa).select_related('cliente').prefetch_related(
         'detalles__producto__tipo_producto'
     ).order_by('-fecha')
 
     # Estadísticas — usando agregaciones en lugar de sum en Python
-    total_ventas = Venta.objects.aggregate(
+    total_ventas = Venta.objects.filter(empresa=empresa).aggregate(
         total=Sum('total')
     )['total'] or 0
 
     total_facturas_pagadas = Venta.objects.filter(
+        empresa=empresa,
         detalles__producto__estado='vendido'
     ).distinct().count()
 
     clientes_con_deuda = Producto.objects.filter(
+        empresa=empresa,
         estado='reservado',
         vendido_a__isnull=False
     ).exclude(vendido_a='').values('vendido_a').distinct().count()
@@ -57,7 +60,9 @@ def lista_ventas(request):
 @requiere_modulo('ventas', accion='ver')
 def lista_deudas(request):
     """Muestra todos los productos separados agrupados por cliente"""
+    empresa = getattr(request, 'empresa', None)
     productos_separados = Producto.objects.filter(
+        empresa=empresa,
         estado='reservado',
         vendido_a__isnull=False
     ).exclude(vendido_a='').select_related('tipo_producto').order_by('vendido_a', '-creado_en')
@@ -77,7 +82,7 @@ def lista_deudas(request):
     ]
     deudas_list.sort(key=lambda x: x['total'], reverse=True)
 
-    empresa_id = getattr(request, 'empresa', None).id if getattr(request, 'empresa', None) else 1
+    empresa_id = empresa.id if empresa else None
     config = ConfiguracionFactura.obtener_configuracion(empresa_id)
 
     context = {
@@ -109,10 +114,11 @@ def crear_venta(request):
 
             ruc_cedula = re.sub(r'[^a-zA-Z0-9-]', '', ruc_cedula)
 
-            cliente = Cliente.objects.filter(ruc_cedula=ruc_cedula).first()
+            cliente = Cliente.objects.filter(
+                ruc_cedula=ruc_cedula,
+                empresas=request.empresa,
+            ).first()
             if cliente:
-                if hasattr(request, 'empresa') and request.empresa:
-                    cliente.empresas.add(request.empresa)
                 return JsonResponse({
                     'success': True,
                     'cliente': {
@@ -124,6 +130,12 @@ def crear_venta(request):
                     },
                     'mensaje': 'Cliente con esa Cédula existente asociado a tu empresa exitosamente.'
                 })
+
+            if Cliente.objects.filter(ruc_cedula=ruc_cedula).exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Ya existe un cliente con esa Cédula en otra empresa y sus datos no están disponibles.'
+                }, status=409)
 
             if email and not re.match(r"[^@]+@[^@]+\.[^@]+", email):
                 return JsonResponse({'success': False, 'error': 'Formato de correo electrónico inválido.'})
@@ -174,13 +186,27 @@ def crear_venta(request):
         elif cliente_id_o_nombre:
             if cliente_id_o_nombre.isdigit():
                 try:
-                    cliente = Cliente.objects.get(pk=cliente_id_o_nombre)
+                    cliente = Cliente.objects.get(
+                        pk=cliente_id_o_nombre,
+                        empresas=empresa,
+                    )
                 except Cliente.DoesNotExist:
-                    cliente, _ = Cliente.objects.get_or_create(nombre=cliente_id_o_nombre)
+                    messages.error(request, 'El cliente seleccionado no pertenece a tu empresa.')
+                    return redirect('crear_venta')
             else:
-                cliente, _ = Cliente.objects.get_or_create(nombre=cliente_id_o_nombre)
+                cliente = Cliente.objects.filter(
+                    nombre=cliente_id_o_nombre,
+                    empresas=empresa,
+                ).first()
+                if not cliente:
+                    cliente = Cliente.objects.create(nombre=cliente_id_o_nombre)
         elif nombre_cliente:
-            cliente, _ = Cliente.objects.get_or_create(nombre=nombre_cliente)
+            cliente = Cliente.objects.filter(
+                nombre=nombre_cliente,
+                empresas=empresa,
+            ).first()
+            if not cliente:
+                cliente = Cliente.objects.create(nombre=nombre_cliente)
         else:
             messages.error(request, 'Debes seleccionar o crear un cliente')
             return redirect('crear_venta')
@@ -196,7 +222,7 @@ def crear_venta(request):
         productos_a_vender = []
         for producto_id in productos_seleccionados:
             try:
-                producto = Producto.objects.get(pk=producto_id)
+                producto = Producto.objects.get(pk=producto_id, empresa=empresa)
             except Producto.DoesNotExist:
                 continue
 
@@ -210,13 +236,13 @@ def crear_venta(request):
             for producto in productos_a_vender:
                 cantidades[producto.id] = cantidades.get(producto.id, 0) + 1
             for producto_id, cantidad in cantidades.items():
-                producto = Producto.objects.get(pk=producto_id)
+                producto = Producto.objects.get(pk=producto_id, empresa=empresa)
                 if producto.stock and cantidad > producto.stock:
                     messages.error(request, f'No puedes vender {cantidad} unidades de "{producto.nombre}" porque solo quedan {producto.stock} en stock.')
                     return redirect('crear_venta')
 
         venta = Venta.objects.create(
-            empresa=empresa or Empresa.objects.get(pk=empresa_id),
+            empresa=empresa,
             cliente=cliente,
             descuento=Decimal(request.POST.get('descuento', 0) or 0),
             envio=Decimal(request.POST.get('envio', 0) or 0),
@@ -229,7 +255,7 @@ def crear_venta(request):
 
         for producto_id in productos_seleccionados:
             try:
-                producto = Producto.objects.get(pk=producto_id)
+                producto = Producto.objects.get(pk=producto_id, empresa=empresa)
                 DetalleVenta.objects.create(
                     venta=venta,
                     producto=producto,
@@ -284,16 +310,21 @@ def crear_venta(request):
     productos_cliente_ids = []
     if cliente_nombre_param:
         productos_cliente_ids = list(
-            Producto.objects.filter(vendido_a=cliente_nombre_param).values_list('id', flat=True)
+            Producto.objects.filter(
+                empresa=empresa,
+                vendido_a=cliente_nombre_param,
+            ).values_list('id', flat=True)
         )
 
     productos_disponibles = Producto.objects.filter(
+        empresa=empresa,
         estado='disponible'
     ).select_related('tipo_producto').order_by('-creado_en')[:200]
 
     if productos_cliente_ids:
         productos_del_cliente = Producto.objects.filter(
-            id__in=productos_cliente_ids
+            id__in=productos_cliente_ids,
+            empresa=empresa,
         ).select_related('tipo_producto')
         productos_unicos = {p.id: p for p in list(productos_del_cliente) + list(productos_disponibles)}
         productos = list(productos_unicos.values())
@@ -315,7 +346,7 @@ def crear_venta(request):
 @requiere_modulo('ventas', accion='editar')
 def editar_venta(request, venta_id):
     """Edita una venta existente"""
-    venta = get_object_or_404(Venta, pk=venta_id)
+    venta = get_object_or_404(Venta, pk=venta_id, empresa=request.empresa)
     
     # Filosofía SaaS: Permitimos la edición para máxima flexibilidad, 
     # solo informamos al usuario si la factura es externa para que sea consciente.
@@ -358,7 +389,8 @@ def detalle_venta(request, venta_id):
         Venta.objects.select_related('cliente').prefetch_related(
             'detalles__producto__tipo_producto'
         ),
-        pk=venta_id
+        pk=venta_id,
+        empresa=request.empresa,
     )
     return render(request, 'ventas/detalle_venta.html', {'venta': venta})
 
@@ -374,9 +406,10 @@ def factura_pdf(request, venta_id):
     """
     venta = get_object_or_404(
         Venta.objects.select_related('cliente').prefetch_related('detalles__producto'),
-        pk=venta_id
+        pk=venta_id,
+        empresa=request.empresa,
     )
-    empresa_id = getattr(request, 'empresa', None).id if getattr(request, 'empresa', None) else 1
+    empresa_id = request.empresa.id
     config = ConfiguracionFactura.obtener_configuracion(empresa_id)
 
     html_string = render_to_string('ventas/factura_pdf.html', {
@@ -403,6 +436,7 @@ def factura_pdf(request, venta_id):
 def generar_comprobante_deuda_pdf(request, cliente_nombre):
     """Genera PDF de comprobante de deuda para un cliente usando pdfkit (A4)"""
     productos = Producto.objects.filter(
+        empresa=request.empresa,
         estado='reservado',
         vendido_a=cliente_nombre
     ).select_related('tipo_producto').order_by('-creado_en')
@@ -411,11 +445,11 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
         messages.error(request, f'No hay productos separados para {cliente_nombre}')
         return redirect('lista_deudas')
 
-    empresa_id = getattr(request, 'empresa', None).id if getattr(request, 'empresa', None) else 1
+    empresa_id = request.empresa.id
     config = ConfiguracionFactura.obtener_configuracion(empresa_id)
 
     try:
-        cliente = Cliente.objects.get(nombre=cliente_nombre)
+        cliente = Cliente.objects.get(nombre=cliente_nombre, empresas=request.empresa)
     except Cliente.DoesNotExist:
         cliente = None
         
@@ -448,8 +482,8 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
 def configuracion_facturas(request):
     """Configura logo, colores y datos de la empresa para las facturas"""
     # Obtención segura de la empresa (fallback a id=1 si el middleware no la inyectó)
-    empresa = getattr(request, 'empresa', None)
-    empresa_id = empresa.id if empresa else 1
+    empresa = request.empresa
+    empresa_id = empresa.id
 
     config = ConfiguracionFactura.obtener_configuracion(empresa_id)
 

@@ -436,6 +436,7 @@ def username_reset_request_view(request):
             if usuarios.exists():
                 # Guardamos el correo en sesión y pasamos al Paso 2
                 request.session['reset_email'] = email
+                request.session.set_expiry(600)
                 return redirect('username_reset_masked')
             else:
                 error_message = "No encontramos ninguna cuenta asociada a este correo."
@@ -471,10 +472,10 @@ def username_reset_masked_view(request):
                         mensaje_txt,
                         [email],
                         html_message=mensaje_html,
-                        fail_silently=True,
+                        fail_silently=False,
                     )
-                except Exception as e:
-                    print(f"Error enviando correo en segundo plano: {e}")
+                except Exception:
+                    logger.exception("Error enviando correo de recuperación de usuario")
                     
             threading.Thread(target=enviar_recuperacion_async).start()
                 
@@ -503,6 +504,7 @@ def password_reset_request_view(request):
             if user.email:
                 # Guarda el ID en sesión temporalmente y pasa al Paso 2
                 request.session['reset_uid'] = user.id
+                request.session.set_expiry(600)
                 return redirect('password_reset_masked')
             else:
                 error_message = "Este usuario no tiene un correo registrado."
@@ -562,10 +564,10 @@ def password_reset_masked_view(request):
                         mensaje_txt,
                         [user.email],
                         html_message=mensaje_html,
-                        fail_silently=True,
+                        fail_silently=False,
                     )
-                except Exception as e:
-                    print(f"Error enviando correo de password: {e}")
+                except Exception:
+                    logger.exception("Error enviando correo de recuperación de contraseña")
                     
             threading.Thread(target=enviar_password_async).start()
             
@@ -577,7 +579,7 @@ def password_reset_masked_view(request):
 
 class CustomLoginView(LoginView):
     def form_invalid(self, form):
-        form_errors_to_messages(self.request, form)
+        messages.error(self.request, "Usuario o contraseña incorrectos.")
         return super().form_invalid(form)
     
 def error_403_view(request, exception=None):

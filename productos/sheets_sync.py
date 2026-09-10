@@ -380,7 +380,10 @@ def sincronizar_sheets(request):
                             # eliminar las ventas/facturas asociadas
                             if producto_existente.estado == 'vendido' and estado != 'vendido':
                                 # Buscar detalles de venta asociados a este producto
-                                detalles = DetalleVenta.objects.filter(producto=producto_existente)
+                                detalles = DetalleVenta.objects.filter(
+                                    producto=producto_existente,
+                                    venta__empresa=request.empresa,
+                                )
                                 
                                 # Obtener las ventas asociadas antes de eliminar los detalles
                                 ventas_ids = list(detalles.values_list('venta_id', flat=True).distinct())
@@ -391,7 +394,10 @@ def sincronizar_sheets(request):
                                 # Eliminar ventas que quedaron sin productos
                                 for venta_id in ventas_ids:
                                     try:
-                                        venta = Venta.objects.get(id=venta_id)
+                                        venta = Venta.objects.get(
+                                            id=venta_id,
+                                            empresa=request.empresa,
+                                        )
                                         # Si la venta ya no tiene productos, eliminarla
                                         if not venta.detalles.exists():
                                             venta.delete()
@@ -498,7 +504,8 @@ def sincronizar_sheets(request):
             
             # Buscar detalles de venta de estos productos
             detalles_inconsistentes = DetalleVenta.objects.filter(
-                producto_id__in=productos_no_vendidos
+                producto_id__in=productos_no_vendidos,
+                venta__empresa=request.empresa,
             )
             
             if detalles_inconsistentes.exists():
@@ -514,7 +521,10 @@ def sincronizar_sheets(request):
                 ventas_actualizadas = 0
                 for venta_id in ventas_ids:
                     try:
-                        venta = Venta.objects.get(id=venta_id)
+                        venta = Venta.objects.get(
+                            id=venta_id,
+                            empresa=request.empresa,
+                        )
                         if not venta.detalles.exists():
                             # Si la venta quedó sin productos, eliminarla
                             venta.delete()
@@ -827,12 +837,11 @@ def sincronizar_ventas_desde_sheets(empresa):
         
         if clientes_nuevos:
             Cliente.objects.bulk_create(clientes_nuevos, batch_size=100)
-            nuevos_salvados = Cliente.objects.filter(nombre__in=[c.nombre for c in clientes_nuevos])
-            for nc in nuevos_salvados:
+            for nc in clientes_nuevos:
                 nc.empresas.add(empresa)
             estadisticas['clientes_creados'] = len(clientes_nuevos)
             # Actualizar cache con clientes nuevos
-            for cliente in Cliente.objects.filter(empresas=empresa, nombre__in=[c.nombre for c in clientes_nuevos]):
+            for cliente in clientes_nuevos:
                 clientes_cache[cliente.nombre] = cliente
         
         # Crear facturas por cada cliente (solo con productos nuevos)

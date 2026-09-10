@@ -421,14 +421,22 @@
                                 <div class="card border-0 shadow-sm" style="border-radius: 16px; border-left: 4px solid #3b82f6 !important;">
                                     <div class="card-body p-4 d-flex justify-content-between align-items-center">
                                         <div>
-                                            <h6 class="fw-bold text-dark mb-1">Forzar 2FA para Inquilinos</h6>
-                                            <p class="text-muted small mb-0">Obliga a los Dueños a configurar Autenticación de Dos Pasos.</p>
+                                            <h6 class="fw-bold text-dark mb-1">Bloqueo por intentos fallidos</h6>
+                                            <p class="text-muted small mb-0">Bloquea temporalmente una cuenta tras varios intentos de acceso incorrectos.</p>
                                         </div>
                                         <div class="form-check custom-switch ps-0">
-                                            <input class="form-check-input ms-0" type="checkbox" id="force2fa" name="force_2fa" {% if config.force_2fa %}checked{% endif %}>
+                                            <input class="form-check-input ms-0" type="checkbox" id="loginLockoutEnabled" name="login_lockout_enabled" {% if config.login_lockout_enabled %}checked{% endif %}>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="col-md-6 mt-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Intentos máximos</label>
+                                <input type="number" class="form-control form-control-lg bg-light border-0" name="login_max_attempts" value="{{ config.login_max_attempts|default:'5' }}" min="3" max="20" style="border-radius: 12px;">
+                            </div>
+                            <div class="col-md-6 mt-4">
+                                <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Duración del bloqueo (minutos)</label>
+                                <input type="number" class="form-control form-control-lg bg-light border-0" name="login_lockout_minutes" value="{{ config.login_lockout_minutes|default:'15' }}" min="1" max="1440" style="border-radius: 12px;">
                             </div>
                             <div class="col-md-6 mt-4">
                                 <label class="form-label text-muted fw-bold text-uppercase small" style="letter-spacing: 0.5px;">Expiración de Sesión</label>

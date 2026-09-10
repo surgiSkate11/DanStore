@@ -211,18 +211,27 @@ class ConfiguracionSaaS(models.Model):
         help_text="Color Hexadecimal del panel de administración. Ej: #0d6efd"
     )
 
-    # Seguridad: obligar verificación en dos pasos a todos los usuarios
-    # (SuperAdmin, dueños y empleados) del sistema.
-    force_2fa = models.BooleanField(
+    # Seguridad: bloqueo temporal tras varios intentos fallidos de login.
+    login_lockout_enabled = models.BooleanField(
         default=False,
-        verbose_name="Forzar Verificación en Dos Pasos (2FA)",
-        help_text="Si está activo, todos los usuarios deberán configurar 2FA para poder iniciar sesión."
+        verbose_name="Bloqueo por intentos fallidos",
+        help_text="Bloquea temporalmente una cuenta después de varios intentos de acceso incorrectos."
+    )
+    login_max_attempts = models.PositiveIntegerField(
+        default=5,
+        validators=[MinValueValidator(3)],
+        verbose_name="Intentos máximos de login",
+        help_text="Cantidad de intentos fallidos antes del bloqueo. Mínimo: 3."
+    )
+    login_lockout_minutes = models.PositiveIntegerField(
+        default=15,
+        validators=[MinValueValidator(1)],
+        verbose_name="Duración del bloqueo (minutos)",
+        help_text="Tiempo durante el que se bloquea el acceso después de alcanzar el límite."
     )
 
-    # Duración de sesión (minutos). Es una configuración GLOBAL del SaaS
-    # (singleton, id=1), igual que el resto de ConfiguracionSaaS: no
-    # depende de la empresa/tenant. Se aplica en TenantMiddleware mediante
-    # request.session.set_expiry(session_timeout * 60).
+    # Política global de inactividad definida por el dueño del software.
+    # Se aplica a todos los usuarios autenticados del sistema.
     session_timeout = models.PositiveIntegerField(
         default=1440,
         validators=[MinValueValidator(5)],

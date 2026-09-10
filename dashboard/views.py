@@ -355,7 +355,7 @@ def saas_configuracion(request):
         raise PermissionDenied("Acceso exclusivo para administradores globales.")
         
     # Obtener la configuración o crearla si es la primera vez (singleton)
-    config, created = ConfiguracionSaaS.objects.get_or_create(id=1)
+    config, _ = ConfiguracionSaaS.objects.get_or_create(id=1)
         
     if request.method == 'POST':
         # Branding y Contacto
@@ -434,13 +434,14 @@ def saas_configuracion(request):
         if theme_color_raw:
             config.theme_color = theme_color_raw
 
-        config.force_2fa = request.POST.get('force_2fa') == 'on'
+        config.login_lockout_enabled = request.POST.get('login_lockout_enabled') == 'on'
+        try:
+            config.login_max_attempts = max(3, int(request.POST.get('login_max_attempts', 5)))
+            config.login_lockout_minutes = max(1, int(request.POST.get('login_lockout_minutes', 15)))
+        except (TypeError, ValueError):
+            messages.error(request, 'La política de bloqueo de login no es válida. Se conservaron sus valores anteriores.')
 
-        # Duración de sesión (minutos). Se valida antes de asignar: un valor
-        # vacío/no numérico o menor al mínimo permitido (ver
-        # ConfiguracionSaaS.session_timeout) no debe tumbar el resto del
-        # guardado, así que si es inválido se conserva el valor previo y se
-        # avisa al admin con un mensaje de error.
+        # Respaldo de sesión para superadmins sin empresa.
         session_timeout_raw = request.POST.get('session_timeout', '').strip()
         try:
             session_timeout_val = int(session_timeout_raw)
@@ -458,9 +459,7 @@ def saas_configuracion(request):
         
         cache.delete('saas_app_name')
         cache.delete('saas_support_email')
-        # El middleware cachea la duración de sesión para no consultar la
-        # base de datos en cada request; al guardar, invalidamos esa caché
-        # para que el nuevo valor se aplique de inmediato.
+        # El respaldo se aplica de inmediato al invalidar su caché.
         cache.delete('saas_session_timeout')
 
         tab_activa = request.POST.get('active_tab', 'branding')

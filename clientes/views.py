@@ -30,9 +30,18 @@ def api_crear_cliente(request):
             if form.is_valid():
                 ruc_cedula = form.cleaned_data['ruc_cedula']
                 
-                # Verificar si existe globalmente para evitar duplicados
-                cliente = Cliente.objects.filter(ruc_cedula=ruc_cedula).first()
+                # Reutilizar únicamente clientes ya asociados a esta empresa.
+                cliente = Cliente.objects.filter(
+                    ruc_cedula=ruc_cedula,
+                    empresas=request.empresa,
+                ).first()
                 
+                if not cliente and Cliente.objects.filter(ruc_cedula=ruc_cedula).exists():
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Ya existe un cliente con esa Cédula en otra empresa y sus datos no están disponibles.'
+                    }, status=409)
+
                 if not cliente:
                     cliente = form.save(commit=False)
                     cliente.save()

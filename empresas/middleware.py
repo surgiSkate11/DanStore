@@ -4,21 +4,14 @@ from django.urls import reverse
 from django.utils.deprecation import MiddlewareMixin
 
 
-# --- Duración de sesión configurable por el SuperAdmin (ConfiguracionSaaS.session_timeout) ---
-# Es una configuración GLOBAL del SaaS (singleton, id=1), igual que el resto de
-# ConfiguracionSaaS: no depende de la empresa/tenant, aplica a todos por igual.
+# --- Duración de sesión global definida por el dueño del software ---
 SESSION_TIMEOUT_CACHE_KEY = 'saas_session_timeout'
-SESSION_TIMEOUT_CACHE_TTL_SEGUNDOS = 300  # 5 minutos: evita ir a BD en cada request
-SESSION_TIMEOUT_DEFAULT_MINUTOS = 1440  # Mismo default que el modelo, por si aún no existe fila
+SESSION_TIMEOUT_CACHE_TTL_SEGUNDOS = 300
+SESSION_TIMEOUT_DEFAULT_MINUTOS = 1440
 
 def _obtener_session_timeout_minutos():
     """
-    Devuelve la duración de sesión configurada (en MINUTOS), leyendo de una
-    caché de corta duración para no golpear la base de datos en cada
-    request. La vista `saas_configuracion` invalida esta caché
-    (cache.delete('saas_session_timeout')) al guardar un nuevo valor, así
-    que el cambio se aplica como máximo con unos minutos de retraso, o de
-    inmediato si el admin acaba de guardar.
+    Devuelve la duración global configurada por el superadmin.
     """
     def _leer_de_bd():
         from .models import ConfiguracionSaaS
@@ -42,27 +35,15 @@ class TenantMiddleware(MiddlewareMixin):
         if not request.user.is_authenticated:
             return
 
-        # Aplica la duración de sesión configurada en ConfiguracionSaaS a
-        # CUALQUIER usuario autenticado (superadmin, dueños y empleados).
-        # set_expiry() reinicia el conteo en cada request ("rolling
-        # session"), por lo que la sesión expira tras N minutos de
-        # INACTIVIDAD, no N minutos desde el login. No usamos
-        # SESSION_COOKIE_AGE porque esa constante es fija a nivel de
-        # settings.py y no puede recargarse en caliente desde este modelo.
         try:
             minutos = _obtener_session_timeout_minutos()
-            request.session.set_expiry(minutos * 60)
-        except Exception:
-            # Nunca debe tumbar la petición por un problema leyendo la
-            # configuración de sesión; en el peor caso, Django usa el
-            # comportamiento de sesión por defecto.
-            pass
+            expiry_seconds = minutos * 60
+            # Evita escribir la sesión en cada request si la política no cambió.
+            if request.session.get('_session_expiry') != expiry_seconds:
+                request.session.set_expiry(expiry_seconds)
+            request.session_expiry_seconds = request.session.get_expiry_age()
 
-        if request.user.is_superuser and request.path.startswith('/admin/'):
-            return
-
-        try:
-            # OPTIMIZACIÓN EXTREMA: Cargar Perfil, Empresa y Suscripción en UNA sola consulta
+            # La empresa y la suscripción se resuelven en una sola consulta.
             from usuarios.models import UserProfile
             perfil = UserProfile.objects.select_related('empresa', 'empresa__suscripcion').filter(user=request.user).first()
 
@@ -81,6 +62,7 @@ class TenantMiddleware(MiddlewareMixin):
 
             if perfil and perfil.empresa:
                 empresa = perfil.empresa
+                request.empresa = empresa
 
                 suspendida_admin = not empresa.activa
                 suspendida_pago = hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0
@@ -92,9 +74,13 @@ class TenantMiddleware(MiddlewareMixin):
                         rutas_permitidas = ['/logout/', '/empresa/suspendida/', '/empresa/soporte/crear/']
 
                     if request.path not in rutas_permitidas and not request.path.startswith('/admin/'):
-                        request.empresa = empresa
                         return redirect('cuenta_suspendida')
 
-                request.empresa = empresa
-        except Exception as e:
-            pass
+        except Exception:
+            request.session_expiry_seconds = None
+
+    def process_response(self, request, response):
+        segundos = getattr(request, 'session_expiry_seconds', None)
+        if segundos is not None and request.user.is_authenticated:
+            response['X-Session-Expires-In'] = str(max(0, int(segundos)))
+        return response

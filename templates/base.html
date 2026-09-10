@@ -1186,5 +1186,34 @@
     {% endif %}
 
     {% block extra_js %}{% endblock %}
+
+    {% if request.user.is_authenticated and request.session_expiry_seconds %}
+    <script>
+        (function () {
+            let sessionExpiryTimer = null;
+
+            function scheduleSessionExpiry(seconds) {
+                const expirySeconds = Number(seconds);
+                if (!Number.isFinite(expirySeconds) || expirySeconds <= 0) return;
+                window.clearTimeout(sessionExpiryTimer);
+                sessionExpiryTimer = window.setTimeout(function () {
+                    const next = window.location.pathname + window.location.search;
+                    window.location.assign('{% url "login" %}?next=' + encodeURIComponent(next));
+                }, expirySeconds * 1000 + 250);
+            }
+
+            scheduleSessionExpiry('{{ request.session_expiry_seconds }}');
+
+            const originalFetch = window.fetch;
+            window.fetch = function () {
+                return originalFetch.apply(this, arguments).then(function (response) {
+                    const remaining = response.headers.get('X-Session-Expires-In');
+                    if (remaining) scheduleSessionExpiry(remaining);
+                    return response;
+                });
+            };
+        })();
+    </script>
+    {% endif %}
 </body>
 </html>

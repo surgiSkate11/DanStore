@@ -587,7 +587,12 @@ def eliminar_premio(request, sorteo_id, premio_id):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
     # premio_id es el ID de SorteoPremio
-    sorteo_premio = get_object_or_404(SorteoPremio, id=premio_id, sorteo_id=sorteo_id)
+    sorteo_premio = get_object_or_404(
+        SorteoPremio,
+        id=premio_id,
+        sorteo_id=sorteo_id,
+        sorteo__empresa=request.empresa,
+    )
     
     nombre = sorteo_premio.premio.nombre
     sorteo_premio.delete()

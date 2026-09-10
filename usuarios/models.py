@@ -20,6 +20,18 @@ class ModuloSaaS(models.Model):
         return self.nombre
 
 
+class LoginSecurityAttempt(models.Model):
+    """Estado de intentos fallidos por cuenta para el bloqueo temporal."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='login_security_attempt')
+    failed_attempts = models.PositiveIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Intento de seguridad de login"
+        verbose_name_plural = "Intentos de seguridad de login"
+
+
 class RolEmpresa(models.Model):
     """Roles personalizados creados por el Dueño para SU empresa (Tenant RBAC)"""
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='roles_personalizados')
