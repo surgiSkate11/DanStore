@@ -1,4 +1,3 @@
-import calendar
 import json
 import threading
 from datetime import timedelta
@@ -590,34 +589,17 @@ def pago_exitoso(request, plan_id, tipo_plan):
     plan = get_object_or_404(Plan, id=plan_id)
     empresa = request.empresa
 
-    if tipo_plan == 'anual':
-        meses_a_sumar = 12
-        texto_tiempo = "1 año"
-    else:
-        meses_a_sumar = 1
-        texto_tiempo = "1 mes"
-
     suscripcion, created = SuscripcionEmpresa.objects.get_or_create(
         empresa=empresa,
         defaults={'plan': plan, 'fecha_vencimiento': timezone.now()}
     )
 
-    fecha_base = timezone.now() if suscripcion.dias_restantes() <= 0 else suscripcion.fecha_vencimiento
-    suscripcion.plan = plan
-    suscripcion.tipo_plan = 'anual' if tipo_plan == 'anual' else 'mensual'
-
-    # Cálculo exacto de mes calendario respetando 28, 30 y 31 días (y bisiestos)
-    mes = fecha_base.month - 1 + meses_a_sumar
-    año = fecha_base.year + mes // 12
-    mes = mes % 12 + 1
-    dia = min(fecha_base.day, calendar.monthrange(año, mes)[1])
-
-    suscripcion.fecha_vencimiento = fecha_base.replace(year=año, month=mes, day=dia)
-    suscripcion.save()
+    suscripcion.renovar(plan=plan, tipo_plan=tipo_plan)
 
     if not empresa.suspension_manual:
         empresa.activa = True
         empresa.save(update_fields=['activa'])
 
-    messages.success(request, f"¡Pago procesado exitosamente! Tu suscripción al '{plan.nombre}' ha sido renovada por {texto_tiempo}.")
+    periodo = '1 año' if tipo_plan == 'anual' else '1 mes'
+    messages.success(request, f"¡Pago procesado exitosamente! Tu suscripción al '{plan.nombre}' ha sido renovada por {periodo}.")
     return redirect('dashboard_router')

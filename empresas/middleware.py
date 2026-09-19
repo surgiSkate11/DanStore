@@ -73,7 +73,15 @@ class TenantMiddleware(MiddlewareMixin):
                     except Exception:
                         rutas_permitidas = ['/logout/', '/empresa/suspendida/', '/empresa/soporte/crear/']
 
-                    if request.path not in rutas_permitidas and not request.path.startswith('/admin/'):
+                    es_ruta_pago = request.path.startswith((
+                        '/empresa/pagar/',
+                        '/empresa/pago-exitoso/',
+                    ))
+                    if (
+                        request.path not in rutas_permitidas
+                        and not es_ruta_pago
+                        and not request.path.startswith('/admin/')
+                    ):
                         return redirect('cuenta_suspendida')
 
         except Exception:

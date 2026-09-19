@@ -20,6 +20,36 @@ class SuscripcionEmpresaAdmin(admin.ModelAdmin):
     list_display = ('empresa', 'plan', 'tipo_plan', 'fecha_inicio', 'fecha_vencimiento')
     search_fields = ('empresa__nombre', 'plan__nombre')
     list_filter = ('tipo_plan', 'plan')
+    readonly_fields = ('fecha_inicio', 'fecha_vencimiento')
+    actions = ('renovar_suscripciones',)
+
+    @admin.action(description='Renovar suscripciones según su periodo')
+    def renovar_suscripciones(self, request, queryset):
+        renovadas = 0
+        reactivadas = 0
+
+        for suscripcion in queryset.select_related('empresa', 'plan'):
+            if not suscripcion.plan:
+                self.message_user(
+                    request,
+                    f"{suscripcion.empresa.nombre} no tiene un plan asignado y no fue renovada.",
+                    level='ERROR',
+                )
+                continue
+
+            suscripcion.renovar()
+            renovadas += 1
+
+            empresa = suscripcion.empresa
+            if not empresa.suspension_manual and not empresa.activa:
+                empresa.activa = True
+                empresa.save(update_fields=['activa'])
+                reactivadas += 1
+
+        self.message_user(
+            request,
+            f"{renovadas} suscripción(es) renovada(s); {reactivadas} empresa(s) reactivada(s).",
+        )
 
 
 class MensajeTicketInline(admin.TabularInline):

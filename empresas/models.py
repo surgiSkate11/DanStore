@@ -1,3 +1,5 @@
+import calendar
+
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -113,6 +115,27 @@ class SuscripcionEmpresa(models.Model):
     tipo_plan = models.CharField(max_length=20, choices=TIPO_PLAN_CHOICES, default='mensual')
     fecha_inicio = models.DateTimeField(default=timezone.now)
     fecha_vencimiento = models.DateTimeField()
+
+    def renovar(self, plan=None, tipo_plan=None, ahora=None):
+        ahora = ahora or timezone.now()
+        tipo_plan = tipo_plan or self.tipo_plan
+        meses_a_sumar = 12 if tipo_plan == 'anual' else 1
+        estaba_vencida = self.fecha_vencimiento <= ahora
+        fecha_base = ahora if estaba_vencida else self.fecha_vencimiento
+
+        mes = fecha_base.month - 1 + meses_a_sumar
+        año = fecha_base.year + mes // 12
+        mes = mes % 12 + 1
+        dia = min(fecha_base.day, calendar.monthrange(año, mes)[1])
+
+        self.plan = plan or self.plan
+        self.tipo_plan = tipo_plan
+        self.fecha_inicio = ahora if estaba_vencida else self.fecha_inicio
+        self.fecha_vencimiento = fecha_base.replace(year=año, month=mes, day=dia)
+        self.save(update_fields=[
+            'plan', 'tipo_plan', 'fecha_inicio', 'fecha_vencimiento'
+        ])
+        return estaba_vencida
 
     def dias_restantes(self):
         delta = self.fecha_vencimiento - timezone.now()
