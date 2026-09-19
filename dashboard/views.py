@@ -797,6 +797,38 @@ def saas_listar_registros(request, app_label, model_name):
 
 
 @login_required
+def saas_renovar_suscripcion(request, subscription_id):
+    """Renueva una suscripción desde el Control Panel SaaS."""
+    if not es_superadmin(request.user) or request.method != 'POST':
+        raise PermissionDenied("Acción no permitida.")
+
+    suscripcion = get_object_or_404(
+        SuscripcionEmpresa.objects.select_related('empresa', 'plan'),
+        id=subscription_id,
+    )
+    if not suscripcion.plan:
+        messages.error(request, f"{suscripcion.empresa.nombre} no tiene un plan asignado.")
+        return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+
+    suscripcion.renovar()
+    empresa = suscripcion.empresa
+    reactivada = False
+    if not empresa.suspension_manual and not empresa.activa:
+        empresa.activa = True
+        empresa.save(update_fields=['activa'])
+        reactivada = True
+
+    periodo = 'un año' if suscripcion.tipo_plan == 'anual' else 'un mes'
+    mensaje = f"Suscripción de {empresa.nombre} renovada por {periodo}."
+    if reactivada:
+        mensaje += " La empresa fue reactivada automáticamente."
+    elif empresa.suspension_manual:
+        mensaje += " La suspensión administrativa se mantiene."
+    messages.success(request, mensaje)
+    return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+
+
+@login_required
 def saas_editar_registro(request, app_label, model_name, object_id):
     """Fábrica de Edición: Edita cualquier registro existente de manera automática"""
     if not es_superadmin(request.user):
@@ -814,6 +846,8 @@ def saas_editar_registro(request, app_label, model_name, object_id):
     if es_modelo_user:
         campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
         FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
+    elif Modelo is SuscripcionEmpresa:
+        FormularioDinamico = modelform_factory(Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'])
     else:
         FormularioDinamico = modelform_factory(Modelo, exclude=[])
 

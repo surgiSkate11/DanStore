@@ -19,6 +19,7 @@ urlpatterns = [
     path('saas/control-panel/crear/<str:app_label>/<str:model_name>/', views.saas_crear_registro, name='saas_crear_registro'),
     path('saas/control-panel/ver/<str:app_label>/<str:model_name>/', views.saas_listar_registros, name='saas_listar_registros'),
     path('saas/control-panel/editar/<str:app_label>/<str:model_name>/<int:object_id>/', views.saas_editar_registro, name='saas_editar_registro'),
+    path('saas/control-panel/renovar-suscripcion/<int:subscription_id>/', views.saas_renovar_suscripcion, name='saas_renovar_suscripcion'),
     path('saas/control-panel/eliminar/<str:app_label>/<str:model_name>/<int:object_id>/', views.saas_eliminar_registro, name='saas_eliminar_registro'),
     path('app/dashboard/', views.dashboard_tenant, name='dashboard_tenant'),
     path('app/reportes/', views.tenant_reportes, name='tenant_reportes'),
