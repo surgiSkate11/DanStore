@@ -90,6 +90,11 @@ class Empresa(models.Model):
     def __str__(self):
         return self.nombre
 
+    @property
+    def acceso_activo(self):
+        suscripcion = getattr(self, 'suscripcion', None)
+        return self.activa and (suscripcion is None or suscripcion.dias_restantes() > 0)
+
 
 class SuscripcionEmpresa(models.Model):
     """Gestión de la suscripción SaaS activa para la empresa"""

@@ -181,7 +181,7 @@
                 </thead>
                 <tbody id="tenantTableBody">
                     {% for emp in empresas %}
-                    <tr class="tenant-row" data-name="{{ emp.nombre|lower }}" data-slug="{{ emp.slug|lower }}" data-id="{{ emp.id }}" data-status="{% if emp.activa %}activa{% else %}suspendida{% endif %}">
+                    <tr class="tenant-row" data-name="{{ emp.nombre|lower }}" data-slug="{{ emp.slug|lower }}" data-id="{{ emp.id }}" data-status="{% if emp.acceso_activo %}activa{% else %}suspendida{% endif %}">
                         <td class="ps-4">
                             <div class="d-flex align-items-center">
                                 {% if emp.logo %}
@@ -203,7 +203,7 @@
                             </a>
                         </td>
                         <td>
-                            {% if emp.activa %}
+                            {% if emp.acceso_activo %}
                                 <span class="status-badge status-active"><i class="bi bi-check-circle-fill"></i> Activa</span>
                             {% else %}
                                 <span class="status-badge status-inactive"><i class="bi bi-pause-circle-fill"></i> Suspendida</span>
@@ -217,8 +217,8 @@
                             </a>
                             <form action="{% url 'toggle_estado_empresa' emp.id %}" method="POST" class="m-0">
                                 {% csrf_token %}
-                                <button type="button" onclick="confirmarCambioEstado(this, '{{ emp.nombre }}', {{ emp.activa|yesno:'true,false' }})" class="action-btn {% if emp.activa %}text-danger{% else %}text-success{% endif %}" title="{% if emp.activa %}Suspender Empresa{% else %}Activar Empresa{% endif %}">
-                                    <i class="bi {% if emp.activa %}bi-pause-fill{% else %}bi-play-fill{% endif %}"></i>
+                                <button type="button" onclick="confirmarCambioEstado(this, '{{ emp.nombre }}', {{ emp.acceso_activo|yesno:'true,false' }})" class="action-btn {% if emp.acceso_activo %}text-danger{% else %}text-success{% endif %}" title="{% if emp.acceso_activo %}Suspender Empresa{% else %}Activar Empresa{% endif %}">
+                                    <i class="bi {% if emp.acceso_activo %}bi-pause-fill{% else %}bi-play-fill{% endif %}"></i>
                                 </button>
                             </form>
                             </div>
