@@ -783,7 +783,11 @@ def saas_listar_registros(request, app_label, model_name):
             else:
                 valor = getattr(reg, campo.name)
             fila.append(valor)
-        registros_data.append({'id': reg.id, 'fila': fila})
+        registros_data.append({
+            'id': reg.id,
+            'fila': fila,
+            'puede_renovarse': getattr(reg, 'puede_renovarse', False),
+        })
 
     context = {
         'titulo': f"Directorio de {Modelo._meta.verbose_name_plural.title()}",
@@ -808,6 +812,12 @@ def saas_renovar_suscripcion(request, subscription_id):
     )
     if not suscripcion.plan:
         messages.error(request, f"{suscripcion.empresa.nombre} no tiene un plan asignado.")
+        return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+    if not suscripcion.puede_renovarse:
+        messages.warning(
+            request,
+            f"La suscripción de {suscripcion.empresa.nombre} todavía está vigente y no puede renovarse nuevamente.",
+        )
         return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
 
     suscripcion.renovar()

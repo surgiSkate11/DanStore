@@ -36,6 +36,13 @@ class SuscripcionEmpresaAdmin(admin.ModelAdmin):
                     level='ERROR',
                 )
                 continue
+            if not suscripcion.puede_renovarse:
+                self.message_user(
+                    request,
+                    f"{suscripcion.empresa.nombre} todavía está vigente y no fue renovada.",
+                    level='WARNING',
+                )
+                continue
 
             suscripcion.renovar()
             renovadas += 1

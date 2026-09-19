@@ -93,7 +93,7 @@
                             {% if app_label == 'empresas' and model_name == 'suscripcionempresa' %}
                             <form method="POST" action="{% url 'saas_renovar_suscripcion' reg.id %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-light text-success shadow-sm border me-1" title="Renovar suscripción">
+                                <button type="submit" class="btn btn-sm btn-light text-success shadow-sm border me-1" title="{% if reg.puede_renovarse %}Renovar suscripción{% else %}Disponible al vencer la suscripción{% endif %}" {% if not reg.puede_renovarse %}disabled{% endif %}>
                                     <i class="bi bi-arrow-clockwise"></i>
                                 </button>
                             </form>

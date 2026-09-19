@@ -141,6 +141,10 @@ class SuscripcionEmpresa(models.Model):
         delta = self.fecha_vencimiento - timezone.now()
         return max(0, delta.days)
 
+    @property
+    def puede_renovarse(self):
+        return self.fecha_vencimiento <= timezone.now()
+
     def porcentaje_consumido(self):
         total_dias = (self.fecha_vencimiento - self.fecha_inicio).days
         if total_dias <= 0: return 100
