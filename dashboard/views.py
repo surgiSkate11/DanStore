@@ -330,8 +330,14 @@ def toggle_estado_empresa(request, empresa_id):
         raise PermissionDenied("Acción no permitida.")
         
     empresa = get_object_or_404(Empresa, id=empresa_id)
-    empresa.activa = not empresa.activa
-    empresa.save()
+    if empresa.acceso_activo:
+        empresa.activa = False
+        empresa.suspension_manual = True
+        empresa.save(update_fields=['activa', 'suspension_manual'])
+    else:
+        empresa.suspension_manual = False
+        empresa.activa = True
+        empresa.save(update_fields=['activa', 'suspension_manual'])
     
     if empresa.activa:
         # Si se está reactivando, verificar si la suscripción está vencida

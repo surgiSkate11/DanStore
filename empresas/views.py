@@ -615,8 +615,9 @@ def pago_exitoso(request, plan_id, tipo_plan):
     suscripcion.fecha_vencimiento = fecha_base.replace(year=año, month=mes, day=dia)
     suscripcion.save()
 
-    empresa.activa = True
-    empresa.save()
+    if not empresa.suspension_manual:
+        empresa.activa = True
+        empresa.save(update_fields=['activa'])
 
     messages.success(request, f"¡Pago procesado exitosamente! Tu suscripción al '{plan.nombre}' ha sido renovada por {texto_tiempo}.")
     return redirect('dashboard_router')

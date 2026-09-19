@@ -37,6 +37,11 @@ class Empresa(models.Model):
     nombre = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True, help_text="URL amigable para la empresa (ej: mi-tienda)")
     activa = models.BooleanField(default=True)
+    suspension_manual = models.BooleanField(
+        default=False,
+        verbose_name="Suspensión administrativa",
+        help_text="Indica que la empresa fue suspendida manualmente por un administrador."
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     # --- PERSONALIZACIÓN DE LA EMPRESA ---
