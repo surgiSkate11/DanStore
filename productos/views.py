@@ -179,6 +179,8 @@ def eliminar_producto(request, pk):
 
     if request.method == 'POST':
         producto.delete()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
         messages.success(request, '¡Producto eliminado exitosamente!')
         return redirect('lista_productos')
 

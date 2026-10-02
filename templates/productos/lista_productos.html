@@ -163,7 +163,18 @@
     }
 
     .product-delete-btn {
+        position: absolute;
+        top: 12px;
+        left: 12px;
         color: #9ca3af;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.14);
         transition: color 0.2s ease, background-color 0.2s ease;
     }
 
@@ -258,7 +269,7 @@
     {% if page_obj %}
     <div class="row g-4 mb-4">
         {% for producto in page_obj %}
-        <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+        <div class="col-12 col-sm-6 col-lg-4 col-xl-3 product-grid-item">
             <div class="card product-card">
                 <!-- Imagen del producto -->
                 <div class="product-image-container">
@@ -274,6 +285,16 @@
                     <button type="button" class="photo-upload-btn" onclick="abrirModalFoto({{ producto.id }})" title="Subir/Tomar foto">
                         <i class="bi bi-camera"></i>
                     </button>
+
+                    {% if 'eliminar' in permisos.productos %}
+                    <button type="button"
+                            class="btn btn-sm btn-link product-delete-btn"
+                            data-delete-url="{% url 'eliminar_producto' producto.pk %}"
+                            title="Eliminar producto"
+                            aria-label="Eliminar {{ producto.nombre|default:producto.tipo_producto }}">
+                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                    </button>
+                    {% endif %}
                     
                     <!-- Badge de estado -->
                     <span class="product-badge badge-{{ producto.estado }}">
@@ -353,16 +374,6 @@
                         </span>
                     </div>
 
-                    {% if 'eliminar' in permisos.productos %}
-                    <div class="product-actions d-flex justify-content-end mt-2">
-                        <a href="{% url 'eliminar_producto' producto.pk %}"
-                           class="btn btn-sm btn-link product-delete-btn p-1"
-                           title="Eliminar producto"
-                           aria-label="Eliminar {{ producto.nombre|default:producto.tipo_producto }}">
-                            <i class="bi bi-trash3" aria-hidden="true"></i>
-                        </a>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -490,6 +501,52 @@
 
 {% block extra_js %}
 <script>
+// ============================================
+// ELIMINAR PRODUCTOS SIN CAMBIAR DE PÁGINA
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    document.querySelectorAll('.product-delete-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const productCard = button.closest('.product-grid-item');
+            const productName = button.dataset.productName;
+
+            showConfirmationModal({
+                title: '¿Eliminar este producto?',
+                message: 'Esta acción no se puede deshacer.',
+                icon: '<i class="bi bi-trash3 text-danger"></i>',
+                confirmText: 'Sí, eliminar',
+                onConfirm: function() {
+                    button.disabled = true;
+
+                    fetch(button.dataset.deleteUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('No se pudo eliminar el producto.');
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        if (!data.success) throw new Error('No se pudo eliminar el producto.');
+                        productCard.remove();
+                        showDjangoToast('¡Producto eliminado exitosamente!', 'success');
+                    })
+                    .catch(function(error) {
+                        button.disabled = false;
+                        showDjangoToast(error.message, 'error');
+                    });
+                }
+            });
+        });
+    });
+});
+
 // ============================================
 // GESTIÓN DE ESTADO DE PRODUCTOS
 // ============================================

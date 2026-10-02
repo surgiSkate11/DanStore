@@ -233,7 +233,7 @@
                             <a href="{% url 'lista_productos' %}" class="btn btn-light btn-action text-secondary border">
                                 <i class="bi bi-x-lg"></i> Cancelar
                             </a>
-                            <button type="submit" class="btn btn-primary btn-action shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                            <button type="submit" class="btn btn-primary btn-action shadow-sm" id="btnGuardarProducto" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
                                 <i class="bi bi-check2-circle"></i> Guardar Producto
                             </button>
                         </div>
@@ -301,12 +301,24 @@
         const formPrincipal = document.querySelector('.needs-validation');
         if (formPrincipal) {
             formPrincipal.addEventListener('submit', function(event) {
+                if (formPrincipal.dataset.submitting === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+
                 if (!formPrincipal.checkValidity()) {
                     event.preventDefault();
                     event.stopPropagation();
                     // Mostrar notificación usando el Toast de base.html
                     if (typeof showDjangoToast === 'function') {
                         showDjangoToast('Por favor, completa los campos requeridos (marcados en rojo).', 'error');
+                    }
+                } else {
+                    formPrincipal.dataset.submitting = 'true';
+                    const btnGuardar = document.getElementById('btnGuardarProducto');
+                    if (btnGuardar) {
+                        btnGuardar.disabled = true;
+                        btnGuardar.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Guardando...';
                     }
                 }
                 formPrincipal.classList.add('was-validated');
