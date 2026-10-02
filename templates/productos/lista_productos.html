@@ -291,6 +291,7 @@
                     <button type="button"
                             class="btn btn-sm btn-link product-delete-btn"
                             data-delete-url="{% url 'eliminar_producto' producto.pk %}"
+                            data-product-name="{{ producto.nombre|default:producto.tipo_producto|default:'Producto sin nombre' }}"
                             title="Eliminar producto"
                             aria-label="Eliminar {{ producto.nombre|default:producto.tipo_producto }}">
                         <i class="bi bi-trash3" aria-hidden="true"></i>
@@ -509,15 +510,27 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
 
+    function escapeHtml(value) {
+        return value.replace(/[&<>'"]/g, function(character) {
+            const entities = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            };
+            return entities[character];
+        });
+    }
+
     document.querySelectorAll('.product-delete-btn').forEach(function(button) {
         button.addEventListener('click', function() {
             const productCard = button.closest('.product-grid-item');
-            const productName = button.dataset.productName;
+            const productName = button.dataset.productName || 'Producto sin nombre';
 
             showConfirmationModal({
-                title: '¿Eliminar este producto? ',
-                name: productName || '',
-                message: 'Esta acción no se puede deshacer.',
+                title: '¿Deseas eliminar el producto? ',
+                message: `Se eliminará <strong>${escapeHtml(productName)}</strong>.<br>Esta acción no se puede deshacer.`,
                 icon: '<i class="bi bi-trash3 text-danger"></i>',
                 confirmText: 'Sí, eliminar',
                 onConfirm: function() {
@@ -531,13 +544,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .then(function(response) {
-                        if (!response.ok) throw new Error('No se pudo eliminar el producto.');
+                        if (!response.ok) throw new Error('No se pudo eliminar el producto' + productName);
                         return response.json();
                     })
                     .then(function(data) {
-                        if (!data.success) throw new Error('No se pudo eliminar el producto.');
+                        if (!data.success) throw new Error('No se pudo eliminar el producto' + productName);
                         productCard.remove();
-                        showDjangoToast('¡Producto eliminado exitosamente!', 'success');
+                        showDjangoToast('¡Producto ' + productName + ' eliminado exitosamente!', 'success');
                     })
                     .catch(function(error) {
                         button.disabled = false;
