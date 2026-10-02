@@ -515,7 +515,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const productName = button.dataset.productName;
 
             showConfirmationModal({
-                title: '¿Eliminar este producto?',
+                title: '¿Eliminar este producto? ',
+                name: productName || '',
                 message: 'Esta acción no se puede deshacer.',
                 icon: '<i class="bi bi-trash3 text-danger"></i>',
                 confirmText: 'Sí, eliminar',
