@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar producto - Tiendita{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card mx-auto border-0 shadow-sm" style="max-width: 520px; border-radius: 12px;">
+        <div class="card-body p-4 p-md-5 text-center">
+            <div class="text-danger mb-3" style="font-size: 2.75rem;">
+                <i class="bi bi-trash3" aria-hidden="true"></i>
+            </div>
+            <h1 class="h4 fw-bold mb-3">¿Eliminar este producto?</h1>
+            <p class="text-muted mb-4">
+                Se eliminará <strong>{{ producto.nombre|default:producto.tipo_producto }}</strong>.
+                Esta acción no se puede deshacer.
+            </p>
+
+            <form method="post" class="d-flex justify-content-center gap-2">
+                {% csrf_token %}
+                <a href="{% url 'lista_productos' %}" class="btn btn-light border px-4">Cancelar</a>
+                <button type="submit" class="btn btn-danger px-4">
+                    <i class="bi bi-trash3 me-1" aria-hidden="true"></i> Eliminar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

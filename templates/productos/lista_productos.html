@@ -156,6 +156,22 @@
         font-weight: 600;
         text-transform: uppercase;
     }
+
+    .product-actions {
+        position: relative;
+        z-index: 2;
+    }
+
+    .product-delete-btn {
+        color: #9ca3af;
+        transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .product-delete-btn:hover,
+    .product-delete-btn:focus-visible {
+        color: #dc3545;
+        background-color: #fff1f2;
+    }
 </style>
 {% endblock %}
 
@@ -336,6 +352,17 @@
                             {{ producto.get_estado_display }}
                         </span>
                     </div>
+
+                    {% if 'eliminar' in permisos.productos %}
+                    <div class="product-actions d-flex justify-content-end mt-2">
+                        <a href="{% url 'eliminar_producto' producto.pk %}"
+                           class="btn btn-sm btn-link product-delete-btn p-1"
+                           title="Eliminar producto"
+                           aria-label="Eliminar {{ producto.nombre|default:producto.tipo_producto }}">
+                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

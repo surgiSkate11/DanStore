@@ -1,6 +1,7 @@
 import unicodedata
 
 from django.db import models
+from django.core.validators import MinValueValidator
 from django.utils import timezone
 from empresas.models import Empresa
 
@@ -119,13 +120,15 @@ class Producto(models.Model):
     precio = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(0.0)],
         verbose_name='Precio de venta',
-        db_index=True
+        db_index=True,
     )
 
     precio_costo = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(0.0)],
         null=True,
         blank=True,
         verbose_name='Precio de costo',
@@ -135,6 +138,7 @@ class Producto(models.Model):
     precio_oferta = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(0.0)],
         null=True,
         blank=True,
         verbose_name='Precio de oferta',
@@ -183,6 +187,8 @@ class Producto(models.Model):
     stock = models.PositiveIntegerField(
         default=1,
         verbose_name='Stock / Cantidad',
+        validators=[MinValueValidator(1)],
+        db_index=True,
         help_text='Cantidad disponible. Para productos únicos déjalo en 1.'
     )
 
@@ -208,6 +214,7 @@ class Producto(models.Model):
     precio_real = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(0.0)],
         null=True,
         blank=True,
         verbose_name='Precio original en Sheets'
