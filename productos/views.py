@@ -591,3 +591,33 @@ def descargar_plantilla(request):
     response['Content-Disposition'] = 'attachment; filename="plantilla_productos.xlsx"'
     wb.save(response)
     return response
+
+"""
+    Validaciones en los precios para:
+    - precio_oferta < precio
+    - precio > 0
+    - precio_costo >= 0 (si se proporciona)
+    - precio_oferta >= 0 (si se proporciona)
+"""
+
+def clean_precio(self):  
+    precio = self.cleaned_data.get('precio')
+    if precio is not None and precio <= 0:
+        raise ProductoForm.ValidationError('El precio debe ser mayor a 0.')
+    return precio
+    
+def clean_precio_costo(self):
+    precio_costo = self.cleaned_data.get('precio_costo')
+    if precio_costo is not None and precio_costo < 0:
+        raise ProductoForm.ValidationError('El precio de costo no puede ser negativo.')
+    return precio_costo
+
+def clean_precio_oferta(self):
+    precio_oferta = self.cleaned_data.get('precio_oferta')
+    if precio_oferta is not None and precio_oferta < 0:
+        raise ProductoForm.ValidationError('El precio de oferta no puede ser negativo.')
+    # 0 es sin oferta
+    if precio_oferta == 0:
+        precio_oferta = None
+    return precio_oferta
+    

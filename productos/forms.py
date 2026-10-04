@@ -37,16 +37,19 @@ class ProductoForm(forms.ModelForm):
             'precio': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
+                'min': '0.01',
                 'placeholder': '0.00'
             }),
             'precio_costo': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
+                'min': '0.00',
                 'placeholder': '0.00 (opcional)'
             }),
             'precio_oferta': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
+                'min': '0.00',
                 'placeholder': '0.00 (opcional)'
             }),
             'marca': forms.TextInput(attrs={
