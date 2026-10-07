@@ -182,9 +182,18 @@
                                         </label>
                                         
                                         {% if field.field.widget.input_type == "file" %}
-                                            <div class="custom-file-upload">
+                                            <div class="custom-file-upload" id="dropZoneImagen">
                                                 <i class="bi bi-cloud-arrow-up-fill fs-3 text-primary mb-2"></i>
                                                 {{ field }}
+                                                <small class="d-block text-muted mt-1">
+                                                    <i class="bi bi-clipboard-image"></i>
+                                                    También puedes arrastrar una imagen aquí o pegarla con <kbd>Ctrl</kbd> + <kbd>V</kbd>
+                                                </small>
+                                                <img id="vistaPreviaImagen"
+                                                    class="img-fluid rounded mt-3 {% if not form.instance.imagen %}d-none{% endif %}"
+                                                    style="max-height: 200px;"
+                                                    alt="Vista previa"
+                                                    {% if form.instance.imagen %}src="{{ form.instance.imagen.url }}"{% endif %}>
                                             </div>
                                         {% elif field.name in "tipo_producto,categoria" %}
                                             <div class="input-group">
@@ -513,6 +522,63 @@
             width: '100%',
             placeholder: '--- Selecciona un Tipo ---',
             allowClear: true
+        });
+    });
+
+    // Pegar / arrastrar imagen en el campo de imagen
+    document.addEventListener('DOMContentLoaded', function () {
+        const input = document.getElementById('id_imagen');
+        const zona = document.getElementById('dropZoneImagen');
+        const preview = document.getElementById('vistaPreviaImagen');
+        if (!input || !zona || !preview) return;
+
+        // Mete el archivo en el input como si lo hubieras elegido a mano
+        function ponerImagen(archivo) {
+            if (!archivo || !archivo.type.startsWith('image/')) return;
+            const dt = new DataTransfer();
+            dt.items.add(archivo);
+            input.files = dt.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // Vista previa cada vez que cambia el archivo (pegado, arrastrado o elegido)
+        input.addEventListener('change', function () {
+            const archivo = input.files && input.files[0];
+            if (!archivo) return;
+            if (preview.dataset.blob) URL.revokeObjectURL(preview.dataset.blob);
+            preview.dataset.blob = URL.createObjectURL(archivo);
+            preview.src = preview.dataset.blob;
+            preview.classList.remove('d-none');
+        });
+
+        // Ctrl+V en cualquier parte de la página
+        document.addEventListener('paste', function (e) {
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    ponerImagen(item.getAsFile());
+                    e.preventDefault();
+                    break;
+                }
+            }
+        });
+
+        // Arrastrar y soltar
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            zona.addEventListener(ev, function (e) {
+                e.preventDefault();
+                zona.style.borderColor = '#667eea';
+                zona.style.background = 'rgba(102, 126, 234, 0.05)';
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            zona.addEventListener(ev, function (e) {
+                e.preventDefault();
+                zona.style.borderColor = '';
+                zona.style.background = '';
+                if (ev === 'drop') ponerImagen(e.dataTransfer.files[0]);
+            });
         });
     });
 </script>
