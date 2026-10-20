@@ -374,9 +374,13 @@ AUTHENTICATION_BACKENDS = [
 # INTERNATIONALIZATION
 # ============================================================
 
-LANGUAGE_CODE = 'es-mx'
+LANGUAGE_CODE = 'es-ec'
 
-TIME_ZONE = 'America/Mexico_City'
+TIME_ZONE = 'America/Guayaquil'
+
+# es-ec usa los formatos de números de es_MX (punto decimal): las plantillas
+# imprimen precios en inputs y JavaScript sin unlocalize.
+FORMAT_MODULE_PATH = ['tiendita_project.formats']
 
 USE_I18N = True
 
