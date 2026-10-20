@@ -27,6 +27,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from clientes.models import Cliente
 from empresas.mail_utils import enviar_correo_saas, obtener_config_smtp
@@ -1251,6 +1252,7 @@ def tenant_reportes(request):
     return render(request, 'dashboard/tenant_reportes.html', context)
 
 
+@xframe_options_sameorigin
 def tienda_publica(request, slug):
     """Landing page / Catálogo público dinámico del cliente final"""
     # Buscamos la empresa sin importar si está activa o no
