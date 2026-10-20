@@ -36,4 +36,5 @@ Thumbs.db
 media/
 
 # Google API
-credentials.json: client_secrets.json
+credentials.json
+client_secrets.json
