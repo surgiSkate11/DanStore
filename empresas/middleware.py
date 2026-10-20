@@ -1,7 +1,12 @@
+import logging
+
 from django.core.cache import cache
+from django.db import DatabaseError
 from django.shortcuts import redirect
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 from django.utils.deprecation import MiddlewareMixin
+
+logger = logging.getLogger(__name__)
 
 
 # --- Duración de sesión global definida por el dueño del software ---
@@ -35,57 +40,62 @@ class TenantMiddleware(MiddlewareMixin):
         if not request.user.is_authenticated:
             return
 
+        # Solo la lectura de la duración de sesión puede fallar de forma esperada.
+        # La revisión de suspensión queda fuera de todo except: si falla, la
+        # petición falla con 500 en vez de dejar pasar una cuenta suspendida.
         try:
             minutos = _obtener_session_timeout_minutos()
-            expiry_seconds = minutos * 60
-            # Evita escribir la sesión en cada request si la política no cambió.
-            if request.session.get('_session_expiry') != expiry_seconds:
-                request.session.set_expiry(expiry_seconds)
-            request.session_expiry_seconds = request.session.get_expiry_age()
+        except DatabaseError:
+            logger.exception("No se pudo leer la duración de sesión")
+            minutos = SESSION_TIMEOUT_DEFAULT_MINUTOS
 
-            # La empresa y la suscripción se resuelven en una sola consulta.
-            from usuarios.models import UserProfile
-            perfil = UserProfile.objects.select_related('empresa', 'empresa__suscripcion').filter(user=request.user).first()
+        expiry_seconds = minutos * 60
+        # Evita escribir la sesión en cada request si la política no cambió.
+        if request.session.get('_session_expiry') != expiry_seconds:
+            request.session.set_expiry(expiry_seconds)
+        request.session_expiry_seconds = request.session.get_expiry_age()
 
-            # El rol se asigna siempre que exista perfil, sin importar si tiene empresa.
-            # Antes solo se asignaba dentro del bloque de empresa, dejando a los
-            # superadmins (sin empresa) sin rol_usuario disponible en los templates.
-            if perfil:
-                request.rol = perfil.rol
+        # La empresa y la suscripción se resuelven en una sola consulta.
+        from usuarios.models import UserProfile
+        perfil = UserProfile.objects.select_related('empresa', 'empresa__suscripcion').filter(user=request.user).first()
 
-            # Si el empleado tiene este flag, no puede navegar por el sistema hasta que la cambie.
-            if perfil and perfil.debe_cambiar_password:
-                # El usuario solo puede ir a la página de cambio de pass o desloguearse.
-                allowed_paths = [reverse('logout'), reverse('forzar_cambio_password')]
-                if request.path not in allowed_paths:
-                    return redirect('forzar_cambio_password')
+        # El rol se asigna siempre que exista perfil, sin importar si tiene empresa.
+        # Antes solo se asignaba dentro del bloque de empresa, dejando a los
+        # superadmins (sin empresa) sin rol_usuario disponible en los templates.
+        if perfil:
+            request.rol = perfil.rol
 
-            if perfil and perfil.empresa:
-                empresa = perfil.empresa
-                request.empresa = empresa
+        # Si el empleado tiene este flag, no puede navegar por el sistema hasta que la cambie.
+        if perfil and perfil.debe_cambiar_password:
+            # El usuario solo puede ir a la página de cambio de pass o desloguearse.
+            allowed_paths = [reverse('logout'), reverse('forzar_cambio_password')]
+            if request.path not in allowed_paths:
+                return redirect('forzar_cambio_password')
 
-                suspendida_admin = not empresa.activa
-                suspendida_pago = hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0
+        if perfil and perfil.empresa:
+            empresa = perfil.empresa
+            request.empresa = empresa
 
-                if suspendida_admin or suspendida_pago:
-                    try:
-                        rutas_permitidas = [reverse('logout'), reverse('cuenta_suspendida'), reverse('crear_ticket')]
-                    except Exception:
-                        rutas_permitidas = ['/logout/', '/empresa/suspendida/', '/empresa/soporte/crear/']
+            suspendida_admin = not empresa.activa
+            suspendida_pago = hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0
 
-                    es_ruta_pago = request.path.startswith((
-                        '/empresa/pagar/',
-                        '/empresa/pago-exitoso/',
-                    ))
-                    if (
-                        request.path not in rutas_permitidas
-                        and not es_ruta_pago
-                        and not request.path.startswith('/admin/')
-                    ):
-                        return redirect('cuenta_suspendida')
+            if suspendida_admin or suspendida_pago:
+                try:
+                    rutas_permitidas = [reverse('logout'), reverse('cuenta_suspendida'), reverse('crear_ticket')]
+                except NoReverseMatch:
+                    logger.exception("No se pudieron resolver las rutas permitidas de cuenta suspendida")
+                    rutas_permitidas = ['/logout/', '/empresa/suspendida/', '/empresa/soporte/crear/']
 
-        except Exception:
-            request.session_expiry_seconds = None
+                es_ruta_pago = request.path.startswith((
+                    '/empresa/pagar/',
+                    '/empresa/pago-exitoso/',
+                ))
+                if (
+                    request.path not in rutas_permitidas
+                    and not es_ruta_pago
+                    and not request.path.startswith('/admin/')
+                ):
+                    return redirect('cuenta_suspendida')
 
     def process_response(self, request, response):
         segundos = getattr(request, 'session_expiry_seconds', None)
