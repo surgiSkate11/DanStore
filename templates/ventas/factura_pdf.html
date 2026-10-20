@@ -99,7 +99,7 @@
     
     <p>Factura: {{ venta.numero_factura }}</p>
     <p>Fecha: {{ venta.fecha|date:"d/m/Y H:i" }}</p>
-    <p>Cliente: {{ venta.cliente.nombre|upper }}</p>
+    <p>Cliente: {{ venta.nombre_cliente|default:venta.cliente.nombre|upper }}</p>
     <p>CI/RUC: {{ venta.ruc_cliente|default:venta.cliente.ruc_cedula|default:config.id_consumidor_final }}</p>
     
     <div class="divider"></div>

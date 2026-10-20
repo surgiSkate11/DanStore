@@ -156,7 +156,7 @@
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-person-circle me-2 d-none d-md-inline" style="font-size: 2rem; color: #667eea;"></i>
                                 <div>
-                                    <strong>{{ venta.cliente.nombre }}</strong>
+                                    <strong>{{ venta.nombre_cliente|default:venta.cliente.nombre }}</strong>
                                     <br>
                                     <small class="text-muted">
                                         <i class="bi bi-telephone"></i> {{ venta.cliente.telefono|default:"N/A" }}
