@@ -27,10 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ============================================================
 
-SECRET_KEY = config(
-    'SECRET_KEY',
-    default='django-insecure-%ufqav673r6x8-0k(mzj+_$k-+6l$w(ktrc62g0gkx$^f!hg7%'
-)
+# Sin default: si falta la variable, Django no arranca.
+SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = config(
     'DEBUG',
