@@ -74,8 +74,11 @@ class ProductoForm(forms.ModelForm):
         self.empresa = kwargs.pop('empresa', None)
         super().__init__(*args, **kwargs)
         
+        # Sin empresa no se ofrece nada: nunca mostrar datos de otras empresas.
+        self.fields['tipo_producto'].queryset = TipoProducto.objects.filter(empresa=self.empresa)
+
         # Configurar opciones de Categoría dinámicamente
-        queryset_productos = Producto.objects.filter(empresa=self.empresa) if self.empresa else Producto.objects.all()
+        queryset_productos = Producto.objects.filter(empresa=self.empresa)
         categorias = list(queryset_productos.exclude(categoria='').values_list('categoria', flat=True).distinct().order_by('categoria'))
         
         if self.instance and self.instance.pk and self.instance.categoria and self.instance.categoria not in categorias:
