@@ -187,6 +187,8 @@ INSTALLED_APPS = [
 
     'cloudinary',
 
+    'django_ratelimit',
+
     # Apps propias
     'dashboard',
     'usuarios',
@@ -222,7 +224,35 @@ MIDDLEWARE = [
 
     # Middleware Multi-tenant
     'empresas.middleware.TenantMiddleware',
+
+    # Convierte Ratelimited (límite de intentos por IP) en la página 429
+    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
+
+
+# ============================================================
+# CACHÉ Y LÍMITE DE INTENTOS POR IP
+# ============================================================
+
+CACHES = {
+    # Igual que el valor por defecto de Django (memoria local, por proceso).
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    },
+    # Contadores del límite de intentos. Van en la base de datos para que los
+    # compartan todos los workers de gunicorn. La tabla la crea la migración
+    # usuarios.0011 (el Procfile no corre createcachetable).
+    'ratelimit': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'ratelimit_cache',
+        # Con el tope por defecto (300) la limpieza borraría contadores vigentes.
+        'OPTIONS': {'MAX_ENTRIES': 100000},
+    },
+}
+
+RATELIMIT_USE_CACHE = 'ratelimit'
+RATELIMIT_IP_META_KEY = 'tiendita_project.utils.obtener_ip_cliente'
+RATELIMIT_VIEW = 'usuarios.views.error_429_view'
 
 
 # ============================================================
@@ -514,7 +544,16 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
 # HSTS preload es difícil de revertir y exige HSTS de un año: se decide aparte.
-SILENCED_SYSTEM_CHECKS = ['security.W021']
+SILENCED_SYSTEM_CHECKS = [
+    'security.W021',
+    # django_ratelimit marca DatabaseCache como "sin incremento atómico" (E003) y
+    # "no soportada oficialmente" (W001). Es una decisión consciente: la caché por
+    # defecto es por proceso y no sirve con varios workers. El costo es que ráfagas
+    # simultáneas pueden contar algún intento de menos; el límite sigue frenando
+    # la fuerza bruta sostenida.
+    'django_ratelimit.E003',
+    'django_ratelimit.W001',
+]
 
 
 # Las páginas de error propias (handler403/404/500) se declaran en

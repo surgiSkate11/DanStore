@@ -17,3 +17,4 @@ paypal-checkout-serversdk==1.0.3
 requests==2.31.0
 cloudinary==1.41.0
 django-cloudinary-storage==0.3.0
+django-ratelimit==4.1.0

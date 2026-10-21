@@ -1,3 +1,5 @@
+import ipaddress
+
 from django.contrib import messages
 from django.contrib.sessions.models import Session
 from django.utils import timezone
@@ -36,3 +38,22 @@ def cerrar_sesiones_de_usuario(user):
         data = sesion.get_decoded()
         if str(user.pk) == str(data.get('_auth_user_id', '')):
             sesion.delete()
+
+
+def obtener_ip_cliente(request):
+    """
+    IP real del cliente para el límite de intentos (RATELIMIT_IP_META_KEY).
+
+    Detrás del proxy de Railway el último valor de X-Forwarded-For es el que
+    agrega el proxy; los anteriores los escribe el cliente y se pueden falsear.
+    Sin ese header, o si el valor no es una IP, se usa REMOTE_ADDR.
+    """
+    reenviadas = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    ultima = reenviadas.split(',')[-1].strip()
+    if ultima:
+        try:
+            return str(ipaddress.ip_address(ultima))
+        except ValueError:
+            pass
+    return request.META.get('REMOTE_ADDR', '')
+

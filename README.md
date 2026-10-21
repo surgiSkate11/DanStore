@@ -49,6 +49,8 @@ Se leen del archivo `.env` o del entorno, con `python-decouple`. Nunca subas val
 | `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `EMAIL_USE_SSL`, `EMAIL_TIMEOUT`, `DEFAULT_FROM_EMAIL`, `SERVER_EMAIL` | En producción | Envío de correos. Con `DEBUG=True` los correos se muestran en la consola. |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | Solo para Google Sheets | Sincronización de productos con hojas de cálculo. |
 
+Seguridad: el login, recuperar contraseña y recuperar usuario aceptan 10 intentos (POST) por minuto desde cada IP; el 11 recibe 429. Los contadores viven en la tabla `ratelimit_cache`, que crea `migrate` (sin variables de entorno nuevas).
+
 ## Pruebas
 
 Las pruebas usan su propia base de datos. Para correrlas en local con SQLite (más rápido que una base remota):

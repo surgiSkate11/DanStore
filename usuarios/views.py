@@ -12,7 +12,7 @@ from django.contrib.auth.password_validation import validate_password, Validatio
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.core.cache import cache
-from django.http import Http404, HttpResponseServerError
+from django.http import Http404, HttpResponse, HttpResponseServerError
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
@@ -20,7 +20,9 @@ from django.urls import reverse, NoReverseMatch
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.encoding import force_bytes
+from django.utils.decorators import method_decorator
 from django.utils.http import urlsafe_base64_encode
+from django_ratelimit.decorators import ratelimit
 
 from empresas.mail_utils import enviar_correo_saas
 from productos.models import Producto
@@ -29,6 +31,9 @@ from .models import UserProfile
 
 logger = logging.getLogger(__name__)
 logger_seguridad = logging.getLogger('seguridad')
+
+# S12: 11 intentos seguidos desde una IP reciben 429.
+LIMITE_POR_IP = '10/m'
 
 
 def ruta_trampa(request, *args, **kwargs):
@@ -439,6 +444,7 @@ def onboarding(request):
 # FLUJO DE RECUPERACIÓN DE USUARIO (CORREO OCULTO)
 # ====================================================================
 
+@ratelimit(group='usuarios.username_reset', key='ip', rate=LIMITE_POR_IP, method='POST', block=True)
 def username_reset_request_view(request):
     """Paso 1: Solicita el correo para buscar el/los usuarios"""
     error_message = None
@@ -507,6 +513,7 @@ def recuperar_usuario_done(request):
 # FLUJO DE RECUPERACIÓN DE CONTRASEÑA (CORREO OCULTO)
 # ====================================================================
 
+@ratelimit(group='usuarios.password_reset', key='ip', rate=LIMITE_POR_IP, method='POST', block=True)
 def password_reset_request_view(request):
     """Paso 1: Solicita el nombre de usuario para buscar su correo"""
     error_message = None
@@ -590,6 +597,10 @@ def password_reset_masked_view(request):
             form_errors_to_messages(request, form)            
     return render(request, 'security/password_reset_masked.html', {'correo_oculto': correo_oculto})
 
+@method_decorator(
+    ratelimit(group='usuarios.login', key='ip', rate=LIMITE_POR_IP, method='POST', block=True),
+    name='dispatch',
+)
 class CustomLoginView(LoginView):
     def form_invalid(self, form):
         messages.error(self.request, "Usuario o contraseña incorrectos.")
@@ -601,6 +612,11 @@ def error_403_view(request, exception=None):
     Muestra una página amigable en vez de la genérica de Django.
     """
     return render(request, '403.html', status=403)
+
+
+def error_429_view(request, exception=None):
+    """Página 429 propia (RATELIMIT_VIEW). Sin request: no consulta la base de datos."""
+    return HttpResponse(render_to_string('429.html'), status=429)
 
 
 def error_404_view(request, exception=None):
