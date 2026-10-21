@@ -62,7 +62,7 @@ class ProductoForm(forms.ModelForm):
             }),
             'stock': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'min': '1'
+                'min': '0'
             }),
             'estado': forms.Select(attrs={
                 'class': 'form-control'
