@@ -38,6 +38,8 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 | T12 | S13 | — | bloqueada: aprobar `django-otp` | bloqueada | |
 | T13 | L11 | 2.11.0 | inline, TDD, Risk 2 | hecha (verify PASS) | fc36346 |
 | T14 | L12 | 2.12.0 | inline, TDD, Risk 2 | hecha | be24454 |
+| T15 | L10 | 2.13.0 | inline, TDD, Risk 1 | hecha (verify PASS) | (este commit) |
+| T16 | L22 | 2.14.0 | inline, TDD | pendiente: decide el usuario | |
 
 Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y moverlas a `GOOGLE_CREDENTIALS_JSON`, ambiente `staging` en Railway, variable `ADMIN_URL` en Railway, secretos del repo en GitHub.
 
@@ -68,3 +70,4 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L22 (T9, corrección):** 2.9.0 habría fallado en GitHub: `settings.py` exige `FERNET_KEY` y, con `DEBUG=False`, un `ALLOWED_HOSTS` distinto del default; la simulación local los tomaba del `.env`. 2.9.1 genera una `FERNET_KEY` desechable y fija `ALLOWED_HOSTS` en el paso de despliegue. Simulado sin `.env` (decouple con `RepositoryEmpty`): `check --deploy --fail-level WARNING` exit 0 y suite 92/92 OK.
 - **L23 (T10):** README con qué es DanStore, instalación en PowerShell, tabla de variables (solo nombres, obligatorias según `settings.py`: `SECRET_KEY`, `FERNET_KEY`, `ADMIN_URL`; `DATABASE_URL` y `ALLOWED_HOSTS` con `DEBUG=False`), pruebas, CI y despliegue en Railway (las migraciones no corren solas). Si T13 agrega variables nuevas, van a esta tabla.
 - **L24 (T9, revisión nativa review-28ab781decedc71a):** aprobada, sin bloqueos. 2.9.2 limita el token del CI (`contents: read`, `pull-requests: read`) y apaga los comentarios de gitleaks en los PR. `.gitleaks.toml` no se crea: decisión del usuario, "Todavía no" regeneró las credenciales; hasta que lo haga, gitleaks puede fallar por `credentials.json` y `client_secrets.json` en el historial, y ese fallo es real.
+- **L22 (T15, migración de productos):** `0007_validadores_precios_e_indice_stock`: cuatro campos de precio solo agregan `MinValueValidator(0)` (sin SQL); `stock` agrega índice (`CREATE INDEX` en PostgreSQL, no concurrente: milisegundos en una tabla chica). Reversible (probado en SQLite 0007 → 0006 → 0007). Nueva prueba `MigracionesAlDiaTests` falla si un modelo queda sin migración. Hallazgo previo (T16): al vender, `ventas/views.py:302-303` deja `stock = 0` y estado vendido; después `ProductoForm` (`productos/forms.py:11`) rechaza editar ese producto porque `MinValueValidator(1)` exige stock ≥ 1.
