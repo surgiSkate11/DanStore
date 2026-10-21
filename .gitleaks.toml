@@ -1,0 +1,14 @@
+title = "DanStore gitleaks config"
+
+[extend]
+useDefault = true
+
+# These two files were committed before Sprint 0 and removed in 2.1.0.
+# Their Google OAuth clients were deleted in Google Cloud, so the secrets
+# left in git history no longer work. Any other leak still fails the CI.
+[allowlist]
+description = "Revoked Google credentials kept in git history"
+paths = [
+  '''^credentials\.json$''',
+  '''^client_secrets\.json$''',
+]
