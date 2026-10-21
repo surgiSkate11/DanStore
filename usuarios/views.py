@@ -12,6 +12,7 @@ from django.contrib.auth.password_validation import validate_password, Validatio
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.core.cache import cache
+from django.http import Http404
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
@@ -27,6 +28,18 @@ from tiendita_project.utils import cerrar_sesiones_de_usuario, form_errors_to_me
 from .models import UserProfile
 
 logger = logging.getLogger(__name__)
+logger_seguridad = logging.getLogger('seguridad')
+
+
+def ruta_trampa(request, *args, **kwargs):
+    """Responde 404 a rutas que solo prueban los robots y registra el intento."""
+    # %r escapa saltos de línea: X-Forwarded-For lo controla el cliente.
+    logger_seguridad.warning(
+        'Intento de acceso a %r desde %r',
+        request.path,
+        request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR')),
+    )
+    raise Http404
 
 
 @login_required

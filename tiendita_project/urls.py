@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -23,7 +23,10 @@ from usuarios import views as usuarios_views
 
 urlpatterns = [
     path('', include('dashboard.urls')),  # Ruta para el dashboard
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
+    # Trampas: rutas que solo prueban los robots. Responden 404 y registran el intento.
+    re_path(r'^admin/', usuarios_views.ruta_trampa),
+    re_path(r'^(wp-admin|wp-login\.php|\.env|phpmyadmin)', usuarios_views.ruta_trampa),
     path('login/', usuarios_views.CustomLoginView.as_view(template_name='security/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     

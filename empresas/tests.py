@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from django.contrib.auth.models import User
 from django.contrib.sessions.backends.db import SessionStore
+from django.core.cache import cache
 from django.db import DatabaseError
 from django.test import RequestFactory
 from django.urls import reverse
@@ -16,6 +17,11 @@ from .models import ConfiguracionSaaS, Empresa, SuscripcionEmpresa
 
 
 class SessionTimeoutTests(TestCase):
+	def setUp(self):
+		# Otras pruebas dejan el timeout de sesión cacheado.
+		cache.clear()
+		self.addCleanup(cache.clear)
+
 	def test_timeout_global_se_aplica_a_usuario_de_empresa(self):
 		empresa = Empresa.objects.create(nombre='Empresa A', slug='empresa-a')
 		usuario = User.objects.create_user(username='owner_a', password='Correcta-123!')

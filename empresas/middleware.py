@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db import DatabaseError
 from django.shortcuts import redirect
@@ -93,7 +94,7 @@ class TenantMiddleware(MiddlewareMixin):
                 if (
                     request.path not in rutas_permitidas
                     and not es_ruta_pago
-                    and not request.path.startswith('/admin/')
+                    and not request.path.startswith('/' + settings.ADMIN_URL)
                 ):
                     return redirect('cuenta_suspendida')
 
