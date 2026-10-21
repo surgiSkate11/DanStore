@@ -107,6 +107,14 @@ class ProductoForm(forms.ModelForm):
                 'precio_oferta',
                 'El precio de oferta debe ser menor al precio normal, o el catálogo no lo mostrará como oferta.'
             )
+
+        # Stock 0 es válido (agotado), pero no con estado disponible.
+        stock = cleaned_data.get('stock')
+        if cleaned_data.get('estado') == 'disponible' and stock == 0:
+            self.add_error(
+                'stock',
+                'Un producto disponible necesita al menos 1 unidad en stock. Si se agotó, márcalo como vendido.'
+            )
         return cleaned_data
 
 
