@@ -32,7 +32,7 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 | T6 | S7 | 2.6.0–2.6.4 | inline, TDD (productos, ventas, clientes, catálogos) | hecha | da4545a (productos), d1d3bc1 (ventas, verify PASS), 9b81458 + 4779d76 (clientes), 2.6.4 (catálogos) |
 | T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | hecha (verify PASS) | d6d41a9 |
 | T8 | S9 | 2.8.0 | inline, TDD | hecha | fb32287 |
-| T9 | S10 | 2.9.0 | inline, Risk 5 | hecha (sin correr en GitHub todavía) | 2.9.0 |
+| T9 | S10 | 2.9.0–2.9.1 | inline, Risk 5 | hecha (sin correr en GitHub todavía) | a4a1681, 2.9.1 |
 | T10 | S11 | 2.10.0 | inline | pendiente | |
 | T11 | S12 | — | bloqueada: aprobar `django-ratelimit` | bloqueada | |
 | T12 | S13 | — | bloqueada: aprobar `django-otp` | bloqueada | |
@@ -65,3 +65,4 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L20 (T14):** RED: el ranking daba 66 puntos en vez de 6 (sumaba las compras hechas en B). `Cliente.total_compras(empresa)` y `cantidad_ventas(empresa)` ahora exigen la empresa. El consumidor final compartido ya no participa en sorteos.
 - **L21 (T9):** CI en `.github/workflows/ci.yml`. Con `DEBUG=False` las pruebas fallan (15 fallas, 3 errores en `catalogos`+`clientes`: `SECURE_SSL_REDIRECT` responde 301), así que `check --deploy --fail-level WARNING` corre con `DEBUG=False` y una `SECRET_KEY` aleatoria de 50+ caracteres, y `manage.py test` con `DEBUG=True`. Local: suite 92/92 OK y `check --deploy` sin advertencias. Sin validar en GitHub (no hay push). Riesgos a vigilar en la primera corrida: `pip-audit` puede fallar por CVE en versiones fijadas (p. ej. `requests==2.31.0`); gitleaks revisa los commits del push/PR, y `credentials.json` sigue en el historial de `main` hasta regenerarlo. Dependabot (RS-13) no está en S10: queda pendiente.
 - **L21 (T13):** RED: `agregar_cliente_a_sheets` para la empresa B escribía en la hoja de la empresa A (tomaba la URL de la caché global `last_sheet_url`). Ahora usa solo `empresa.google_sheets_config['sheet_url']`. `OAUTHLIB_INSECURE_TRANSPORT` solo con `DEBUG`.
+- **L22 (T9, corrección):** 2.9.0 habría fallado en GitHub: `settings.py` exige `FERNET_KEY` y, con `DEBUG=False`, un `ALLOWED_HOSTS` distinto del default; la simulación local los tomaba del `.env`. 2.9.1 genera una `FERNET_KEY` desechable y fija `ALLOWED_HOSTS` en el paso de despliegue. Simulado sin `.env` (decouple con `RepositoryEmpty`): `check --deploy --fail-level WARNING` exit 0 y suite 92/92 OK.
