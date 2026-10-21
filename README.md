@@ -51,6 +51,20 @@ Se leen del archivo `.env` o del entorno, con `python-decouple`. Nunca subas val
 
 Seguridad: el login, recuperar contraseña y recuperar usuario aceptan 10 intentos (POST) por minuto desde cada IP; el 11 recibe 429. Los contadores viven en la tabla `ratelimit_cache`, que crea `migrate` (sin variables de entorno nuevas).
 
+## Panel de administración con 2FA
+
+El panel de Django (`/<ADMIN_URL>`) es solo para superusuarios y pide, además de la contraseña, un código de 6 dígitos de una app autenticadora. Quien no tenga dispositivo 2FA no entra, aunque sepa la contraseña.
+
+Para activarlo, crea el dispositivo de un superusuario existente (PowerShell):
+
+```powershell
+env\Scripts\python.exe manage.py crear_2fa <usuario>
+```
+
+El comando imprime la clave en base32 y la URL `otpauth://`. Escribe la clave a mano en Google Authenticator o Authy (cuenta basada en tiempo) y guárdala en un lugar seguro. Para cambiar de teléfono o regenerarla, repite el comando con `--reemplazar`.
+
+En Railway, ejecútalo una sola vez con `railway run python manage.py crear_2fa <usuario>`. El 2FA aplica solo al panel de Django: el login normal (`/login/`) no lo pide.
+
 ## Pruebas
 
 Las pruebas usan su propia base de datos. Para correrlas en local con SQLite (más rápido que una base remota):
