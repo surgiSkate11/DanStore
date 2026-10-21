@@ -12,7 +12,7 @@ from django.contrib.auth.password_validation import validate_password, Validatio
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.core.cache import cache
-from django.http import Http404
+from django.http import Http404, HttpResponseServerError
 from django.core.signing import TimestampSigner, SignatureExpired, BadSignature
 from django.db import transaction, IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
@@ -601,3 +601,14 @@ def error_403_view(request, exception=None):
     Muestra una página amigable en vez de la genérica de Django.
     """
     return render(request, '403.html', status=403)
+
+
+def error_404_view(request, exception=None):
+    """Página 404 propia: no muestra las rutas del proyecto."""
+    return render(request, '404.html', status=404)
+
+
+def error_500_view(request):
+    """Página 500 propia. Sin contexto ni base.html: debe funcionar aunque falle la base de datos."""
+    # Sin request: no corren los context processors, que consultan la base de datos.
+    return HttpResponseServerError(render_to_string('500.html'))

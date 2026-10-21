@@ -55,3 +55,8 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Páginas de error propias. Django solo las lee desde el urls.py raíz.
+handler403 = 'usuarios.views.error_403_view'
+handler404 = 'usuarios.views.error_404_view'
+handler500 = 'usuarios.views.error_500_view'

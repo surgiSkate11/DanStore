@@ -2,14 +2,17 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.urls import reverse
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import PermissionDenied
+from django.test import RequestFactory, TestCase
+from django.urls import get_resolver, reverse
 from django.utils import timezone
 
 from empresas.models import ConfiguracionSaaS
 from empresas.testing import crear_empresa_con_dueno
 from .backends import EmailOrUsernameModelBackend
 from .models import LoginSecurityAttempt
+from . import views as usuarios_views
 
 
 class LoginSecurityTests(TestCase):
@@ -107,3 +110,41 @@ class PanelAdminCuentaSuspendidaTests(TestCase):
         self.client.force_login(dueno)
         respuesta = self.client.get(f'/{settings.ADMIN_URL}login/')
         self.assertNotEqual(respuesta.get('Location'), reverse('cuenta_suspendida'))
+
+
+class PaginasDeErrorTests(TestCase):
+    """C11: Django solo lee handler403/404/500 desde el urls.py raíz."""
+
+    def setUp(self):
+        self.request = RequestFactory().get('/algo/')
+        self.request.user = AnonymousUser()
+
+    def test_handlers_se_declaran_en_urls(self):
+        resolver = get_resolver()
+        self.assertIs(resolver.resolve_error_handler(403), usuarios_views.error_403_view)
+        self.assertIs(resolver.resolve_error_handler(404), getattr(usuarios_views, 'error_404_view', None))
+        self.assertIs(resolver.resolve_error_handler(500), getattr(usuarios_views, 'error_500_view', None))
+
+    def test_pagina_404_propia_en_espanol(self):
+        respuesta = self.client.get('/esta-ruta-no-existe/')
+        self.assertEqual(respuesta.status_code, 404)
+        self.assertTemplateUsed(respuesta, '404.html')
+        self.assertContains(respuesta, 'Página no encontrada', status_code=404)
+
+    def test_pagina_404_propia_con_sesion_iniciada(self):
+        _, dueno = crear_empresa_con_dueno('panaderia')
+        self.client.force_login(dueno)
+        respuesta = self.client.get('/esta-ruta-no-existe/')
+        self.assertContains(respuesta, 'Página no encontrada', status_code=404)
+
+    def test_pagina_403_propia_se_renderiza(self):
+        respuesta = usuarios_views.error_403_view(self.request, PermissionDenied())
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertIn('Acceso restringido', respuesta.content.decode())
+
+    def test_pagina_500_propia_no_muestra_detalles(self):
+        respuesta = usuarios_views.error_500_view(self.request)
+        self.assertEqual(respuesta.status_code, 500)
+        contenido = respuesta.content.decode()
+        self.assertIn('Algo salió mal', contenido)
+        self.assertNotIn('Traceback', contenido)

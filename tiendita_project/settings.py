@@ -517,8 +517,5 @@ if not DEBUG:
 SILENCED_SYSTEM_CHECKS = ['security.W021']
 
 
-# ============================================================
-# CUSTOM ERROR PAGE
-# ============================================================
-
-handler403 = 'usuarios.views.error_403_view'
+# Las páginas de error propias (handler403/404/500) se declaran en
+# tiendita_project/urls.py: Django no las lee desde settings.
