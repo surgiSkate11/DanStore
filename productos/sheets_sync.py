@@ -15,7 +15,6 @@ from google.oauth2.credentials import Credentials as OAuthCredentials
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.cache import cache
 from django.db import models
 from django.db.models import Sum
 from django.shortcuts import redirect, render
@@ -28,8 +27,10 @@ from ventas.models import Venta, DetalleVenta
 
 logger = logging.getLogger(__name__)
 
-# Permitir OAuth sobre HTTP (solo para entorno de desarrollo local)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# Permitir OAuth sobre HTTP solo en desarrollo local: en producción el token
+# viajaría sin cifrar.
+if settings.DEBUG:
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
 def limpiar_precio(valor):
@@ -200,9 +201,6 @@ def sincronizar_sheets(request):
         if not sheet_url:
             messages.error(request, 'Debes proporcionar la URL de Google Sheets')
             return redirect('sincronizar_sheets')
-        
-        # Guardar URL del sheet para uso posterior
-        guardar_sheet_url(sheet_url)
         
         # Conectar con Google Sheets
         client, error = conectar_google_sheets(request.empresa)
@@ -711,12 +709,11 @@ def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None, empresa=None):
         if error:
             return False, f"Error de conexión: {error}"
         
-        # Obtener la URL del sheet (puedes guardarla en settings o pasarla como parámetro)
+        # Sin URL explícita se usa la hoja guardada en la propia empresa, nunca otra.
+        if not sheet_url and empresa is not None:
+            sheet_url = (empresa.google_sheets_config or {}).get('sheet_url')
         if not sheet_url:
-            # Intentar obtener de la última sincronización o usar una configuración
-            sheet_url = cache.get('last_sheet_url')
-            if not sheet_url:
-                return False, "No se ha configurado la URL del Google Sheet"
+            return False, "No se ha configurado la URL del Google Sheet"
         
         # Abrir el Google Sheet
         sheet = client.open_by_url(sheet_url)
@@ -756,10 +753,6 @@ def agregar_cliente_a_sheets(nombre_cliente, sheet_url=None, empresa=None):
         logger.exception('Error al agregar cliente "%s" a Google Sheets (empresa %s)', nombre_cliente, getattr(empresa, 'id', None))
         return False, "No se pudo agregar el cliente a Google Sheets. Intenta nuevamente."
 
-
-def guardar_sheet_url(sheet_url):
-    """Guarda la URL del sheet en cache para uso posterior"""
-    cache.set('last_sheet_url', sheet_url, timeout=None)  # Sin expiración
 
 
 def sincronizar_ventas_desde_sheets(empresa):
