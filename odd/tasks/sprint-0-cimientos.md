@@ -33,7 +33,7 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 | T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | hecha (verify PASS) | d6d41a9 |
 | T8 | S9 | 2.8.0 | inline, TDD | hecha | fb32287 |
 | T9 | S10 | 2.9.0–2.9.1 | inline, Risk 5 | hecha (sin correr en GitHub todavía) | a4a1681, 2.9.1 |
-| T10 | S11 | 2.10.0 | inline | pendiente | |
+| T10 | S11 | 2.10.0 | inline | hecha | 2.10.0 |
 | T11 | S12 | — | bloqueada: aprobar `django-ratelimit` | bloqueada | |
 | T12 | S13 | — | bloqueada: aprobar `django-otp` | bloqueada | |
 | T13 | L11 | 2.11.0 | inline, TDD, Risk 2 | hecha (verify PASS) | fc36346 |
@@ -66,3 +66,4 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L21 (T9):** CI en `.github/workflows/ci.yml`. Con `DEBUG=False` las pruebas fallan (15 fallas, 3 errores en `catalogos`+`clientes`: `SECURE_SSL_REDIRECT` responde 301), así que `check --deploy --fail-level WARNING` corre con `DEBUG=False` y una `SECRET_KEY` aleatoria de 50+ caracteres, y `manage.py test` con `DEBUG=True`. Local: suite 92/92 OK y `check --deploy` sin advertencias. Sin validar en GitHub (no hay push). Riesgos a vigilar en la primera corrida: `pip-audit` puede fallar por CVE en versiones fijadas (p. ej. `requests==2.31.0`); gitleaks revisa los commits del push/PR, y `credentials.json` sigue en el historial de `main` hasta regenerarlo. Dependabot (RS-13) no está en S10: queda pendiente.
 - **L21 (T13):** RED: `agregar_cliente_a_sheets` para la empresa B escribía en la hoja de la empresa A (tomaba la URL de la caché global `last_sheet_url`). Ahora usa solo `empresa.google_sheets_config['sheet_url']`. `OAUTHLIB_INSECURE_TRANSPORT` solo con `DEBUG`.
 - **L22 (T9, corrección):** 2.9.0 habría fallado en GitHub: `settings.py` exige `FERNET_KEY` y, con `DEBUG=False`, un `ALLOWED_HOSTS` distinto del default; la simulación local los tomaba del `.env`. 2.9.1 genera una `FERNET_KEY` desechable y fija `ALLOWED_HOSTS` en el paso de despliegue. Simulado sin `.env` (decouple con `RepositoryEmpty`): `check --deploy --fail-level WARNING` exit 0 y suite 92/92 OK.
+- **L23 (T10):** README con qué es DanStore, instalación en PowerShell, tabla de variables (solo nombres, obligatorias según `settings.py`: `SECRET_KEY`, `FERNET_KEY`, `ADMIN_URL`; `DATABASE_URL` y `ALLOWED_HOSTS` con `DEBUG=False`), pruebas, CI y despliegue en Railway (las migraciones no corren solas). Si T13 agrega variables nuevas, van a esta tabla.
