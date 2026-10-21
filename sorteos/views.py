@@ -188,7 +188,7 @@ def ejecutar_sorteo(request, sorteo_id):
                 
             else:
                 # Monto total de compras (monto_minimo, top_compradores, manual, todos)
-                monto = float(cliente.total_compras())
+                monto = float(cliente.total_compras(request.empresa))
             
             # Convertir monto a puntos: cada $5 = 3 puntos
             puntos = int((monto / 5) * 3)
