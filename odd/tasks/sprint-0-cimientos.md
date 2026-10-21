@@ -30,14 +30,14 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 | T4 | S5 | 2.4.0 | inline, Risk 2 | hecha (verify PASS) | 1c0d79a |
 | T5 | S6 | 2.5.0 | inline | hecha | 83ca4bf |
 | T6 | S7 | 2.6.0–2.6.4 | inline, TDD (productos, ventas, clientes, catálogos) | hecha | da4545a (productos), d1d3bc1 (ventas, verify PASS), 9b81458 + 4779d76 (clientes), 2.6.4 (catálogos) |
-| T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | pendiente | |
-| T8 | S9 | 2.8.0 | inline, TDD | pendiente | |
+| T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | hecha (verify PASS) | d6d41a9 |
+| T8 | S9 | 2.8.0 | inline, TDD | hecha | fb32287 |
 | T9 | S10 | 2.9.0 | inline, Risk 5 | pendiente | |
 | T10 | S11 | 2.10.0 | inline | pendiente | |
 | T11 | S12 | — | bloqueada: aprobar `django-ratelimit` | bloqueada | |
 | T12 | S13 | — | bloqueada: aprobar `django-otp` | bloqueada | |
-| T13 | L11 | 2.11.0 | inline, Risk 2 | pendiente | |
-| T14 | L12 | 2.12.0 | inline, TDD, Risk 2 | pendiente | |
+| T13 | L11 | 2.11.0 | inline, Risk 2 | en curso (sesión 1) | |
+| T14 | L12 | 2.12.0 | inline, TDD, Risk 2 | hecha | be24454 |
 
 Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y moverlas a `GOOGLE_CREDENTIALS_JSON`, ambiente `staging` en Railway, variable `ADMIN_URL` en Railway, secretos del repo en GitHub.
 
@@ -58,3 +58,8 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L13 (GGA en 2.6.3):** `api_crear_cliente` con `request.empresa=None` filtraría `empresas=None`. No es explotable: la vista no tiene ruta en ningún `urls.py` (código muerto). Se deja anotado; borrarla decide el usuario.
 - **L14 (tamaño):** a 2.6.3 la rama `chore/sprint-0-cimientos` suma ~1.890 líneas en 10 commits. Corte de revisión sugerido: PR 1 = 2.0.0–2.6.x (T0–T6); PR 2 = T7 en adelante. Push y PR los decide el usuario.
 - **L15 (catálogos):** sin fuga. 7 pruebas de aislamiento en verde desde el inicio (no hubo RED posible); prueba de mutación: quitar `empresa=request.empresa` en `apply_catalog_filters` hace fallar 6 de 7.
+- **L16 (revisión nativa T0–T6, lineage review-59da7086b3cdb141):** aprobada y acusada (3 lentes). Hallazgos no bloqueantes, trabajo posterior: credenciales aún en el historial de git (regenerarlas en Google Cloud, S2); `SECURE_REDIRECT_EXEMPT` deja `/` servible por HTTP (`settings.py:496`); en `ventas/views.py:176-212` el consumidor final compartido (nombre visible entre empresas, RUC de 13 dígitos), oráculo de existencia de RUC (`:204`) y carrera en `get_or_create` (`:196`); `productos/forms.py:77` filtra `empresa=None` sin empresa; `crear_venta` por GET (`:327`).
+- **L17 (reparto entre sesiones):** sesión 1 hace T7, T8, T13 y T14; sesión 2 hace T9 y T10. Mismo checkout: cada sesión hace commit solo de sus rutas (`git commit -- <rutas>`).
+- **L18 (T7):** `ADMIN_URL` sin default: Django no arranca sin ella (`.env` local, Railway y CI). La trampa registra con `%r` porque `X-Forwarded-For` lo controla el cliente (se podían inyectar líneas falsas en el log). `SessionTimeoutTests` limpia la caché en `setUp` (fallaba según el orden de las pruebas).
+- **L19 (T8):** `templates/403.html` tenía el contenido duplicado (dos `{% extends %}`): renderizarla daba `TemplateSyntaxError`. La 500 se renderiza sin `request` para no correr los context processors, que consultan la base de datos.
+- **L20 (T14):** RED: el ranking daba 66 puntos en vez de 6 (sumaba las compras hechas en B). `Cliente.total_compras(empresa)` y `cantidad_ventas(empresa)` ahora exigen la empresa. El consumidor final compartido ya no participa en sorteos.
