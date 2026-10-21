@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 
 def clientes_de_empresa(empresa):
     """Clientes de la empresa, sin el consumidor final: es una sola fila compartida por todas."""
+    if not empresa:
+        # filter(empresas=None) devolvería los clientes sin empresa.
+        return Cliente.objects.none()
     return Cliente.objects.filter(empresas=empresa).exclude(ruc_cedula=RUC_CONSUMIDOR_FINAL)
 
 

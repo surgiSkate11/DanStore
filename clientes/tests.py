@@ -3,6 +3,7 @@ import io
 from decimal import Decimal
 from types import SimpleNamespace
 
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.template.loader import render_to_string
 from django.test import RequestFactory, SimpleTestCase, TestCase
@@ -254,3 +255,12 @@ class AislamientoClientesTests(TestCase):
         self.assertEqual(respuesta.status_code, 404)
         final.refresh_from_db()
         self.assertEqual(final.nombre, 'CONSUMIDOR FINAL')
+
+
+class ClientesSinEmpresaTests(TestCase):
+    def test_superadmin_sin_empresa_no_abre_clientes_sin_empresa(self):
+        huerfano = Cliente.objects.create(nombre='Cliente Huerfano', ruc_cedula='5555555555')
+        superadmin = User.objects.create_superuser('root', 'root@example.com', 'Clave-prueba-123')
+        self.client.force_login(superadmin)
+        respuesta = self.client.get(reverse('detalle_cliente', args=[huerfano.pk]))
+        self.assertEqual(respuesta.status_code, 404)
