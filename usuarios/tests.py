@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest import mock
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import caches
 from django.core.exceptions import PermissionDenied
@@ -271,3 +271,28 @@ class ObtenerIpClienteTests(TestCase):
 
     def test_acepta_ipv6(self):
         self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='falsa, 2001:db8::1'), '2001:db8::1')
+
+
+class BloqueoPorCuentaEnLoginTests(TestCase):
+    """El bloqueo por cuenta (LoginSecurityAttempt) no se salta con otro backend."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='cuenta_bloqueada', email='bloqueada@example.com', password='Correcta-123!',
+        )
+        ConfiguracionSaaS.objects.create(
+            id=1, login_lockout_enabled=True, login_max_attempts=3, login_lockout_minutes=15,
+        )
+        LoginSecurityAttempt.objects.create(
+            user=self.user, failed_attempts=3, locked_until=timezone.now() + timedelta(minutes=15),
+        )
+
+    def test_cuenta_bloqueada_no_se_autentica_con_la_clave_correcta(self):
+        self.assertIsNone(authenticate(username='cuenta_bloqueada', password='Correcta-123!'))
+
+    def test_cuenta_bloqueada_no_inicia_sesion_por_la_vista_de_login(self):
+        respuesta = self.client.post(reverse('login'), {
+            'username': 'cuenta_bloqueada', 'password': 'Correcta-123!',
+        }, REMOTE_ADDR='203.0.113.99')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)

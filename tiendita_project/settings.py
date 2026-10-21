@@ -397,11 +397,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # CUSTOM AUTHENTICATION
 # ============================================================
 
+# Un solo backend: EmailOrUsernameModelBackend ya hereda de ModelBackend y
+# aplica el bloqueo por cuenta. Un segundo ModelBackend lo saltaría.
 AUTHENTICATION_BACKENDS = [
 
     'usuarios.backends.EmailOrUsernameModelBackend',
-
-    'django.contrib.auth.backends.ModelBackend',
 
 ]
 
