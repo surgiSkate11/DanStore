@@ -89,6 +89,6 @@ Railway construye la aplicación con Nixpacks y la arranca con gunicorn (`railwa
 
 1. Crea un servicio con este repositorio y una base de datos PostgreSQL.
 2. Define las variables obligatorias, más `DEBUG=False`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, Cloudinary y correo.
-3. Despliega. Railway no corre las migraciones solo: después de cada cambio de modelo, ejecuta `python manage.py migrate` en el servicio.
+3. Despliega. Antes de cada despliegue Railway corre `python manage.py migrate --noinput` (`preDeployCommand` en `railway.toml`); si la migración falla, la versión nueva no se publica.
 
 Railway revisa la salud de la aplicación en `/`, y esa ruta no se redirige a HTTPS. El resto del sitio sí.

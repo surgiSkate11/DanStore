@@ -29,7 +29,7 @@ En el cuerpo de cada PR, copia el diagrama y marca el actual con 📍.
 | 6 | `pr/sprint-0-06-sorteos-sheets-ci-readme` | PR 5 | 2.12.0 – 2.9.2 | 335 | Ranking de sorteos por empresa, Google Sheets por empresa, CI, README. |
 | 7 | `pr/sprint-0-07-migraciones-productos` | PR 6 | 2.13.0 – 2.15.0 (`.gitignore`) | 207 | Migraciones pendientes de productos, stock 0 editable, gitleaks. |
 | 8 | `pr/sprint-0-08-limite-ip-y-bloqueo` | PR 7 | 2.15.0 – 2.15.1 | 319 | RS-06 límite por IP (`django-ratelimit`), bloqueo por cuenta sin bypass. |
-| 9 | `pr/sprint-0-09-2fa-panel` | PR 8 | 2.16.0 – 2.16.2 | ≈ 330 | RS-02 2FA del panel (`django-otp`, `crear_2fa`), este documento. |
+| 9 | `pr/sprint-0-09-2fa-panel` | PR 8 | 2.16.0 – 2.16.3 | ≈ 330 | RS-02 2FA del panel (`django-otp`, `crear_2fa`), este documento. |
 
 ## Verificación por PR
 
@@ -45,6 +45,6 @@ git diff pr/sprint-0-02-configuracion-segura --stat
 
 - El panel de Django no tiene límite por IP propio (solo bloqueo por cuenta y 2FA).
 - Si la app se expone sin el proxy de Railway, `X-Forwarded-For` se puede falsear.
-- Si la tabla `ratelimit_cache` no existe, el login falla: **correr `migrate` antes de servir tráfico**.
+- Si la tabla `ratelimit_cache` no existe, el login falla. Desde 2.16.3 Railway corre `migrate` antes de cada despliegue (`preDeployCommand`).
 - Consumidor final compartido entre empresas: un cliente por empresa en el Sprint 1.
 - Pasos 2 de recuperación de contraseña y usuario sin límite por IP.
