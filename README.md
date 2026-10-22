@@ -1,6 +1,6 @@
 # DanStore
 
-Tienda multiempresa hecha en Django 4.2. Cada empresa maneja sus propios productos, catálogos en PDF, clientes, ventas y sorteos, y cobra con Stripe o PayPal. Los datos de una empresa nunca son visibles para otra. Las imágenes se guardan en Cloudinary y la aplicación se despliega en Railway.
+Tienda multiempresa hecha en Django 4.2. Cada empresa maneja sus propios productos, catálogos en PDF, clientes, ventas y sorteos, y cobra con Stripe o PayPal. Los datos de una empresa nunca son visibles para otra. Las imágenes se guardan en Cloudinary y la aplicación se despliega en Render.
 
 ## Instalación local
 
@@ -63,7 +63,7 @@ env\Scripts\python.exe manage.py crear_2fa <usuario>
 
 El comando imprime la clave en base32 y la URL `otpauth://`. Escribe la clave a mano en Google Authenticator o Authy (cuenta basada en tiempo) y guárdala en un lugar seguro. Para cambiar de teléfono o regenerarla, repite el comando con `--reemplazar`.
 
-En Railway, ejecútalo una sola vez con `railway run python manage.py crear_2fa <usuario>`. El 2FA aplica solo al panel de Django: el login normal (`/login/`) no lo pide.
+En Render, ejecútalo una sola vez desde la pestaña **Shell** del servicio: `python manage.py crear_2fa <usuario>`. El 2FA aplica solo al panel de Django: el login normal (`/login/`) no lo pide.
 
 ## Pruebas
 
@@ -83,12 +83,12 @@ GitHub Actions (`.github/workflows/ci.yml`) corre en cada push y pull request:
 3. `pip-audit`, que busca vulnerabilidades conocidas en `requirements.txt`.
 4. gitleaks, que busca secretos en los commits.
 
-## Despliegue en Railway
+## Despliegue en Render
 
-Railway construye la aplicación con Nixpacks y la arranca con gunicorn (`railway.toml` y `Procfile`). Whitenoise sirve los archivos estáticos.
+Render arranca la aplicación con gunicorn detrás de Cloudflare y de su propio proxy, que termina HTTPS. Whitenoise sirve los archivos estáticos.
 
-1. Crea un servicio con este repositorio y una base de datos PostgreSQL.
-2. Define las variables obligatorias, más `DEBUG=False`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, Cloudinary y correo.
-3. Despliega. Antes de cada despliegue Railway corre `python manage.py migrate --noinput` (`preDeployCommand` en `railway.toml`); si la migración falla, la versión nueva no se publica.
+1. Crea un Web Service con este repositorio y una base de datos PostgreSQL.
+2. En **Environment**, define las variables obligatorias, más `DEBUG=False`, `ALLOWED_HOSTS` (incluye tu dominio `*.onrender.com`), `CSRF_TRUSTED_ORIGINS`, Cloudinary y correo.
+3. En **Settings → Start Command**, usa `python manage.py migrate --noinput && gunicorn tiendita_project.wsgi:application`. Así cada despliegue migra antes de recibir tráfico; si la migración falla, la app no arranca. (El *Pre-Deploy Command* de Render hace lo mismo, pero solo existe en los planes pagos.)
 
-Railway revisa la salud de la aplicación en `/`, y esa ruta no se redirige a HTTPS. El resto del sitio sí.
+El límite de intentos por IP lee la IP real del cliente de `CF-Connecting-IP`, que Cloudflare siempre sobrescribe (y, si falta, de `True-Client-IP`). `X-Forwarded-For` no se usa: en Render el cliente lo puede falsear y su último valor es el borde de Cloudflare. `railway.toml` queda de una prueba anterior con Railway y Render no lo usa.

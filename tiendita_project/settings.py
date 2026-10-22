@@ -539,11 +539,11 @@ X_FRAME_OPTIONS = 'DENY'
 # HTTPS (solo producción)
 # ============================================================
 
-# El healthcheck de Railway (railway.toml) pide "/" por HTTP sin pasar por el proxy.
+# Los healthchecks de la plataforma pueden pedir "/" por HTTP sin pasar por el proxy.
 SECURE_REDIRECT_EXEMPT = [r'^$']
 
 if not DEBUG:
-    # Railway termina TLS en su proxy; sin esto hay bucle de redirecciones.
+    # El proxy de Render termina TLS; sin esto hay bucle de redirecciones.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True

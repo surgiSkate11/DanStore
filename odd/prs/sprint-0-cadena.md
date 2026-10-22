@@ -44,7 +44,7 @@ git diff pr/sprint-0-02-configuracion-segura --stat
 ## Fuera de alcance (siguientes sprints)
 
 - El panel de Django no tiene límite por IP propio (solo bloqueo por cuenta y 2FA).
-- Si la app se expone sin el proxy de Railway, `X-Forwarded-For` se puede falsear.
+- El límite por IP confía en `CF-Connecting-IP` (Cloudflare delante de Render). Si la app se expusiera sin Cloudflare, ese header se podría falsear.
 - Si la tabla `ratelimit_cache` no existe, el login falla. Desde 2.16.3 Railway corre `migrate` antes de cada despliegue (`preDeployCommand`).
 - Consumidor final compartido entre empresas: un cliente por empresa en el Sprint 1.
 - Pasos 2 de recuperación de contraseña y usuario sin límite por IP.

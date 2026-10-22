@@ -44,16 +44,20 @@ def obtener_ip_cliente(request):
     """
     IP real del cliente para el límite de intentos (RATELIMIT_IP_META_KEY).
 
-    Detrás del proxy de Railway el último valor de X-Forwarded-For es el que
-    agrega el proxy; los anteriores los escribe el cliente y se pueden falsear.
-    Sin ese header, o si el valor no es una IP, se usa REMOTE_ADDR.
+    En Render el camino es Cliente -> Cloudflare -> proxy de Render -> app.
+    Cloudflare siempre sobrescribe CF-Connecting-IP con la IP del cliente, por eso
+    va primero; True-Client-IP solo es confiable si la zona lo tiene activado.
+    X-Forwarded-For no sirve: Render le agrega valores sin limpiarlo, así que
+    el cliente lo controla, y su último valor es el borde de Cloudflare,
+    compartido por muchos clientes. Sin esos headers (desarrollo local), o si
+    el valor no es una IP, se usa REMOTE_ADDR.
     """
-    reenviadas = request.META.get('HTTP_X_FORWARDED_FOR', '')
-    ultima = reenviadas.split(',')[-1].strip()
-    if ultima:
-        try:
-            return str(ipaddress.ip_address(ultima))
-        except ValueError:
-            pass
+    for header in ('HTTP_CF_CONNECTING_IP', 'HTTP_TRUE_CLIENT_IP'):
+        valor = request.META.get(header, '').strip()
+        if valor:
+            try:
+                return str(ipaddress.ip_address(valor))
+            except ValueError:
+                continue
     return request.META.get('REMOTE_ADDR', '')
 

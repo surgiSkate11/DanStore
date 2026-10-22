@@ -206,17 +206,22 @@ class LimitePorIpTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertContains(respuesta, 'Usuario o contraseña incorrectos.')
 
-    def test_login_cuenta_la_ultima_ip_de_x_forwarded_for(self):
-        proxy = {'REMOTE_ADDR': '10.0.0.1'}
+    def test_en_render_cada_cliente_tiene_su_contador_aunque_compartan_borde_de_cloudflare(self):
+        # Render: Cliente -> Cloudflare -> proxy de Render -> app. El último valor de
+        # X-Forwarded-For es la IP pública del borde de Cloudflare, igual para muchos clientes.
+        def detras_de_render(cliente, falsa='falsa'):
+            return {
+                'REMOTE_ADDR': '10.21.157.68',
+                'HTTP_X_FORWARDED_FOR': f'{falsa}, {cliente}, 104.22.17.40',
+                'HTTP_TRUE_CLIENT_IP': cliente,
+                'HTTP_CF_CONNECTING_IP': cliente,
+            }
         for numero in range(10):
-            respuesta = self._login(HTTP_X_FORWARDED_FOR=f'falsa-{numero}, 198.51.100.7', **proxy)
+            respuesta = self._login(**detras_de_render('99.61.165.29', falsa=f'falsa-{numero}'))
             self.assertEqual(respuesta.status_code, 200)
-        # El primer valor lo controla el cliente: cambiarlo no reinicia el contador.
-        respuesta = self._login(HTTP_X_FORWARDED_FOR='otra-falsa, 198.51.100.7', **proxy)
-        self.assertEqual(respuesta.status_code, 429)
-        # Otra IP real detrás del mismo proxy no se ve afectada.
-        respuesta = self._login(HTTP_X_FORWARDED_FOR='otra-falsa, 198.51.100.8', **proxy)
-        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(self._login(**detras_de_render('99.61.165.29')).status_code, 429)
+        # Otro cliente que entra por el mismo borde de Cloudflare no queda bloqueado.
+        self.assertEqual(self._login(**detras_de_render('99.61.165.30')).status_code, 200)
 
     def test_get_nunca_se_limita(self):
         for _ in range(15):
@@ -256,27 +261,46 @@ class LimitePorIpTests(TestCase):
 
 
 class ObtenerIpClienteTests(TestCase):
-    """RATELIMIT_IP_META_KEY: detrás del proxy el primer valor de X-Forwarded-For lo controla el cliente."""
+    """RATELIMIT_IP_META_KEY en Render: la IP real la pone Cloudflare en CF-Connecting-IP."""
 
     def _ip(self, **meta):
-        meta.setdefault('REMOTE_ADDR', '10.0.0.1')
+        meta.setdefault('REMOTE_ADDR', '10.21.157.68')
         return obtener_ip_cliente(RequestFactory().get('/', **meta))
 
-    def test_usa_el_ultimo_valor_de_x_forwarded_for(self):
-        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='falsa, 198.51.100.7'), '198.51.100.7')
+    def test_usa_la_ip_que_pone_cloudflare(self):
+        self.assertEqual(self._ip(
+            HTTP_TRUE_CLIENT_IP='99.61.165.29',
+            HTTP_CF_CONNECTING_IP='99.61.165.29',
+            HTTP_X_FORWARDED_FOR='99.61.165.29, 104.22.17.40',
+        ), '99.61.165.29')
 
-    def test_quita_espacios_del_ultimo_valor(self):
-        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='1.2.3.4,   198.51.100.7  '), '198.51.100.7')
+    def test_sin_cf_connecting_ip_usa_true_client_ip(self):
+        self.assertEqual(self._ip(HTTP_TRUE_CLIENT_IP=' 99.61.165.29 '), '99.61.165.29')
 
-    def test_sin_x_forwarded_for_usa_remote_addr(self):
-        self.assertEqual(self._ip(), '10.0.0.1')
+    def test_cf_connecting_ip_gana_a_un_true_client_ip_falsificado(self):
+        # Cloudflare siempre sobrescribe CF-Connecting-IP; True-Client-IP solo si la zona lo activa.
+        self.assertEqual(self._ip(HTTP_TRUE_CLIENT_IP='6.6.6.6', HTTP_CF_CONNECTING_IP='99.61.165.29'), '99.61.165.29')
 
-    def test_valor_que_no_es_una_ip_usa_remote_addr(self):
-        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='198.51.100.7, basura'), '10.0.0.1')
-        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR=' '), '10.0.0.1')
+    def test_nunca_usa_x_forwarded_for(self):
+        # Render lo agrega sin limpiarlo: el cliente lo controla y su último valor es Cloudflare.
+        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='198.51.100.7, 104.22.17.40'), '10.21.157.68')
+
+    def test_sin_headers_de_cloudflare_usa_remote_addr(self):
+        self.assertEqual(self._ip(), '10.21.157.68')
+
+    def test_valor_que_no_es_una_ip_pasa_al_siguiente(self):
+        self.assertEqual(self._ip(HTTP_CF_CONNECTING_IP='basura', HTTP_TRUE_CLIENT_IP='99.61.165.29'), '99.61.165.29')
+        self.assertEqual(self._ip(HTTP_CF_CONNECTING_IP=' ', HTTP_TRUE_CLIENT_IP='1.2.3.4, 5.6.7.8'), '10.21.157.68')
 
     def test_acepta_ipv6(self):
-        self.assertEqual(self._ip(HTTP_X_FORWARDED_FOR='falsa, 2001:db8::1'), '2001:db8::1')
+        self.assertEqual(self._ip(HTTP_CF_CONNECTING_IP='2001:db8::1'), '2001:db8::1')
+
+    def test_la_trampa_registra_la_misma_ip_que_el_limite(self):
+        with self.assertLogs('seguridad', level='WARNING') as registro:
+            self.client.get('/admin/', REMOTE_ADDR='10.21.157.68', HTTP_CF_CONNECTING_IP='99.61.165.29',
+                            HTTP_X_FORWARDED_FOR='1.2.3.4, 104.22.17.40')
+        self.assertIn("'99.61.165.29'", registro.output[0])
+        self.assertNotIn('1.2.3.4', registro.output[0])
 
 
 class BloqueoPorCuentaEnLoginTests(TestCase):
