@@ -14,7 +14,7 @@ Tienda multiempresa en Django 4.2 con catálogos, ventas, clientes, sorteos y pa
 - `tiendita_project/`: settings, urls y wsgi. La configuración se lee de `.env` con python-decouple.
 - Apps: `dashboard`, `usuarios`, `productos`, `catalogos`, `clientes`, `ventas`, `sorteos`, `empresas`.
 - Plantillas en `templates/<app>/`, estáticos en `static/`. Imágenes en Cloudinary.
-- Producción: Render (gunicorn + whitenoise, detrás de Cloudflare). La IP real del cliente viene en `CF-Connecting-IP`; nunca uses `X-Forwarded-For` para decisiones de seguridad.
+- Producción: Render (gunicorn + whitenoise, detrás de Cloudflare). La IP del cliente sale de `tiendita_project.utils.obtener_ip_cliente`: no leas `X-Forwarded-For` ni `CF-Connecting-IP` a mano.
 
 ## Reglas
 - No leas ni muestres `.env`, `client_secrets.json` ni `credentials.json`: tienen secretos.

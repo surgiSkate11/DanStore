@@ -223,6 +223,12 @@ class LimitePorIpTests(TestCase):
         # Otro cliente que entra por el mismo borde de Cloudflare no queda bloqueado.
         self.assertEqual(self._login(**detras_de_render('99.61.165.30')).status_code, 200)
 
+    def test_entrar_directo_a_render_rotando_cf_connecting_ip_igual_llega_al_limite(self):
+        for numero in range(11):
+            respuesta = self._login(REMOTE_ADDR='10.21.157.68', HTTP_CF_CONNECTING_IP=f'6.6.6.{numero}',
+                                    HTTP_X_FORWARDED_FOR=f'6.6.6.{numero}, 203.0.113.5')
+        self.assertEqual(respuesta.status_code, 429)
+
     def test_get_nunca_se_limita(self):
         for _ in range(15):
             self.assertEqual(self.client.get('/login/', REMOTE_ADDR=self.IP).status_code, 200)
@@ -265,7 +271,14 @@ class ObtenerIpClienteTests(TestCase):
 
     def _ip(self, **meta):
         meta.setdefault('REMOTE_ADDR', '10.21.157.68')
+        meta.setdefault('HTTP_X_FORWARDED_FOR', '99.61.165.29, 104.22.17.40')  # borde de Cloudflare
         return obtener_ip_cliente(RequestFactory().get('/', **meta))
+
+    def test_quien_entra_directo_a_render_no_puede_inventar_su_ip(self):
+        self.assertEqual(self._ip(
+            HTTP_X_FORWARDED_FOR='6.6.6.6, 203.0.113.5', HTTP_CF_CONNECTING_IP='6.6.6.6',
+            HTTP_TRUE_CLIENT_IP='6.6.6.6',
+        ), '203.0.113.5')
 
     def test_usa_la_ip_que_pone_cloudflare(self):
         self.assertEqual(self._ip(
