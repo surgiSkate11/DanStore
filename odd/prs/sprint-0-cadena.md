@@ -33,7 +33,7 @@ En el cuerpo de cada PR, copia el diagrama y marca el actual con 📍.
 
 ## Verificación por PR
 
-Cada PR pasa el CI (pruebas, `check --deploy`, `pip-audit`, gitleaks). Para revisar uno en local:
+El CI (pruebas, `check --deploy`, `pip-audit`, gitleaks) recién existe desde el PR 6, que agrega `.github/workflows/ci.yml`: los PRs 6 a 9 lo corren, y los PRs 1 a 5 no tienen chequeos propios. Antes de fusionar el PR 1, el CI del PR 6 tiene que estar en verde, porque prueba todo lo acumulado hasta ahí. Para revisar uno en local:
 
 ```powershell
 git switch pr/sprint-0-03-aislamiento-ventas
