@@ -91,4 +91,8 @@ Render arranca la aplicación con gunicorn detrás de Cloudflare y de su propio 
 2. En **Environment**, define las variables obligatorias, más `DEBUG=False`, `ALLOWED_HOSTS` (incluye tu dominio `*.onrender.com`), `CSRF_TRUSTED_ORIGINS`, Cloudinary y correo.
 3. En **Settings → Start Command**, usa `python manage.py migrate --noinput && gunicorn tiendita_project.wsgi:application`. Así cada despliegue migra antes de recibir tráfico; si la migración falla, la app no arranca. (El *Pre-Deploy Command* de Render hace lo mismo, pero solo existe en los planes pagos.)
 
-El límite de intentos por IP mira el último valor de `X-Forwarded-For`, que agrega el proxy de Render: si es un borde de Cloudflare, usa `CF-Connecting-IP` (o `True-Client-IP`); si no, alguien entró directo a Render y se usa esa IP, porque los headers de Cloudflare los pudo inventar. `railway.toml` queda de una prueba anterior con Railway y Render no lo usa.
+El límite de intentos por IP mira el último valor de `X-Forwarded-For`, que agrega el proxy de Render: si es un borde de Cloudflare, usa `CF-Connecting-IP` (o `True-Client-IP`); si no, alguien entró directo a Render y se usa esa IP, porque los headers de Cloudflare los pudo inventar.
+
+Riesgo conocido: la lista de rangos de Cloudflare está fija en `tiendita_project/utils.py` y hay que actualizarla si Cloudflare publica rangos nuevos. Además, alguien que mande sus peticiones al origen de Render desde la red de Cloudflare (por ejemplo con su propia cuenta) podría seguir inventando `CF-Connecting-IP`. La solución de fondo queda para el Sprint 1: que Cloudflare agregue una cabecera con un secreto compartido y la app la verifique, o cerrar el acceso directo a `*.onrender.com`. Mientras tanto siguen activos el bloqueo por cuenta y el 2FA del panel.
+
+`railway.toml` queda de una prueba anterior con Railway y Render no lo usa.
