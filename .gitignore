@@ -13,7 +13,7 @@ venv/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-db_pruebas.sqlite3*
+db_pruebas*.sqlite3*
 /staticfiles
 
 # Media (keep structure, ignore uploads)

@@ -187,9 +187,9 @@ class Producto(models.Model):
     stock = models.PositiveIntegerField(
         default=1,
         verbose_name='Stock / Cantidad',
-        validators=[MinValueValidator(1)],
+        validators=[MinValueValidator(0)],
         db_index=True,
-        help_text='Cantidad disponible. Para productos únicos déjalo en 1.'
+        help_text='Cantidad disponible. Para productos únicos déjalo en 1. En 0 el producto está agotado.'
     )
 
     # ── ATRIBUTOS DINÁMICOS (el comodín para cualquier campo extra) ───────────

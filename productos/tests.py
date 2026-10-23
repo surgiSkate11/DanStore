@@ -80,6 +80,104 @@ class AislamientoProductosTests(TestCase):
         self.assertFalse(Producto.objects.filter(empresa=self.empresa_a).exists())
 
 
+class StockCeroTests(TestCase):
+    """Stock 0 es una cantidad válida (agotado); lo que se vigila es la coherencia con el estado."""
+
+    MENSAJE = 'Un producto disponible necesita al menos 1 unidad en stock. Si se agotó, márcalo como vendido.'
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('panaderia')
+        self.client.force_login(self.dueno)
+
+    def crear(self, **extra):
+        datos = dict(
+            empresa=self.empresa, nombre='Pan de yuca', categoria='Panes',
+            precio=Decimal('0.25'), stock=5, estado='disponible',
+        )
+        datos.update(extra)
+        return Producto.objects.create(**datos)
+
+    def datos_post(self, **extra):
+        datos = {
+            'nombre': 'Pan de yuca', 'categoria': 'Panes', 'precio': '0.25',
+            'stock': '1', 'estado': 'disponible',
+        }
+        datos.update(extra)
+        return datos
+
+    def test_editar_producto_vendido_con_stock_cero_conserva_el_stock(self):
+        producto = self.crear(stock=0, estado='vendido')
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(nombre='Pan de yuca grande', stock='0', estado='vendido'),
+        )
+        self.assertRedirects(respuesta, reverse('lista_productos'))
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, 'Pan de yuca grande')
+        self.assertEqual(producto.stock, 0)
+        self.assertEqual(producto.estado, 'vendido')
+
+    def test_editar_producto_reservado_con_stock_cero_se_guarda(self):
+        producto = self.crear(stock=0, estado='reservado')
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(descripcion='Apartado', stock='0', estado='reservado'),
+        )
+        self.assertRedirects(respuesta, reverse('lista_productos'))
+        producto.refresh_from_db()
+        self.assertEqual(producto.descripcion, 'Apartado')
+        self.assertEqual(producto.stock, 0)
+
+    def test_disponible_con_stock_cero_se_rechaza_y_no_guarda(self):
+        producto = self.crear(stock=3, estado='disponible')
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(nombre='Cambiado', stock='0', estado='disponible'),
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.context['form'].errors['stock'], [self.MENSAJE])
+        self.assertIn('Stock / Cantidad: ' + self.MENSAJE, [str(m) for m in respuesta.context['messages']])
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, 'Pan de yuca')
+        self.assertEqual(producto.stock, 3)
+        self.assertEqual(producto.estado, 'disponible')
+
+    def test_reactivar_producto_vendido_sin_reponer_stock_se_rechaza(self):
+        producto = self.crear(stock=0, estado='vendido')
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(stock='0', estado='disponible'),
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.context['form'].errors['stock'], [self.MENSAJE])
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock, 0)
+        self.assertEqual(producto.estado, 'vendido')
+
+    def test_crear_producto_sin_stock_usa_el_valor_por_defecto_de_uno(self):
+        self.assertEqual(Producto._meta.get_field('stock').default, 1)
+        respuesta = self.client.get(reverse('crear_producto'))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.context['form'].fields['stock'].initial, 1)
+
+    def test_stock_negativo_se_rechaza_y_no_guarda(self):
+        producto = self.crear(stock=3)
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(nombre='Cambiado', stock='-1'),
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn('stock', respuesta.context['form'].errors)
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, 'Pan de yuca')
+        self.assertEqual(producto.stock, 3)
+
+    def test_crear_producto_disponible_con_stock_valido_se_guarda(self):
+        respuesta = self.client.post(reverse('crear_producto'), self.datos_post(stock='4'))
+        self.assertRedirects(respuesta, reverse('lista_productos'))
+        self.assertEqual(Producto.objects.get(empresa=self.empresa).stock, 4)
+
+
 class SheetsSyncAislamientoTests(TestCase):
     """La hoja de Google Sheets de una empresa nunca la usa otra."""
 

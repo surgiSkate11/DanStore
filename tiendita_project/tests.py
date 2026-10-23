@@ -1,8 +1,10 @@
 from datetime import datetime, timezone as dt_timezone
 from decimal import Decimal
+from io import StringIO
 
 from django.conf import settings
-from django.test import SimpleTestCase
+from django.core.management import call_command
+from django.test import SimpleTestCase, TestCase
 from django.utils import formats, timezone, translation
 
 
@@ -21,3 +23,14 @@ class LocalizacionEcuadorTests(SimpleTestCase):
         with translation.override(settings.LANGUAGE_CODE):
             self.assertEqual(formats.localize(Decimal('1234.50')), '1234.50')
             self.assertEqual(formats.number_format(Decimal('1234.5'), 2, force_grouping=True), '1,234.50')
+
+
+class MigracionesAlDiaTests(TestCase):
+    """Todo cambio de modelo lleva su migración (regla del AGENTS.md)."""
+
+    def test_no_hay_cambios_de_modelo_sin_migracion(self):
+        salida = StringIO()
+        try:
+            call_command('makemigrations', '--check', '--dry-run', stdout=salida, stderr=salida)
+        except SystemExit:
+            self.fail(f'Hay cambios de modelo sin migración:\n{salida.getvalue()}')
