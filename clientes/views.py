@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from ventas.models import Venta, DetalleVenta
+from ventas.views import RUC_CONSUMIDOR_FINAL
 from productos.models import Producto
 from .models import Cliente
 from .forms import ClienteForm
@@ -16,6 +17,15 @@ from empresas.mixins import requiere_modulo
 from tiendita_project.utils import form_errors_to_messages
 
 logger = logging.getLogger(__name__)
+
+
+def clientes_de_empresa(empresa):
+    """Clientes de la empresa, sin el consumidor final: es una sola fila compartida por todas."""
+    if not empresa:
+        # filter(empresas=None) devolvería los clientes sin empresa.
+        return Cliente.objects.none()
+    return Cliente.objects.filter(empresas=empresa).exclude(ruc_cedula=RUC_CONSUMIDOR_FINAL)
+
 
 @login_required
 @requiere_modulo('clientes', accion='crear')
@@ -73,7 +83,7 @@ def lista_clientes(request):
             'total_ventas': 0, 'total_deudas': 0, 'clientes_con_deuda': 0
         })
         
-    clientes_qs = Cliente.objects.filter(empresas=empresa)
+    clientes_qs = clientes_de_empresa(empresa)
     # OPTIMIZACIÓN DE MEMORIA RAM: Traer máximo los últimos 20 para no saturar la vista web
     clientes_incompletos = clientes_qs.filter(ruc_cedula__startswith='SYS-').order_by('-creado_en')[:20]
     
@@ -150,7 +160,7 @@ def crear_cliente(request):
 def detalle_cliente(request, cliente_id):
     """Muestra la información de un cliente específico y su historial de compras."""
     empresa = getattr(request, 'empresa', None)
-    cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
+    cliente = get_object_or_404(clientes_de_empresa(empresa), id=cliente_id)
 
     # Obtener todas las ventas del cliente
     ventas_cliente = Venta.objects.filter(cliente=cliente, empresa=empresa).exclude(estado='anulada')
@@ -197,7 +207,7 @@ def detalle_cliente(request, cliente_id):
 def editar_cliente(request, cliente_id):
     """Permite editar los datos de un cliente temporal o existente."""
     empresa = getattr(request, 'empresa', None)
-    cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
+    cliente = get_object_or_404(clientes_de_empresa(empresa), id=cliente_id)
 
     if request.method == 'POST':
         form = ClienteForm(request.POST, instance=cliente)
@@ -224,7 +234,7 @@ def eliminar_cliente(request, cliente_id):
     """Elimina un cliente de forma segura, preservando el historial si es necesario."""
     if request.method == 'POST':
         empresa = getattr(request, 'empresa', None)
-        cliente = get_object_or_404(Cliente, id=cliente_id, empresas=empresa)
+        cliente = get_object_or_404(clientes_de_empresa(empresa), id=cliente_id)
         
         ventas_count = Venta.objects.filter(cliente=cliente, empresa=empresa).count()
         nombre = cliente.nombre
@@ -272,7 +282,7 @@ def exportar_clientes_csv(request):
     writer.writerow(['Nombre', 'RUC/Cédula', 'Teléfono', 'Email', 'Total Gastado', 'Fecha de Registro'])
     
     # OPTIMIZACIÓN: Calcular el total gastado de TODOS los clientes en 1 sola consulta
-    clientes = Cliente.objects.filter(empresas=empresa).annotate(
+    clientes = clientes_de_empresa(empresa).annotate(
         total_gastado=Sum('ventas__total', filter=Q(ventas__empresa=empresa) & ~Q(ventas__estado='anulada'))
     )
     

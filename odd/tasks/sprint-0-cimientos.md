@@ -29,13 +29,15 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 | T3 | S4 | 2.3.0 | inline, TDD, Risk 2 | hecha (verify PASS) | ecd9592 |
 | T4 | S5 | 2.4.0 | inline, Risk 2 | hecha (verify PASS) | 1c0d79a |
 | T5 | S6 | 2.5.0 | inline | hecha | 83ca4bf |
-| T6 | S7 | 2.6.0–2.6.3 | inline, TDD (productos, ventas, clientes, catálogos) | en curso: productos hecho | da4545a (productos) |
+| T6 | S7 | 2.6.0–2.6.4 | inline, TDD (productos, ventas, clientes, catálogos) | hecha | da4545a (productos), d1d3bc1 (ventas, verify PASS), 9b81458 + 4779d76 (clientes), 2.6.4 (catálogos) |
 | T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | pendiente | |
 | T8 | S9 | 2.8.0 | inline, TDD | pendiente | |
 | T9 | S10 | 2.9.0 | inline, Risk 5 | pendiente | |
 | T10 | S11 | 2.10.0 | inline | pendiente | |
 | T11 | S12 | — | bloqueada: aprobar `django-ratelimit` | bloqueada | |
 | T12 | S13 | — | bloqueada: aprobar `django-otp` | bloqueada | |
+| T13 | L11 | 2.11.0 | inline, Risk 2 | pendiente | |
+| T14 | L12 | 2.12.0 | inline, TDD, Risk 2 | pendiente | |
 
 Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y moverlas a `GOOGLE_CREDENTIALS_JSON`, ambiente `staging` en Railway, variable `ADMIN_URL` en Railway, secretos del repo en GitHub.
 
@@ -52,3 +54,7 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L9 (GGA bloquea 2.6.1):** "If an empresa has no client with RUC `9999999999` yet, the code reuses the global "consumidor final" client [...] empresa A keeps whatever name empresa B gave that client." Decisión del usuario: "Guardar el nombre en la venta (recomendado)": campo nuevo `nombre_cliente` en `Venta` con migración (copia del nombre al vender, como `ruc_cliente`), y el consumidor final deja de aparecer en la lista de clientes de cada empresa. El rediseño "un cliente por empresa" queda como historia del Sprint 1.
 - **L10 (hallazgo previo):** `makemigrations --check` propone `productos/0007_alter_producto_precio...`: un cambio de modelo de `productos` anterior al sprint (commit "Validaciones precios") quedó sin migración. No se toca en T6; decide el usuario.
 - **L11 (GGA, deuda previa):** `Venta.empresa` y `ConfiguracionFactura.empresa` tenían `default=1` (asignaban datos a la empresa 1 en silencio): se quita en 2.6.1 con migración 0008. Fuera de T6 quedan, como T13: `productos/sheets_sync.py` guarda la URL de la hoja en la caché global `'last_sheet_url'` (compartida entre empresas) y activa `OAUTHLIB_INSECURE_TRANSPORT=1` también en producción.
+- **L12 (fuga en sorteos, fuera de S7):** `sorteos/views.py:191` usa `cliente.total_compras()`, que suma ventas de todas las empresas (`clientes/models.py:31,36` no filtran por empresa): el ranking de sorteos de A cuenta compras hechas en B. Queda como T14.
+- **L13 (GGA en 2.6.3):** `api_crear_cliente` con `request.empresa=None` filtraría `empresas=None`. No es explotable: la vista no tiene ruta en ningún `urls.py` (código muerto). Se deja anotado; borrarla decide el usuario.
+- **L14 (tamaño):** a 2.6.3 la rama `chore/sprint-0-cimientos` suma ~1.890 líneas en 10 commits. Corte de revisión sugerido: PR 1 = 2.0.0–2.6.x (T0–T6); PR 2 = T7 en adelante. Push y PR los decide el usuario.
+- **L15 (catálogos):** sin fuga. 7 pruebas de aislamiento en verde desde el inicio (no hubo RED posible); prueba de mutación: quitar `empresa=request.empresa` en `apply_catalog_filters` hace fallar 6 de 7.
