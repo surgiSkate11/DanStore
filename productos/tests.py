@@ -1,9 +1,14 @@
+import importlib
+import os
 from decimal import Decimal
+from unittest import mock
 
-from django.test import TestCase
+from django.core.cache import cache
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from empresas.testing import crear_empresa_con_dueno
+from productos import sheets_sync
 from productos.models import Producto, TipoProducto
 
 
@@ -73,3 +78,51 @@ class AislamientoProductosTests(TestCase):
         self.assertEqual(respuesta.status_code, 200)
         self.assertIn('tipo_producto', respuesta.context['form'].errors)
         self.assertFalse(Producto.objects.filter(empresa=self.empresa_a).exists())
+
+
+class SheetsSyncAislamientoTests(TestCase):
+    """La hoja de Google Sheets de una empresa nunca la usa otra."""
+
+    URL_A = 'https://docs.google.com/spreadsheets/d/hoja-de-a'
+    URL_B = 'https://docs.google.com/spreadsheets/d/hoja-de-b'
+
+    def setUp(self):
+        self.empresa_a, _ = crear_empresa_con_dueno('panaderia')
+        self.empresa_b, _ = crear_empresa_con_dueno('cafeteria')
+        self.empresa_a.google_sheets_config = {'sheet_url': self.URL_A}
+        self.empresa_a.save(update_fields=['google_sheets_config'])
+        # Antes, la última URL sincronizada quedaba en una clave global de caché.
+        cache.set('last_sheet_url', self.URL_A)
+        self.addCleanup(cache.clear)
+
+    def agregar_cliente(self, empresa):
+        cliente_google = mock.Mock()
+        cliente_google.open_by_url.return_value.get_worksheet.return_value.row_values.return_value = ['Cliente']
+        cliente_google.open_by_url.return_value.get_worksheet.return_value.col_values.return_value = ['Cliente']
+        with mock.patch.object(sheets_sync, 'conectar_google_sheets', return_value=(cliente_google, None)):
+            resultado = sheets_sync.agregar_cliente_a_sheets('Ana', empresa=empresa)
+        return resultado, cliente_google
+
+    def test_sin_hoja_propia_no_usa_la_hoja_de_otra_empresa(self):
+        (exito, mensaje), cliente_google = self.agregar_cliente(self.empresa_b)
+        self.assertFalse(exito)
+        self.assertEqual(mensaje, 'No se ha configurado la URL del Google Sheet')
+        cliente_google.open_by_url.assert_not_called()
+
+    def test_usa_la_hoja_guardada_en_su_propia_empresa(self):
+        self.empresa_b.google_sheets_config = {'sheet_url': self.URL_B}
+        self.empresa_b.save(update_fields=['google_sheets_config'])
+        (exito, _), cliente_google = self.agregar_cliente(self.empresa_b)
+        self.assertTrue(exito)
+        cliente_google.open_by_url.assert_called_once_with(self.URL_B)
+
+
+class SheetsSyncOAuthTests(TestCase):
+    def test_oauth_por_http_solo_en_desarrollo(self):
+        for debug, esperado in [(False, None), (True, '1')]:
+            with self.subTest(DEBUG=debug), override_settings(DEBUG=debug), \
+                    mock.patch.dict(os.environ, {}, clear=False):
+                os.environ.pop('OAUTHLIB_INSECURE_TRANSPORT', None)
+                importlib.reload(sheets_sync)
+                self.assertEqual(os.environ.get('OAUTHLIB_INSECURE_TRANSPORT'), esperado)
+        importlib.reload(sheets_sync)

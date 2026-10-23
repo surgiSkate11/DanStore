@@ -30,14 +30,14 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 | T4 | S5 | 2.4.0 | inline, Risk 2 | hecha (verify PASS) | 1c0d79a |
 | T5 | S6 | 2.5.0 | inline | hecha | 83ca4bf |
 | T6 | S7 | 2.6.0–2.6.4 | inline, TDD (productos, ventas, clientes, catálogos) | hecha | da4545a (productos), d1d3bc1 (ventas, verify PASS), 9b81458 + 4779d76 (clientes), 2.6.4 (catálogos) |
-| T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | pendiente | |
-| T8 | S9 | 2.8.0 | inline, TDD | pendiente | |
-| T9 | S10 | 2.9.0 | inline, Risk 5 | pendiente | |
-| T10 | S11 | 2.10.0 | inline | pendiente | |
+| T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | hecha (verify PASS) | d6d41a9 |
+| T8 | S9 | 2.8.0 | inline, TDD | hecha | fb32287 |
+| T9 | S10 | 2.9.0–2.9.1 | inline, Risk 5 | hecha (sin correr en GitHub todavía) | a4a1681, 2.9.1 |
+| T10 | S11 | 2.10.0 | inline | hecha | 2.10.0 |
 | T11 | S12 | — | bloqueada: aprobar `django-ratelimit` | bloqueada | |
 | T12 | S13 | — | bloqueada: aprobar `django-otp` | bloqueada | |
-| T13 | L11 | 2.11.0 | inline, Risk 2 | pendiente | |
-| T14 | L12 | 2.12.0 | inline, TDD, Risk 2 | pendiente | |
+| T13 | L11 | 2.11.0 | inline, TDD, Risk 2 | hecha (verify PASS) | fc36346 |
+| T14 | L12 | 2.12.0 | inline, TDD, Risk 2 | hecha | be24454 |
 
 Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y moverlas a `GOOGLE_CREDENTIALS_JSON`, ambiente `staging` en Railway, variable `ADMIN_URL` en Railway, secretos del repo en GitHub.
 
@@ -58,3 +58,13 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L13 (GGA en 2.6.3):** `api_crear_cliente` con `request.empresa=None` filtraría `empresas=None`. No es explotable: la vista no tiene ruta en ningún `urls.py` (código muerto). Se deja anotado; borrarla decide el usuario.
 - **L14 (tamaño):** a 2.6.3 la rama `chore/sprint-0-cimientos` suma ~1.890 líneas en 10 commits. Corte de revisión sugerido: PR 1 = 2.0.0–2.6.x (T0–T6); PR 2 = T7 en adelante. Push y PR los decide el usuario.
 - **L15 (catálogos):** sin fuga. 7 pruebas de aislamiento en verde desde el inicio (no hubo RED posible); prueba de mutación: quitar `empresa=request.empresa` en `apply_catalog_filters` hace fallar 6 de 7.
+- **L16 (revisión nativa T0–T6, lineage review-59da7086b3cdb141):** aprobada y acusada (3 lentes). Hallazgos no bloqueantes, trabajo posterior: credenciales aún en el historial de git (regenerarlas en Google Cloud, S2); `SECURE_REDIRECT_EXEMPT` deja `/` servible por HTTP (`settings.py:496`); en `ventas/views.py:176-212` el consumidor final compartido (nombre visible entre empresas, RUC de 13 dígitos), oráculo de existencia de RUC (`:204`) y carrera en `get_or_create` (`:196`); `productos/forms.py:77` filtra `empresa=None` sin empresa; `crear_venta` por GET (`:327`).
+- **L17 (reparto entre sesiones):** sesión 1 hace T7, T8, T13 y T14; sesión 2 hace T9 y T10. Mismo checkout: cada sesión hace commit solo de sus rutas (`git commit -- <rutas>`).
+- **L18 (T7):** `ADMIN_URL` sin default: Django no arranca sin ella (`.env` local, Railway y CI). La trampa registra con `%r` porque `X-Forwarded-For` lo controla el cliente (se podían inyectar líneas falsas en el log). `SessionTimeoutTests` limpia la caché en `setUp` (fallaba según el orden de las pruebas).
+- **L19 (T8):** `templates/403.html` tenía el contenido duplicado (dos `{% extends %}`): renderizarla daba `TemplateSyntaxError`. La 500 se renderiza sin `request` para no correr los context processors, que consultan la base de datos.
+- **L20 (T14):** RED: el ranking daba 66 puntos en vez de 6 (sumaba las compras hechas en B). `Cliente.total_compras(empresa)` y `cantidad_ventas(empresa)` ahora exigen la empresa. El consumidor final compartido ya no participa en sorteos.
+- **L21 (T9):** CI en `.github/workflows/ci.yml`. Con `DEBUG=False` las pruebas fallan (15 fallas, 3 errores en `catalogos`+`clientes`: `SECURE_SSL_REDIRECT` responde 301), así que `check --deploy --fail-level WARNING` corre con `DEBUG=False` y una `SECRET_KEY` aleatoria de 50+ caracteres, y `manage.py test` con `DEBUG=True`. Local: suite 92/92 OK y `check --deploy` sin advertencias. Sin validar en GitHub (no hay push). Riesgos a vigilar en la primera corrida: `pip-audit` puede fallar por CVE en versiones fijadas (p. ej. `requests==2.31.0`); gitleaks revisa los commits del push/PR, y `credentials.json` sigue en el historial de `main` hasta regenerarlo. Dependabot (RS-13) no está en S10: queda pendiente.
+- **L21 (T13):** RED: `agregar_cliente_a_sheets` para la empresa B escribía en la hoja de la empresa A (tomaba la URL de la caché global `last_sheet_url`). Ahora usa solo `empresa.google_sheets_config['sheet_url']`. `OAUTHLIB_INSECURE_TRANSPORT` solo con `DEBUG`.
+- **L22 (T9, corrección):** 2.9.0 habría fallado en GitHub: `settings.py` exige `FERNET_KEY` y, con `DEBUG=False`, un `ALLOWED_HOSTS` distinto del default; la simulación local los tomaba del `.env`. 2.9.1 genera una `FERNET_KEY` desechable y fija `ALLOWED_HOSTS` en el paso de despliegue. Simulado sin `.env` (decouple con `RepositoryEmpty`): `check --deploy --fail-level WARNING` exit 0 y suite 92/92 OK.
+- **L23 (T10):** README con qué es DanStore, instalación en PowerShell, tabla de variables (solo nombres, obligatorias según `settings.py`: `SECRET_KEY`, `FERNET_KEY`, `ADMIN_URL`; `DATABASE_URL` y `ALLOWED_HOSTS` con `DEBUG=False`), pruebas, CI y despliegue en Railway (las migraciones no corren solas). Si T13 agrega variables nuevas, van a esta tabla.
+- **L24 (T9, revisión nativa review-28ab781decedc71a):** aprobada, sin bloqueos. 2.9.2 limita el token del CI (`contents: read`, `pull-requests: read`) y apaga los comentarios de gitleaks en los PR. `.gitleaks.toml` no se crea: decisión del usuario, "Todavía no" regeneró las credenciales; hasta que lo haga, gitleaks puede fallar por `credentials.json` y `client_secrets.json` en el historial, y ese fallo es real.

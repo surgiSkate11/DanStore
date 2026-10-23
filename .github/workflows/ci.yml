@@ -1,0 +1,63 @@
+name: CI
+on: [push, pull_request]
+
+# El token de GitHub solo puede leer el repositorio (gitleaks lee los commits del PR).
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tiendita_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tiendita_test
+      ADMIN_URL: panel-ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # gitleaks necesita el historial de los commits que revisa
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Librerías del sistema para WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+      - run: pip install -r requirements.txt
+
+      # settings.py no arranca sin FERNET_KEY: se genera una clave desechable.
+      - name: Clave de cifrado de prueba
+        run: echo "FERNET_KEY=$(python -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" >> "$GITHUB_ENV"
+
+      - name: Revisión de despliegue (falla con cualquier advertencia)
+        env:
+          DEBUG: 'False'
+          ALLOWED_HOSTS: danstore-ci.example.com
+        run: |
+          export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(50))')"
+          python manage.py check --deploy --fail-level WARNING
+
+      # Con DEBUG=False, SECURE_SSL_REDIRECT respondería 301 a todas las pruebas.
+      - name: Pruebas
+        env:
+          DEBUG: 'True'
+          SECRET_KEY: clave-solo-para-pruebas
+        run: python manage.py test
+
+      - name: Vulnerabilidades conocidas en dependencias
+        run: pip install pip-audit && pip-audit -r requirements.txt
+
+      - name: Secretos en el código
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false

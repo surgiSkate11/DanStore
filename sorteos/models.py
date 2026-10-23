@@ -76,6 +76,15 @@ class Sorteo(models.Model):
         return f"{self.get_tipo_display()} - {self.nombre}"
     
     def obtener_participantes(self):
+        """Clientes que cumplen el criterio, sin el consumidor final.
+
+        El consumidor final es una sola fila compartida por todas las empresas:
+        su nombre no es de esta empresa y no es una persona que pueda ganar.
+        """
+        from ventas.views import RUC_CONSUMIDOR_FINAL
+        return self._participantes_por_criterio().exclude(ruc_cedula=RUC_CONSUMIDOR_FINAL)
+
+    def _participantes_por_criterio(self):
         """Obtiene la lista de clientes que cumplen el criterio"""
         from django.db.models import Sum, Count
         from datetime import date

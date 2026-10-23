@@ -28,13 +28,14 @@ class Cliente(models.Model):
     def __str__(self):
         return f"{self.nombre} - {self.ruc_cedula}"
 
-    def cantidad_ventas(self):
-        """Retorna la cantidad de ventas asociadas a este cliente."""
+    # Un cliente puede comprar en varias empresas: los totales siempre son por empresa.
+    def cantidad_ventas(self, empresa):
+        """Cantidad de ventas del cliente en la empresa indicada."""
         from ventas.models import Venta
-        return Venta.objects.filter(cliente=self).count()
+        return Venta.objects.filter(cliente=self, empresa=empresa).count()
 
-    def total_compras(self):
-        """Suma de todas las compras del cliente, requerida para reportes y sorteos."""
+    def total_compras(self, empresa):
+        """Suma de las compras del cliente en la empresa indicada (reportes y sorteos)."""
         from ventas.models import Venta
         from django.db.models import Sum
-        return Venta.objects.filter(cliente=self).aggregate(total=Sum('total'))['total'] or 0
+        return Venta.objects.filter(cliente=self, empresa=empresa).aggregate(total=Sum('total'))['total'] or 0
