@@ -30,6 +30,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Sin default: si falta la variable, Django no arranca.
 SECRET_KEY = config('SECRET_KEY')
 
+# Ruta secreta del panel de Django, sin default. /admin/ queda como trampa (404).
+ADMIN_URL = config('ADMIN_URL').strip('/') + '/'
+
+if ADMIN_URL in ('/', 'admin/'):
+    raise ValueError("ADMIN_URL debe ser una ruta secreta distinta de 'admin/'.")
+
 DEBUG = config(
     'DEBUG',
     default=False,
@@ -511,8 +517,5 @@ if not DEBUG:
 SILENCED_SYSTEM_CHECKS = ['security.W021']
 
 
-# ============================================================
-# CUSTOM ERROR PAGE
-# ============================================================
-
-handler403 = 'usuarios.views.error_403_view'
+# Las páginas de error propias (handler403/404/500) se declaran en
+# tiendita_project/urls.py: Django no las lee desde settings.

@@ -1,12 +1,18 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.contrib.auth.models import AnonymousUser
+from django.core.exceptions import PermissionDenied
+from django.test import RequestFactory, TestCase
+from django.urls import get_resolver, reverse
 from django.utils import timezone
 
 from empresas.models import ConfiguracionSaaS
+from empresas.testing import crear_empresa_con_dueno
 from .backends import EmailOrUsernameModelBackend
 from .models import LoginSecurityAttempt
+from . import views as usuarios_views
 
 
 class LoginSecurityTests(TestCase):
@@ -58,3 +64,87 @@ class LoginSecurityTests(TestCase):
 
         self.assertContains(response, 'Usuario o contraseña incorrectos.')
         self.assertNotContains(response, 'Note que puede que ambos campos')
+
+class PanelAdminOcultoTests(TestCase):
+    """C10: el panel vive en ADMIN_URL y /admin/ es una trampa que responde 404."""
+
+    def test_admin_por_defecto_responde_404_y_registra_el_intento(self):
+        with self.assertLogs('seguridad', level='WARNING') as registro:
+            respuesta = self.client.get('/admin/', REMOTE_ADDR='203.0.113.7')
+        self.assertEqual(respuesta.status_code, 404)
+        self.assertIn('/admin/', registro.output[0])
+        self.assertIn('203.0.113.7', registro.output[0])
+
+    def test_registro_no_acepta_lineas_falsas_desde_x_forwarded_for(self):
+        with self.assertLogs('seguridad', level='WARNING') as registro:
+            self.client.get('/admin/', HTTP_X_FORWARDED_FOR='1.2.3.4\nLINEA FALSA')
+        self.assertEqual(len(registro.records), 1)
+        self.assertNotIn('\n', registro.records[0].getMessage())
+
+    def test_subrutas_del_admin_por_defecto_tambien_son_trampa(self):
+        with self.assertLogs('seguridad', level='WARNING'):
+            respuesta = self.client.get('/admin/login/')
+        self.assertEqual(respuesta.status_code, 404)
+
+    def test_rutas_que_prueban_los_robots_responden_404(self):
+        for ruta in ['/wp-admin/', '/wp-login.php', '/.env', '/phpmyadmin/']:
+            with self.subTest(ruta), self.assertLogs('seguridad', level='WARNING'):
+                self.assertEqual(self.client.get(ruta).status_code, 404)
+
+    def test_admin_url_muestra_el_login_del_panel(self):
+        respuesta = self.client.get(f'/{settings.ADMIN_URL}login/')
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, 'name="username"')
+
+    def test_admin_url_no_tiene_valor_por_defecto(self):
+        self.assertNotEqual(settings.ADMIN_URL, 'admin/')
+        self.assertTrue(settings.ADMIN_URL.endswith('/'))
+        self.assertFalse(settings.ADMIN_URL.startswith('/'))
+
+
+class PanelAdminCuentaSuspendidaTests(TestCase):
+    def test_cuenta_suspendida_puede_abrir_el_login_de_admin_url(self):
+        empresa, dueno = crear_empresa_con_dueno('vencida')
+        empresa.activa = False
+        empresa.save()
+        self.client.force_login(dueno)
+        respuesta = self.client.get(f'/{settings.ADMIN_URL}login/')
+        self.assertNotEqual(respuesta.get('Location'), reverse('cuenta_suspendida'))
+
+
+class PaginasDeErrorTests(TestCase):
+    """C11: Django solo lee handler403/404/500 desde el urls.py raíz."""
+
+    def setUp(self):
+        self.request = RequestFactory().get('/algo/')
+        self.request.user = AnonymousUser()
+
+    def test_handlers_se_declaran_en_urls(self):
+        resolver = get_resolver()
+        self.assertIs(resolver.resolve_error_handler(403), usuarios_views.error_403_view)
+        self.assertIs(resolver.resolve_error_handler(404), getattr(usuarios_views, 'error_404_view', None))
+        self.assertIs(resolver.resolve_error_handler(500), getattr(usuarios_views, 'error_500_view', None))
+
+    def test_pagina_404_propia_en_espanol(self):
+        respuesta = self.client.get('/esta-ruta-no-existe/')
+        self.assertEqual(respuesta.status_code, 404)
+        self.assertTemplateUsed(respuesta, '404.html')
+        self.assertContains(respuesta, 'Página no encontrada', status_code=404)
+
+    def test_pagina_404_propia_con_sesion_iniciada(self):
+        _, dueno = crear_empresa_con_dueno('panaderia')
+        self.client.force_login(dueno)
+        respuesta = self.client.get('/esta-ruta-no-existe/')
+        self.assertContains(respuesta, 'Página no encontrada', status_code=404)
+
+    def test_pagina_403_propia_se_renderiza(self):
+        respuesta = usuarios_views.error_403_view(self.request, PermissionDenied())
+        self.assertEqual(respuesta.status_code, 403)
+        self.assertIn('Acceso restringido', respuesta.content.decode())
+
+    def test_pagina_500_propia_no_muestra_detalles(self):
+        respuesta = usuarios_views.error_500_view(self.request)
+        self.assertEqual(respuesta.status_code, 500)
+        contenido = respuesta.content.decode()
+        self.assertIn('Algo salió mal', contenido)
+        self.assertNotIn('Traceback', contenido)
