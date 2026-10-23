@@ -4,7 +4,7 @@ python-decouple==3.8
 Pillow==13.0.0
 reportlab==4.0.7
 pypdf==6.21.2
-gunicorn==23.0.0
+gunicorn==26.2.0
 whitenoise==6.8.2
 dj-database-url==2.2.0
 gspread==6.0.0
