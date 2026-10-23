@@ -83,6 +83,8 @@ GitHub Actions (`.github/workflows/ci.yml`) corre en cada push y pull request:
 3. `pip-audit`, que busca vulnerabilidades conocidas en `requirements.txt`.
 4. gitleaks, que busca secretos en los commits.
 
+Además, Dependabot (`.github/dependabot.yml`) abre cada lunes pull requests con las dependencias de Python y de GitHub Actions que tengan versiones nuevas o vulnerabilidades conocidas.
+
 ## Despliegue en Render
 
 Render arranca la aplicación con gunicorn detrás de Cloudflare y de su propio proxy, que termina HTTPS. Whitenoise sirve los archivos estáticos.

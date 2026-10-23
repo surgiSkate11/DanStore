@@ -1,0 +1,25 @@
+# Weekly pull requests for outdated or vulnerable dependencies (RS-13).
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Guayaquil
+    open-pull-requests-limit: 5
+    labels: [dependencias]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Guayaquil
+    labels: [dependencias]
+    commit-message:
+      prefix: "ci"
