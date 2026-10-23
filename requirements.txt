@@ -2,7 +2,7 @@ Django==5.2.18
 psycopg2-binary==2.9.10
 python-decouple==3.8
 Pillow==13.0.0
-reportlab==4.0.7
+reportlab==5.0.1
 pypdf==6.21.2
 gunicorn==23.0.0
 whitenoise==6.8.2
