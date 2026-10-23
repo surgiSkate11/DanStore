@@ -472,7 +472,7 @@ def factura_pdf(request, venta_id):
 @login_required
 @requiere_modulo('ventas', accion='ver')
 def generar_comprobante_deuda_pdf(request, cliente_nombre):
-    """Genera PDF de comprobante de deuda para un cliente usando pdfkit (A4)"""
+    """Genera PDF de comprobante de deuda para un cliente (A4)"""
     productos = Producto.objects.filter(
         empresa=request.empresa,
         estado='reservado',
