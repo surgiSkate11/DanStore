@@ -1,6 +1,6 @@
 # DanStore
 
-Tienda multiempresa hecha en Django 4.2. Cada empresa maneja sus propios productos, catálogos en PDF, clientes, ventas y sorteos, y cobra con Stripe o PayPal. Los datos de una empresa nunca son visibles para otra. Las imágenes se guardan en Cloudinary y la aplicación se despliega en Railway.
+Tienda multiempresa hecha en Django 4.2. Cada empresa maneja sus propios productos, catálogos en PDF, clientes, ventas y sorteos, y cobra con Stripe o PayPal. Los datos de una empresa nunca son visibles para otra. Las imágenes se guardan en Cloudinary y la aplicación se despliega en Render.
 
 ## Instalación local
 
@@ -51,6 +51,20 @@ Se leen del archivo `.env` o del entorno, con `python-decouple`. Nunca subas val
 
 Seguridad: el login, recuperar contraseña y recuperar usuario aceptan 10 intentos (POST) por minuto desde cada IP; el 11 recibe 429. Los contadores viven en la tabla `ratelimit_cache`, que crea `migrate` (sin variables de entorno nuevas).
 
+## Panel de administración con 2FA
+
+El panel de Django (`/<ADMIN_URL>`) es solo para superusuarios y pide, además de la contraseña, un código de 6 dígitos de una app autenticadora. Quien no tenga dispositivo 2FA no entra, aunque sepa la contraseña.
+
+Para activarlo, crea el dispositivo de un superusuario existente (PowerShell):
+
+```powershell
+env\Scripts\python.exe manage.py crear_2fa <usuario>
+```
+
+El comando imprime la clave en base32 y la URL `otpauth://`. Escribe la clave a mano en Google Authenticator o Authy (cuenta basada en tiempo) y guárdala en un lugar seguro. Para cambiar de teléfono o regenerarla, repite el comando con `--reemplazar`.
+
+En Render, ejecútalo una sola vez desde la pestaña **Shell** del servicio: `python manage.py crear_2fa <usuario>`. El 2FA aplica solo al panel de Django: el login normal (`/login/`) no lo pide.
+
 ## Pruebas
 
 Las pruebas usan su propia base de datos. Para correrlas en local con SQLite (más rápido que una base remota):
@@ -69,12 +83,16 @@ GitHub Actions (`.github/workflows/ci.yml`) corre en cada push y pull request:
 3. `pip-audit`, que busca vulnerabilidades conocidas en `requirements.txt`.
 4. gitleaks, que busca secretos en los commits.
 
-## Despliegue en Railway
+## Despliegue en Render
 
-Railway construye la aplicación con Nixpacks y la arranca con gunicorn (`railway.toml` y `Procfile`). Whitenoise sirve los archivos estáticos.
+Render arranca la aplicación con gunicorn detrás de Cloudflare y de su propio proxy, que termina HTTPS. Whitenoise sirve los archivos estáticos.
 
-1. Crea un servicio con este repositorio y una base de datos PostgreSQL.
-2. Define las variables obligatorias, más `DEBUG=False`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, Cloudinary y correo.
-3. Despliega. Railway no corre las migraciones solo: después de cada cambio de modelo, ejecuta `python manage.py migrate` en el servicio.
+1. Crea un Web Service con este repositorio y una base de datos PostgreSQL.
+2. En **Environment**, define las variables obligatorias, más `DEBUG=False`, `ALLOWED_HOSTS` (incluye tu dominio `*.onrender.com`), `CSRF_TRUSTED_ORIGINS`, Cloudinary y correo.
+3. En **Settings → Start Command**, usa `python manage.py migrate --noinput && gunicorn tiendita_project.wsgi:application`. Así cada despliegue migra antes de recibir tráfico; si la migración falla, la app no arranca. (El *Pre-Deploy Command* de Render hace lo mismo, pero solo existe en los planes pagos.)
 
-Railway revisa la salud de la aplicación en `/`, y esa ruta no se redirige a HTTPS. El resto del sitio sí.
+El límite de intentos por IP mira el último valor de `X-Forwarded-For`, que agrega el proxy de Render: si es un borde de Cloudflare, usa `CF-Connecting-IP` (o `True-Client-IP`); si no, alguien entró directo a Render y se usa esa IP, porque los headers de Cloudflare los pudo inventar.
+
+Riesgo conocido: la lista de rangos de Cloudflare está fija en `tiendita_project/utils.py` y hay que actualizarla si Cloudflare publica rangos nuevos. Además, alguien que mande sus peticiones al origen de Render desde la red de Cloudflare (por ejemplo con su propia cuenta) podría seguir inventando `CF-Connecting-IP`. La solución de fondo queda para el Sprint 1: que Cloudflare agregue una cabecera con un secreto compartido y la app la verifique, o cerrar el acceso directo a `*.onrender.com`. Mientras tanto siguen activos el bloqueo por cuenta y el 2FA del panel.
+
+`railway.toml` queda de una prueba anterior con Railway y Render no lo usa.

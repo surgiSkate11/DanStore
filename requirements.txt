@@ -18,3 +18,4 @@ requests==2.31.0
 cloudinary==1.41.0
 django-cloudinary-storage==0.3.0
 django-ratelimit==4.1.0
+django-otp==1.7.5

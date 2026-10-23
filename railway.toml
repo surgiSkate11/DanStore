@@ -3,6 +3,8 @@
 builder = "nixpacks"
 
 [deploy]
+# Migrations run before each deploy; if they fail, the new version does not go live.
+preDeployCommand = ["python manage.py migrate --noinput"]
 startCommand = "gunicorn tiendita_project.wsgi:application"
 healthcheckPath = "/"
 healthcheckTimeout = 100
