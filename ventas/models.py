@@ -10,7 +10,7 @@ from clientes.models import Cliente
 
 class Venta(models.Model):
     """Modelo de ventas/facturas - Solo se crean cuando hay pago"""
-    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, default=1, related_name='ventas')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='ventas')
     
     # CAMBIO 3.1: Numeración oficial
     numero_factura = models.CharField(
@@ -38,6 +38,12 @@ class Venta(models.Model):
         max_length=20,
         blank=True,
         verbose_name="RUC / Cédula del cliente"
+    )
+    nombre_cliente = models.CharField(
+        max_length=200,
+        blank=True,
+        default='',
+        verbose_name='Nombre del cliente'
     )
     
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='ventas', verbose_name="Cliente")
@@ -142,7 +148,7 @@ class DetalleVenta(models.Model):
 
 class ConfiguracionFactura(models.Model):
     """Configuración personalizable para facturas"""
-    empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, default=1, related_name='configuracion_factura')
+    empresa = models.OneToOneField(Empresa, on_delete=models.CASCADE, related_name='configuracion_factura')
     nombre_empresa = models.CharField(max_length=200, default="Tiendita", verbose_name="Nombre de la empresa")
     nombre_personalizado = models.BooleanField(default=False, verbose_name="Nombre personalizado manualmente")
     ruc_empresa = models.CharField(max_length=20, blank=True, verbose_name="RUC de la empresa")

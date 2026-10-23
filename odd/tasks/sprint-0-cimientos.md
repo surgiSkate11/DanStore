@@ -23,13 +23,13 @@ Rama: `chore/sprint-0-cimientos`. Commits: `2.<corrección>.<commit> - Descripci
 
 | ID | Specs | Versión | Ruta | Estado | Commit |
 | --- | --- | --- | --- | --- | --- |
-| T0 | S1 | 2.0.0 | inline | pendiente | Rama + guía y plan |
-| T1 | S2 | 2.1.0 | inline | pendiente | |
-| T2 | S3 | 2.2.0 | inline | pendiente | |
-| T3 | S4 | 2.3.0 | inline, TDD, Risk 2 | pendiente | |
-| T4 | S5 | 2.4.0 | inline, Risk 2 | pendiente | |
-| T5 | S6 | 2.5.0 | inline | pendiente | |
-| T6 | S7 | 2.6.0–2.6.3 | inline, TDD (productos, ventas, clientes, catálogos) | pendiente | |
+| T0 | S1 | 2.0.0 | inline | hecha | 91938ec |
+| T1 | S2 | 2.1.0 | inline | hecha | 5085828 |
+| T2 | S3 | 2.2.0 | inline | hecha | e560b17 |
+| T3 | S4 | 2.3.0 | inline, TDD, Risk 2 | hecha (verify PASS) | ecd9592 |
+| T4 | S5 | 2.4.0 | inline, Risk 2 | hecha (verify PASS) | 1c0d79a |
+| T5 | S6 | 2.5.0 | inline | hecha | 83ca4bf |
+| T6 | S7 | 2.6.0–2.6.3 | inline, TDD (productos, ventas, clientes, catálogos) | en curso: productos hecho | da4545a (productos) |
 | T7 | S8 | 2.7.0 | inline, TDD, Risk 2 | pendiente | |
 | T8 | S9 | 2.8.0 | inline, TDD | pendiente | |
 | T9 | S10 | 2.9.0 | inline, Risk 5 | pendiente | |
@@ -44,3 +44,11 @@ Fuera del código (lo hace el usuario): regenerar credenciales de Google Cloud y
 - **L1 (pedido original):** "lee el md de docs para q  hagamos el sprint 0, los commits llevaran el 2.x.x - Description"
 - **L2:** Formato de versión elegido: "Minor por corrección, patch por commit".
 - **L3 (evidencia):** `.gitignore` termina en `credentials.json: client_secrets.jsonclient_secrets.json` y ambos archivos están versionados (`git ls-files`). `SECRET_KEY` con default en `settings.py:30`; `except Exception` en `empresas/middleware.py:73` y `:87`; `'/admin/'` en `:83`; `handler403` en `settings.py:492`; zona horaria `America/Mexico_City` en `settings.py:381`. `productos`, `catalogos` y `dashboard` tienen 0 pruebas.
+- **L4:** `es-ec` con punto decimal (decisión del usuario): `FORMAT_MODULE_PATH` reutiliza los formatos de es_MX porque 50 plantillas imprimen números sin `unlocalize`.
+- **L5 (evidencia):** el verificador de T4 detectó que el healthcheck de Railway (`railway.toml` healthcheckPath "/") recibiría 301; se añadió `SECURE_REDIRECT_EXEMPT = [r'^$']`. HSTS preload (W021) silenciado a propósito.
+- **L6 (fuga real):** `ProductoForm` no filtraba `tipo_producto` por empresa (mostraba y aceptaba tipos de otras empresas). Corregido en da4545a.
+- **L7 (sospecha):** `ventas/views.py` `crear_venta` con `factura_sin_datos` hace `Cliente.objects.get_or_create(ruc_cedula=<POST ruc_cliente>)` sin filtrar por empresa, renombra y asocia el cliente a la empresa actual.
+- **L8:** Pruebas locales con `DATABASE_URL=sqlite:///db_pruebas.sqlite3` (Neon tarda >15 min).
+- **L9 (GGA bloquea 2.6.1):** "If an empresa has no client with RUC `9999999999` yet, the code reuses the global "consumidor final" client [...] empresa A keeps whatever name empresa B gave that client." Decisión del usuario: "Guardar el nombre en la venta (recomendado)": campo nuevo `nombre_cliente` en `Venta` con migración (copia del nombre al vender, como `ruc_cliente`), y el consumidor final deja de aparecer en la lista de clientes de cada empresa. El rediseño "un cliente por empresa" queda como historia del Sprint 1.
+- **L10 (hallazgo previo):** `makemigrations --check` propone `productos/0007_alter_producto_precio...`: un cambio de modelo de `productos` anterior al sprint (commit "Validaciones precios") quedó sin migración. No se toca en T6; decide el usuario.
+- **L11 (GGA, deuda previa):** `Venta.empresa` y `ConfiguracionFactura.empresa` tenían `default=1` (asignaban datos a la empresa 1 en silencio): se quita en 2.6.1 con migración 0008. Fuera de T6 quedan, como T13: `productos/sheets_sync.py` guarda la URL de la hoja en la caché global `'last_sheet_url'` (compartida entre empresas) y activa `OAUTHLIB_INSECURE_TRANSPORT=1` también en producción.

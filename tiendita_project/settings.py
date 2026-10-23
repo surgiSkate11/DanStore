@@ -27,10 +27,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ============================================================
 
-SECRET_KEY = config(
-    'SECRET_KEY',
-    default='django-insecure-%ufqav673r6x8-0k(mzj+_$k-+6l$w(ktrc62g0gkx$^f!hg7%'
-)
+# Sin default: si falta la variable, Django no arranca.
+SECRET_KEY = config('SECRET_KEY')
 
 DEBUG = config(
     'DEBUG',
@@ -376,9 +374,13 @@ AUTHENTICATION_BACKENDS = [
 # INTERNATIONALIZATION
 # ============================================================
 
-LANGUAGE_CODE = 'es-mx'
+LANGUAGE_CODE = 'es-ec'
 
-TIME_ZONE = 'America/Mexico_City'
+TIME_ZONE = 'America/Guayaquil'
+
+# es-ec usa los formatos de números de es_MX (punto decimal): las plantillas
+# imprimen precios en inputs y JavaScript sin unlocalize.
+FORMAT_MODULE_PATH = ['tiendita_project.formats']
 
 USE_I18N = True
 
@@ -482,7 +484,31 @@ else:
 # IFRAME
 # ============================================================
 
-X_FRAME_OPTIONS = 'SAMEORIGIN'
+# DENY en todo el sitio; tienda_publica usa SAMEORIGIN para la vista previa
+# de configuracion_tienda.html.
+X_FRAME_OPTIONS = 'DENY'
+
+
+# ============================================================
+# HTTPS (solo producción)
+# ============================================================
+
+# El healthcheck de Railway (railway.toml) pide "/" por HTTP sin pasar por el proxy.
+SECURE_REDIRECT_EXEMPT = [r'^$']
+
+if not DEBUG:
+    # Railway termina TLS en su proxy; sin esto hay bucle de redirecciones.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    # Subir a 31536000 cuando todo vaya confirmado por HTTPS.
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+# HSTS preload es difícil de revertir y exige HSTS de un año: se decide aparte.
+SILENCED_SYSTEM_CHECKS = ['security.W021']
 
 
 # ============================================================

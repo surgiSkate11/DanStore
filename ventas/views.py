@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 from decimal import Decimal
 from datetime import datetime
@@ -6,6 +7,7 @@ from collections import defaultdict
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
 from django.db.models import Sum, Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
@@ -16,6 +18,10 @@ from productos.models import Producto
 from .models import Venta, DetalleVenta, ConfiguracionFactura
 from clientes.models import Cliente
 from empresas.mixins import requiere_modulo
+
+RUC_CONSUMIDOR_FINAL = '9999999999'
+
+logger = logging.getLogger(__name__)
 
 
 # ── VISTAS DE VENTAS ──────────────────────────────────────────────────────────
@@ -101,6 +107,11 @@ def crear_venta(request):
     """Crea una nueva venta/factura"""
 
     if request.method == 'POST':
+        # Sin empresa no se crea nada: nunca caer en los datos de otra empresa.
+        if not getattr(request, 'empresa', None):
+            messages.error(request, 'Tu usuario no tiene una empresa asignada para registrar ventas.')
+            return redirect('lista_ventas')
+
         # Interceptar petición AJAX del modal de Creación de Cliente
         if request.POST.get('action') == 'crear_cliente':
             nombre = request.POST.get('nombre', '').strip()
@@ -126,7 +137,7 @@ def crear_venta(request):
                         'ruc_cedula': cliente.ruc_cedula,
                         'telefono': cliente.telefono,
                         'direccion': cliente.direccion,
-                        'compras': cliente.cantidad_ventas()
+                        'compras': Venta.objects.filter(cliente=cliente, empresa=request.empresa).count()
                     },
                     'mensaje': 'Cliente con esa Cédula existente asociado a tu empresa exitosamente.'
                 })
@@ -162,12 +173,12 @@ def crear_venta(request):
                     },
                     'mensaje': '¡Cliente creado exitosamente!'
                 })
-            except Exception as e:
-                return JsonResponse({'success': False, 'error': str(e)})
+            except IntegrityError:
+                logger.exception('No se pudo crear el cliente (empresa %s)', request.empresa.id)
+                return JsonResponse({'success': False, 'error': 'No se pudo crear el cliente. Intenta de nuevo.'})
 
-        empresa = getattr(request, 'empresa', None)
-        empresa_id = empresa.id if empresa else 1
-        config = ConfiguracionFactura.obtener_configuracion(empresa_id)
+        empresa = request.empresa
+        config = ConfiguracionFactura.obtener_configuracion(empresa.id)
 
         factura_sin_datos = request.POST.get('factura_sin_datos') == '1'
         cliente_id_o_nombre = request.POST.get('cliente_id', '').strip()
@@ -176,11 +187,29 @@ def crear_venta(request):
         if factura_sin_datos:
             cliente_nombre = (config.texto_consumidor_final or 'CONSUMIDOR FINAL').strip() or 'CONSUMIDOR FINAL'
             cliente_ruc = (request.POST.get('ruc_cliente') or config.id_consumidor_final or '9999999999').strip() or '9999999999'
-            cliente, _ = Cliente.objects.get_or_create(
-                ruc_cedula=cliente_ruc,
-                defaults={'nombre': cliente_nombre, 'telefono': '', 'direccion': '', 'email': None}
-            )
-            if cliente.nombre != cliente_nombre:
+            # El RUC viene del POST: solo se reutiliza un cliente ya ligado a esta empresa.
+            # El RUC genérico de consumidor final es el único que se comparte entre empresas.
+            cliente = Cliente.objects.filter(ruc_cedula=cliente_ruc, empresas=empresa).first()
+            if not cliente:
+                existente = Cliente.objects.filter(ruc_cedula=cliente_ruc).first()
+                if existente is None:
+                    cliente = Cliente.objects.create(
+                        ruc_cedula=cliente_ruc, nombre=cliente_nombre,
+                        telefono='', direccion='', email=None,
+                    )
+                elif cliente_ruc == RUC_CONSUMIDOR_FINAL:
+                    cliente = existente
+                else:
+                    messages.error(request, 'Ya existe un cliente con ese RUC/Cédula en otra empresa y sus datos no están disponibles.')
+                    return redirect('crear_venta')
+            # El consumidor final es una sola fila para todas las empresas: nunca se renombra,
+            # cada venta guarda su propio nombre. Los demás clientes solo se renombran si son
+            # exclusivos de esta empresa.
+            if (
+                cliente.ruc_cedula != RUC_CONSUMIDOR_FINAL
+                and cliente.nombre != cliente_nombre
+                and cliente.empresas.exclude(pk=getattr(empresa, 'pk', None)).count() == 0
+            ):
                 cliente.nombre = cliente_nombre
                 cliente.save(update_fields=['nombre'])
         elif cliente_id_o_nombre:
@@ -214,6 +243,9 @@ def crear_venta(request):
         if empresa:
             cliente.empresas.add(empresa)
 
+        # Nombre con el que se factura: el de la empresa para el consumidor final, no el de la fila compartida.
+        nombre_en_venta = cliente_nombre if factura_sin_datos else cliente.nombre
+
         productos_seleccionados = request.POST.getlist('productos')
         if not productos_seleccionados:
             messages.error(request, 'Debes seleccionar al menos un producto para la venta.')
@@ -230,6 +262,10 @@ def crear_venta(request):
                 messages.error(request, f'El producto "{producto.nombre}" ya no está disponible.')
                 return redirect('crear_venta')
             productos_a_vender.append(producto)
+
+        if not productos_a_vender:
+            messages.error(request, 'Los productos seleccionados no están disponibles.')
+            return redirect('crear_venta')
 
         if productos_a_vender:
             cantidades = {}
@@ -250,6 +286,7 @@ def crear_venta(request):
             descripcion_otros=request.POST.get('descripcion_otros', ''),
             notas=request.POST.get('notas', ''),
             metodo_pago=request.POST.get('metodo_pago', 'efectivo'),
+            nombre_cliente=nombre_en_venta,
             ruc_cliente=request.POST.get('ruc_cliente', '') or (config.id_consumidor_final if factura_sin_datos else ''),
         )
 
@@ -267,7 +304,7 @@ def crear_venta(request):
 
                 if nuevo_stock <= 0:
                     producto.estado = 'vendido'
-                    producto.vendido_a = cliente.nombre
+                    producto.vendido_a = nombre_en_venta
                 else:
                     producto.estado = 'disponible'
                     producto.vendido_a = ''
@@ -286,7 +323,8 @@ def crear_venta(request):
 
     # OPTIMIZACIÓN: Cargar clientes sin N+1 Queries y calcular compras masivamente
     empresa = getattr(request, 'empresa', None)
-    clientes_bd = Cliente.objects.filter(empresas=empresa).annotate(
+    # El consumidor final es compartido entre empresas: no se ofrece como cliente.
+    clientes_bd = Cliente.objects.filter(empresas=empresa).exclude(ruc_cedula=RUC_CONSUMIDOR_FINAL).annotate(
         num_compras=Count('ventas', filter=Q(ventas__empresa=empresa) & ~Q(ventas__estado='anulada'))
     )
     
@@ -481,7 +519,6 @@ def generar_comprobante_deuda_pdf(request, cliente_nombre):
 @requiere_modulo('ventas', accion='editar')
 def configuracion_facturas(request):
     """Configura logo, colores y datos de la empresa para las facturas"""
-    # Obtención segura de la empresa (fallback a id=1 si el middleware no la inyectó)
     empresa = request.empresa
     empresa_id = empresa.id
 
