@@ -181,9 +181,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
 
-    'cloudinary_storage',
-
     'django.contrib.staticfiles',
+
+    # Debe ir DESPUÉS de staticfiles: su comando collectstatic reemplaza al de
+    # Django y no copia nada si el almacenamiento estático no es el de Cloudinary
+    # (ver comentario de STORAGES). Aquí solo aporta sus otros comandos.
+    'cloudinary_storage',
 
     'cloudinary',
 
@@ -446,11 +449,17 @@ STATICFILES_DIRS = [
 ]
 
 # ============================================================
-# ALMACENAMIENTO: sintaxis clásica (Django 4.2 la soporta
-# completamente), en vez de STORAGES (sintaxis nueva de 4.2).
-# Con STORAGES, collectstatic dejó de encontrar archivos
-# (0 static files copied) — con esta sintaxis clásica,
-# probada, sí los encuentra y copia correctamente.
+# ALMACENAMIENTO (STORAGES; Django 5.1 quitó DEFAULT_FILE_STORAGE
+# y STATICFILES_STORAGE).
+#
+# Un intento anterior con STORAGES dejó collectstatic en "0 static
+# files copied". La causa no era STORAGES: el comando collectstatic
+# de django-cloudinary-storage reemplaza al de Django cuando la app
+# 'cloudinary_storage' va ANTES de 'django.contrib.staticfiles', y su
+# copy_file solo copia si STATICFILES_STORAGE es StaticCloudinaryStorage
+# (o con --upload-unhashed-files); con whitenoise no copia nada. Por
+# eso en INSTALLED_APPS va después de staticfiles: gana el comando de
+# Django (hay una prueba en tiendita_project/tests.py).
 #
 # CompressedStaticFilesStorage (sin "Manifest"): comprime con
 # gzip/brotli pero NO reescribe URLs internas ni exige que cada
@@ -458,8 +467,14 @@ STATICFILES_DIRS = [
 # evita por completo la clase de error "MissingFileError" que
 # tronaba el build antes.
 # ============================================================
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+STORAGES = {
+    'default': {
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 # ============================================================
 # MEDIA FILES

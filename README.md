@@ -1,6 +1,6 @@
 # DanStore
 
-Tienda multiempresa hecha en Django 4.2. Cada empresa maneja sus propios productos, catálogos en PDF, clientes, ventas y sorteos, y cobra con Stripe o PayPal. Los datos de una empresa nunca son visibles para otra. Las imágenes se guardan en Cloudinary y la aplicación se despliega en Render.
+Tienda multiempresa hecha en Django 5.2. Cada empresa maneja sus propios productos, catálogos en PDF, clientes, ventas y sorteos, y cobra con Stripe o PayPal. Los datos de una empresa nunca son visibles para otra. Las imágenes se guardan en Cloudinary y la aplicación se despliega en Render.
 
 ## Instalación local
 
