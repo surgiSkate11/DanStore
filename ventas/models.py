@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -7,6 +7,14 @@ from django.db import transaction
 from productos.models import Producto
 from empresas.models import Empresa
 from clientes.models import Cliente
+
+
+CENTAVO = Decimal('0.01')
+
+
+def redondear_dinero(valor):
+    """Redondea a centavos con ROUND_HALF_UP (0.045 -> 0.05)."""
+    return Decimal(valor).quantize(CENTAVO, rounding=ROUND_HALF_UP)
 
 
 class Venta(models.Model):
@@ -51,6 +59,14 @@ class Venta(models.Model):
     fecha = models.DateTimeField(default=timezone.now, verbose_name="Fecha de venta")
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Subtotal")
     iva = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="IVA")
+    porcentaje_iva = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Porcentaje de IVA aplicado",
+        validators=[
+            MinValueValidator(0, message="El porcentaje de IVA no puede ser negativo."),
+            MaxValueValidator(30, message="El porcentaje de IVA no puede ser mayor a 30."),
+        ],
+        help_text="Se guarda al facturar. Vacío en ventas antiguas cuyo porcentaje no se conoce.",
+    )
     descuento = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Descuento")
     envio = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Costo de envío")
     otros_gastos = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Otros gastos")
@@ -112,22 +128,36 @@ class Venta(models.Model):
             return f"FAC-{str(ultimo_num + 1).zfill(6)}"
     
     def calcular_total(self):
-        """Calcula el subtotal, IVA y total final de la venta."""
+        """Única fuente del cálculo de la factura (los precios de producto no incluyen IVA).
+
+        subtotal = suma de los precios de los detalles
+        base     = subtotal - descuento (nunca menor que 0)
+        iva      = base * porcentaje_iva / 100
+        total    = base + iva + envío + otros gastos (estos dos sin IVA, ver L8)
+
+        El porcentaje queda guardado en la venta la primera vez; después no se
+        vuelve a leer la configuración, así editar una factura vieja no la recalcula.
+        """
         resultado = self.detalles.aggregate(suma_total=models.Sum('precio_unitario'))
-        self.subtotal = resultado['suma_total'] or 0
+        subtotal = redondear_dinero(resultado['suma_total'] or 0)
 
-        empresa_id = self.empresa_id or (self.empresa.id if self.empresa else None)
-        porcentaje_iva = Decimal('0')
-        if empresa_id:
-            config = ConfiguracionFactura.obtener_configuracion(empresa_id)
-            porcentaje_iva = Decimal(str(config.porcentaje_iva or '0'))
+        if self.porcentaje_iva is None:
+            config = ConfiguracionFactura.obtener_configuracion(self.empresa_id)
+            self.porcentaje_iva = Decimal(str(config.porcentaje_iva or '0'))
 
-        self.iva = (self.subtotal * porcentaje_iva / Decimal('100')).quantize(Decimal('0.01'))
-        self.total = self.subtotal + self.iva - self.descuento + self.envio + self.otros_gastos
+        base_imponible = max(subtotal - self.descuento, Decimal('0'))
+        iva = redondear_dinero(base_imponible * self.porcentaje_iva / Decimal('100'))
 
-        self.save(update_fields=['subtotal', 'iva', 'total', 'actualizado_en'])
-    
-    
+        self.subtotal = subtotal
+        self.iva = iva
+        # El envío y los otros gastos se suman sin IVA (confirmado por el dueño, ver L8).
+        self.total = redondear_dinero(base_imponible + iva + self.envio + self.otros_gastos)
+
+        self.save(update_fields=[
+            'subtotal', 'iva', 'total', 'porcentaje_iva',
+            'descuento', 'envio', 'otros_gastos', 'actualizado_en',
+        ])
+
     def cantidad_productos(self):
         """Cuenta la cantidad de productos en la venta"""
         return self.detalles.count()

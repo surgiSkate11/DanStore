@@ -847,7 +847,9 @@ def sincronizar_ventas_desde_sheets(empresa):
                     empresa=empresa,
                     cliente=cliente,
                     notas='',
-                    origen='sheets'
+                    origen='sheets',
+                    # Los precios del Sheet son finales: la venta nunca recibe IVA, ni al editarla.
+                    porcentaje_iva=Decimal('0'),
                 )
                 
                 # Calcular totales y preparar detalles

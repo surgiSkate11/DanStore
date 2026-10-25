@@ -10,6 +10,7 @@ from django.urls import reverse
 from empresas.testing import crear_empresa_con_dueno
 from productos import sheets_sync
 from productos.models import Producto, TipoProducto
+from ventas.models import ConfiguracionFactura, Venta
 
 
 class AislamientoProductosTests(TestCase):
@@ -224,3 +225,49 @@ class SheetsSyncOAuthTests(TestCase):
                 importlib.reload(sheets_sync)
                 self.assertEqual(os.environ.get('OAUTHLIB_INSECURE_TRANSPORT'), esperado)
         importlib.reload(sheets_sync)
+
+
+class SheetsVentaSinIvaTests(TestCase):
+    """Los precios de Google Sheets son finales: sus ventas se crean y se editan sin IVA."""
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('tienda-sheets')
+        self.tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Ropa')
+        self.producto = Producto.objects.create(
+            empresa=self.empresa, nombre='Camisa', tipo_producto=self.tipo,
+            precio=Decimal('10.00'), precio_real=Decimal('8.00'), stock=0,
+            estado='vendido', vendido_a='Juan Perez',
+        )
+        self.client.force_login(self.dueno)
+
+    def test_venta_de_sheets_se_crea_sin_iva_y_conserva_su_descuento(self):
+        resultado = sheets_sync.sincronizar_ventas_desde_sheets(self.empresa)
+
+        self.assertEqual(resultado['ventas_creadas'], 1)
+        venta = Venta.objects.get(empresa=self.empresa)
+        self.assertEqual(venta.origen, 'sheets')
+        self.assertEqual(venta.porcentaje_iva, Decimal('0'))
+        self.assertEqual(venta.iva, Decimal('0'))
+        self.assertEqual(venta.subtotal, Decimal('10.00'))
+        self.assertEqual(venta.descuento, Decimal('2.00'))
+        self.assertEqual(venta.total, Decimal('8.00'))
+
+    def test_venta_de_sheets_sigue_sin_iva_despues_de_editarla(self):
+        Producto.objects.filter(pk=self.producto.pk).update(precio_real=Decimal('10.00'))
+        sheets_sync.sincronizar_ventas_desde_sheets(self.empresa)
+        venta = Venta.objects.get(empresa=self.empresa)
+        # Aunque la configuración de la empresa cobre IVA, la venta de Sheets no lo recibe.
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('15.00')},
+        )
+
+        response = self.client.post(reverse('editar_venta', args=[venta.id]), {
+            'descuento': '0', 'envio': '3.00', 'otros_gastos': '0',
+            'descripcion_otros': '', 'notas': 'ajuste', 'metodo_pago': 'efectivo',
+        })
+
+        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        venta.refresh_from_db()
+        self.assertEqual(venta.iva, Decimal('0.00'))
+        self.assertEqual(venta.porcentaje_iva, Decimal('0.00'))
+        self.assertEqual(venta.total, Decimal('13.00'))

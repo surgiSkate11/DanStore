@@ -871,7 +871,8 @@ class GastosEditarVentaTests(GastosVentaBase):
         self.assertEqual(self.venta.descuento, Decimal('5.00'))
         self.assertEqual(self.venta.envio, Decimal('2.00'))
         self.assertEqual(self.venta.otros_gastos, Decimal('1.00'))
-        self.assertEqual(self.venta.total, Decimal('113.00'))
+        # T3: base 100 - 5 = 95; IVA 15 % = 14.25; + envío 2 + otros 1 (sin IVA).
+        self.assertEqual(self.venta.total, Decimal('112.25'))
         self.assertEqual(self.venta.notas, 'original')
         self.assertEqual(self.venta.metodo_pago, 'efectivo')
         self.producto.refresh_from_db()
@@ -911,11 +912,150 @@ class GastosEditarVentaTests(GastosVentaBase):
         self.assertEqual(self.venta.otros_gastos, Decimal('0.25'))
         self.assertEqual(self.venta.notas, 'cambiada')
         self.assertEqual(self.venta.metodo_pago, 'tarjeta')
-        # Cálculo vigente (cambia en T3): subtotal + IVA 15 % sobre el subtotal − descuento + envío + otros.
-        self.assertEqual(self.venta.total, Decimal('108.75'))
+        # T3: base 100 - 10 = 90; IVA 15 % = 13.50; + envío 3.50 + otros 0.25 (sin IVA).
+        self.assertEqual(self.venta.total, Decimal('107.25'))
 
     def test_valores_vacios_cuentan_como_cero(self):
         response = self.client.post(self.url, self.datos_edicion(descuento='', envio='', otros_gastos=''))
         self.assertRedirects(response, reverse('detalle_venta', args=[self.venta.id]))
         self.venta.refresh_from_db()
         self.assertEqual((self.venta.descuento, self.venta.envio, self.venta.otros_gastos), (0, 0, 0))
+
+
+class CalculoFacturaTests(GastosVentaBase):
+    """S1/S4: el IVA se calcula sobre subtotal - descuento, con redondeo HALF_UP y % guardado en la venta."""
+
+    def venta(self, precio, porcentaje=None, **campos):
+        if porcentaje is not None:
+            ConfiguracionFactura.objects.update_or_create(
+                empresa=self.empresa, defaults={'porcentaje_iva': Decimal(porcentaje)},
+            )
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente, **campos)
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal(precio))
+        venta.calcular_total()
+        venta.refresh_from_db()
+        return venta
+
+    def test_iva_se_suma_al_subtotal_sin_descuento(self):
+        venta = self.venta('100.00', '15.00')
+        self.assertEqual(venta.subtotal, Decimal('100.00'))
+        self.assertEqual(venta.iva, Decimal('15.00'))
+        self.assertEqual(venta.total, Decimal('115.00'))
+        self.assertEqual(venta.porcentaje_iva, Decimal('15.00'))
+
+    def test_iva_se_calcula_despues_del_descuento(self):
+        venta = self.venta('100.00', '15.00', descuento=Decimal('10.00'))
+        self.assertEqual(venta.subtotal, Decimal('100.00'))
+        self.assertEqual(venta.iva, Decimal('13.50'))
+        self.assertEqual(venta.total, Decimal('103.50'))
+
+    def test_envio_y_otros_gastos_se_suman_sin_iva(self):
+        venta = self.venta(
+            '100.00', '15.00', descuento=Decimal('10.00'),
+            envio=Decimal('5.00'), otros_gastos=Decimal('2.00'),
+        )
+        self.assertEqual(venta.iva, Decimal('13.50'))
+        self.assertEqual(venta.total, Decimal('110.50'))
+
+    def test_redondeo_half_up_a_centavos(self):
+        venta = self.venta('0.30', '15.00')
+        self.assertEqual(venta.iva, Decimal('0.05'))  # 0.045 sube a 0.05
+        self.assertEqual(venta.total, Decimal('0.35'))
+
+    def test_porcentaje_cero_no_agrega_iva(self):
+        venta = self.venta('100.00', '0.00')
+        self.assertEqual(venta.iva, Decimal('0.00'))
+        self.assertEqual(venta.total, Decimal('100.00'))
+        self.assertEqual(venta.porcentaje_iva, Decimal('0.00'))
+
+    def test_descuento_igual_al_subtotal_deja_solo_los_gastos_sin_iva(self):
+        venta = self.venta('100.00', '15.00', descuento=Decimal('100.00'), envio=Decimal('3.00'))
+        self.assertEqual(venta.iva, Decimal('0.00'))
+        self.assertEqual(venta.total, Decimal('3.00'))
+
+    def test_descuento_mayor_al_subtotal_nunca_da_base_negativa(self):
+        venta = self.venta('100.00', '15.00', descuento=Decimal('150.00'))
+        self.assertEqual(venta.iva, Decimal('0.00'))
+        self.assertEqual(venta.total, Decimal('0.00'))
+
+    def test_el_porcentaje_queda_guardado_al_crear_la_venta(self):
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('15.00')},
+        )
+        response = self.client.post(reverse('crear_venta'), self.datos(descuento='10'))
+        self.assertEqual(response.status_code, 302)
+        venta = Venta.objects.get(empresa=self.empresa)
+        self.assertEqual(venta.porcentaje_iva, Decimal('15.00'))
+        self.assertEqual((venta.subtotal, venta.iva, venta.total), (Decimal('100.00'), Decimal('13.50'), Decimal('103.50')))
+
+    def test_cambiar_la_configuracion_no_recalcula_una_venta_al_editarla(self):
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('15.00')},
+        )
+        self.client.post(reverse('crear_venta'), self.datos())
+        venta = Venta.objects.get(empresa=self.empresa)
+        ConfiguracionFactura.objects.filter(empresa=self.empresa).update(porcentaje_iva=Decimal('12.00'))
+
+        response = self.client.post(reverse('editar_venta', args=[venta.id]), {
+            'descuento': '0', 'envio': '0', 'otros_gastos': '0',
+            'descripcion_otros': '', 'notas': 'sin cambios', 'metodo_pago': 'efectivo',
+        })
+
+        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        venta.refresh_from_db()
+        self.assertEqual(venta.porcentaje_iva, Decimal('15.00'))
+        self.assertEqual(venta.iva, Decimal('15.00'))
+        self.assertEqual(venta.total, Decimal('115.00'))
+
+    def test_venta_antigua_sin_porcentaje_toma_el_de_la_configuracion_y_lo_guarda(self):
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('12.00')},
+        )
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        self.assertIsNone(venta.porcentaje_iva)
+
+        venta.calcular_total()
+
+        venta.refresh_from_db()
+        self.assertEqual(venta.porcentaje_iva, Decimal('12.00'))
+        self.assertEqual((venta.iva, venta.total), (Decimal('12.00'), Decimal('112.00')))
+
+
+class MigracionPorcentajeIvaTests(GastosVentaBase):
+    """La migración 0010 asigna el % actual de cada empresa sin tocar los importes históricos."""
+
+    def test_ventas_existentes_reciben_el_porcentaje_de_su_empresa_sin_cambiar_importes(self):
+        migracion = importlib.import_module('ventas.migrations.0010_venta_porcentaje_iva')
+        otra_empresa, _ = crear_empresa_con_dueno('sin-config')
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('12.00')},
+        )
+        ConfiguracionFactura.objects.filter(empresa=otra_empresa).delete()
+
+        # Importes "históricos" calculados con la regla vieja (IVA sobre el subtotal, antes del descuento).
+        historicos = dict(
+            subtotal=Decimal('100.00'), iva=Decimal('15.00'), descuento=Decimal('10.00'),
+            envio=Decimal('2.00'), otros_gastos=Decimal('1.00'), total=Decimal('108.00'),
+        )
+        con_config = Venta.objects.create(empresa=self.empresa, cliente=self.cliente, **historicos)
+        sin_config = Venta.objects.create(empresa=otra_empresa, cliente=self.cliente, **historicos)
+        Venta.objects.filter(pk__in=[con_config.pk, sin_config.pk]).update(porcentaje_iva=None)
+
+        migracion.asignar_porcentaje_iva(django_apps, None)
+
+        for venta, esperado in ((con_config, Decimal('12.00')), (sin_config, Decimal('15.00'))):
+            venta.refresh_from_db()
+            self.assertEqual(venta.porcentaje_iva, esperado)
+            for campo, valor in historicos.items():
+                self.assertEqual(getattr(venta, campo), valor, campo)
+
+    def test_la_migracion_no_pisa_un_porcentaje_ya_guardado(self):
+        migracion = importlib.import_module('ventas.migrations.0010_venta_porcentaje_iva')
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('12.00')},
+        )
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente, porcentaje_iva=Decimal('8.00'))
+        migracion.asignar_porcentaje_iva(django_apps, None)
+        venta.refresh_from_db()
+        self.assertEqual(venta.porcentaje_iva, Decimal('8.00'))
