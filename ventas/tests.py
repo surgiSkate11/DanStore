@@ -720,3 +720,202 @@ class PorcentajeIvaAdminTests(TestCase):
             with self.subTest(valor=valor):
                 form = self.formulario_con(valor)
                 self.assertTrue(form.is_valid(), form.errors)
+
+
+class GastosVentaBase(TestCase):
+    """Preparación común: empresa con dueño, un producto de $100 con stock 3 y un cliente."""
+
+    CAMPOS = {'descuento': 'descuento', 'envio': 'envío', 'otros_gastos': 'otros gastos'}
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('gastos-tienda')
+        tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Ropa')
+        self.producto = Producto.objects.create(
+            empresa=self.empresa, nombre='Camisa', tipo_producto=tipo,
+            precio=Decimal('100.00'), stock=3, estado='disponible',
+        )
+        self.cliente = Cliente.objects.create(nombre='Ana García', ruc_cedula='1234567890')
+        self.cliente.empresas.add(self.empresa)
+        self.client.force_login(self.dueno)
+
+    def datos(self, unidades=1, **extra):
+        datos = {
+            'cliente_id': str(self.cliente.id),
+            'productos': [str(self.producto.id)] * unidades,
+            'descuento': '0', 'envio': '0', 'otros_gastos': '0',
+            'descripcion_otros': '', 'notas': '', 'metodo_pago': 'efectivo',
+            'ruc_cliente': '',
+        }
+        datos.update(extra)
+        return datos
+
+    def casos_invalidos(self, campo):
+        etiqueta = self.CAMPOS[campo]
+        texto = f'Ingresa un valor numérico válido para {etiqueta}.'
+        return {
+            'abc': texto,
+            'NaN': texto,
+            'Infinity': texto,
+            '1e3': texto,
+            '-1': f'El valor de {etiqueta} no puede ser negativo.',
+            '-0.01': f'El valor de {etiqueta} no puede ser negativo.',
+            '1.234': f'El valor de {etiqueta} admite como máximo 2 decimales.',
+            '100000000': f'El valor de {etiqueta} no puede superar 99999999.99.',
+        }
+
+
+class GastosCrearVentaTests(GastosVentaBase):
+    """S3 en crear_venta: descuento, envío y otros gastos se validan en el servidor."""
+
+    def assertNadaCambio(self):
+        self.assertEqual(Venta.objects.count(), 0)
+        self.assertEqual(DetalleVenta.objects.count(), 0)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 3)
+        self.assertEqual(self.producto.estado, 'disponible')
+
+    def test_valores_invalidos_no_crean_venta_ni_tocan_el_stock(self):
+        for campo in self.CAMPOS:
+            for valor, mensaje in self.casos_invalidos(campo).items():
+                with self.subTest(campo=campo, valor=valor):
+                    response = self.client.post(reverse('crear_venta'), self.datos(**{campo: valor}))
+                    self.assertEqual(response.status_code, 302)
+                    self.assertEqual(response.url, reverse('crear_venta'))
+                    self.assertIn(mensaje, mensajes(response))
+                    self.assertNadaCambio()
+
+    def test_descuento_mayor_al_subtotal_se_rechaza(self):
+        response = self.client.post(reverse('crear_venta'), self.datos(descuento='100.01'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('crear_venta'))
+        self.assertIn('El descuento no puede ser mayor al subtotal ($100.00).', mensajes(response))
+        self.assertNadaCambio()
+
+    def test_descuento_se_compara_con_el_subtotal_de_todas_las_unidades(self):
+        response = self.client.post(reverse('crear_venta'), self.datos(unidades=2, descuento='200.01'))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('El descuento no puede ser mayor al subtotal ($200.00).', mensajes(response))
+        self.assertNadaCambio()
+
+        response = self.client.post(reverse('crear_venta'), self.datos(unidades=2, descuento='150'))
+        self.assertEqual(response.status_code, 302)
+        venta = Venta.objects.get()
+        self.assertEqual(venta.descuento, Decimal('150.00'))
+
+    def test_descuento_igual_al_subtotal_se_acepta(self):
+        response = self.client.post(reverse('crear_venta'), self.datos(descuento='100'))
+        venta = Venta.objects.get()
+        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(venta.descuento, Decimal('100.00'))
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 2)
+
+    def test_valores_validos_se_guardan(self):
+        response = self.client.post(
+            reverse('crear_venta'),
+            self.datos(descuento='10.5', envio='5', otros_gastos='2.25'),
+        )
+        venta = Venta.objects.get()
+        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(venta.descuento, Decimal('10.50'))
+        self.assertEqual(venta.envio, Decimal('5.00'))
+        self.assertEqual(venta.otros_gastos, Decimal('2.25'))
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 2)
+
+    def test_valores_vacios_cuentan_como_cero(self):
+        response = self.client.post(
+            reverse('crear_venta'),
+            self.datos(descuento='', envio=' ', otros_gastos=''),
+        )
+        venta = Venta.objects.get()
+        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual((venta.descuento, venta.envio, venta.otros_gastos), (0, 0, 0))
+
+    def test_el_formulario_declara_los_limites_de_los_campos(self):
+        html = self.client.get(reverse('crear_venta')).content.decode()
+
+        def etiqueta(identificador):
+            inicio = html.rindex('<input', 0, html.index(f'id="{identificador}"'))
+            return html[inicio:html.index('>', inicio)]
+
+        self.assertIn('min="0"', etiqueta('inputEnvio'))
+        self.assertIn('min="0"', etiqueta('inputOtrosGastos'))
+        self.assertIn('min="0"', etiqueta('inputDescuento'))
+        self.assertIn('max="100"', etiqueta('inputDescuento'))
+
+
+class GastosEditarVentaTests(GastosVentaBase):
+    """S3 en editar_venta: un dato inválido deja la venta exactamente como estaba."""
+
+    def setUp(self):
+        super().setUp()
+        self.venta = Venta.objects.create(
+            empresa=self.empresa, cliente=self.cliente, descuento=Decimal('5.00'),
+            envio=Decimal('2.00'), otros_gastos=Decimal('1.00'), notas='original',
+        )
+        DetalleVenta.objects.create(venta=self.venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        self.venta.calcular_total()
+        self.url = reverse('editar_venta', args=[self.venta.id])
+
+    def datos_edicion(self, **extra):
+        datos = {
+            'descuento': '5.00', 'envio': '2.00', 'otros_gastos': '1.00',
+            'descripcion_otros': 'Embalaje', 'notas': 'cambiada', 'metodo_pago': 'tarjeta',
+        }
+        datos.update(extra)
+        return datos
+
+    def assertVentaIntacta(self):
+        self.venta.refresh_from_db()
+        self.assertEqual(self.venta.descuento, Decimal('5.00'))
+        self.assertEqual(self.venta.envio, Decimal('2.00'))
+        self.assertEqual(self.venta.otros_gastos, Decimal('1.00'))
+        self.assertEqual(self.venta.total, Decimal('113.00'))
+        self.assertEqual(self.venta.notas, 'original')
+        self.assertEqual(self.venta.metodo_pago, 'efectivo')
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 3)
+
+    def test_valores_invalidos_dejan_la_venta_sin_cambios(self):
+        for campo in self.CAMPOS:
+            for valor, mensaje in self.casos_invalidos(campo).items():
+                with self.subTest(campo=campo, valor=valor):
+                    response = self.client.post(self.url, self.datos_edicion(**{campo: valor}))
+                    self.assertEqual(response.status_code, 302)
+                    self.assertEqual(response.url, self.url)
+                    self.assertIn(mensaje, mensajes(response))
+                    self.assertVentaIntacta()
+
+    def test_descuento_mayor_al_subtotal_se_rechaza(self):
+        response = self.client.post(self.url, self.datos_edicion(descuento='100.01'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.url)
+        self.assertIn('El descuento no puede ser mayor al subtotal ($100.00).', mensajes(response))
+        self.assertVentaIntacta()
+
+    def test_descuento_igual_al_subtotal_se_acepta(self):
+        response = self.client.post(self.url, self.datos_edicion(descuento='100'))
+        self.assertRedirects(response, reverse('detalle_venta', args=[self.venta.id]))
+        self.venta.refresh_from_db()
+        self.assertEqual(self.venta.descuento, Decimal('100.00'))
+
+    def test_valores_validos_se_guardan_y_recalculan_el_total(self):
+        response = self.client.post(
+            self.url, self.datos_edicion(descuento='10', envio='3.5', otros_gastos='0.25'),
+        )
+        self.assertRedirects(response, reverse('detalle_venta', args=[self.venta.id]))
+        self.venta.refresh_from_db()
+        self.assertEqual(self.venta.descuento, Decimal('10.00'))
+        self.assertEqual(self.venta.envio, Decimal('3.50'))
+        self.assertEqual(self.venta.otros_gastos, Decimal('0.25'))
+        self.assertEqual(self.venta.notas, 'cambiada')
+        self.assertEqual(self.venta.metodo_pago, 'tarjeta')
+        # Cálculo vigente (cambia en T3): subtotal + IVA 15 % sobre el subtotal − descuento + envío + otros.
+        self.assertEqual(self.venta.total, Decimal('108.75'))
+
+    def test_valores_vacios_cuentan_como_cero(self):
+        response = self.client.post(self.url, self.datos_edicion(descuento='', envio='', otros_gastos=''))
+        self.assertRedirects(response, reverse('detalle_venta', args=[self.venta.id]))
+        self.venta.refresh_from_db()
+        self.assertEqual((self.venta.descuento, self.venta.envio, self.venta.otros_gastos), (0, 0, 0))

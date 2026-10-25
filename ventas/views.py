@@ -11,11 +11,12 @@ from django.db import IntegrityError
 from django.db.models import Sum, Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.urls import reverse
 from productos.models import Producto
-from .forms import PorcentajeIvaForm
+from .forms import PorcentajeIvaForm, leer_gastos
 from .models import Venta, DetalleVenta, ConfiguracionFactura
 from clientes.models import Cliente
 from empresas.mixins import requiere_modulo
@@ -278,12 +279,16 @@ def crear_venta(request):
                     messages.error(request, f'No puedes vender {cantidad} unidades de "{producto.nombre}" porque solo quedan {producto.stock} en stock.')
                     return redirect('crear_venta')
 
+        try:
+            gastos = leer_gastos(request.POST, sum(Decimal(p.precio or 0) for p in productos_a_vender))
+        except ValidationError as error:
+            messages.error(request, error.message)
+            return redirect('crear_venta')
+
         venta = Venta.objects.create(
             empresa=empresa,
             cliente=cliente,
-            descuento=Decimal(request.POST.get('descuento', 0) or 0),
-            envio=Decimal(request.POST.get('envio', 0) or 0),
-            otros_gastos=Decimal(request.POST.get('otros_gastos', 0) or 0),
+            **gastos,
             descripcion_otros=request.POST.get('descripcion_otros', ''),
             notas=request.POST.get('notas', ''),
             metodo_pago=request.POST.get('metodo_pago', 'efectivo'),
@@ -393,9 +398,15 @@ def editar_venta(request, venta_id):
         messages.info(request, 'Esta factura se sincronizó desde Google Sheets. Puedes ajustarla libremente, pero los cambios solo se reflejarán en este sistema.')
 
     if request.method == 'POST':
-        venta.descuento = Decimal(request.POST.get('descuento', 0))
-        venta.envio = Decimal(request.POST.get('envio', 0))
-        venta.otros_gastos = Decimal(request.POST.get('otros_gastos', 0))
+        try:
+            gastos = leer_gastos(request.POST, venta.detalles.aggregate(s=Sum('precio_unitario'))['s'])
+        except ValidationError as error:
+            messages.error(request, error.message)
+            return redirect('editar_venta', venta_id=venta.id)
+
+        venta.descuento = gastos['descuento']
+        venta.envio = gastos['envio']
+        venta.otros_gastos = gastos['otros_gastos']
         venta.descripcion_otros = request.POST.get('descripcion_otros', '')
         venta.notas = request.POST.get('notas', '')
         venta.metodo_pago = request.POST.get('metodo_pago', venta.metodo_pago)
