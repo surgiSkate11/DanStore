@@ -19,8 +19,8 @@ Versiones 3.1.0–3.7.0 (minor por tarea, patch por commit). Pruebas: `ADMIN_URL
 
 | ID | Specs | Versión | Ruta | Estado | Commit |
 | --- | --- | --- | --- | --- | --- |
-| T1 | S2, S9 | 3.1.0 | worker, TDD | pendiente | |
-| T2 | S3, S9 | 3.2.0 | worker, TDD | pendiente | |
+| T1 | S2, S9 | 3.1.0 | worker, TDD | hecho | c3dab20 |
+| T2 | S3, S9 | 3.2.0 | worker, TDD | hecho | adc43d9 |
 | T3 | S1, S4, S9 | 3.3.0 | worker, TDD, Risk 1 (migración y regla tributaria) | pendiente | |
 | T4 | S5, S9 | 3.4.0 | worker, TDD, Risk 4 (concurrencia) | pendiente | |
 | T5 | S6, S9 | 3.5.0 | worker, TDD | pendiente | |
@@ -41,3 +41,5 @@ Versiones 3.1.0–3.7.0 (minor por tarea, patch por commit). Pruebas: `ADMIN_URL
   - Tras guardar, la misma pantalla muestra "Venta N° … guardada — $total" con: Imprimir ticket (Enter; iframe oculto con `factura_pdf?html=1`, sin abrir pestañas), Descargar PDF, Compartir (reutiliza `compartirDocumento` de `base.html`), Nueva venta (N; limpia productos y cliente) y Ver detalle.
   - "Imprimir al guardar" es una preferencia por dispositivo (localStorage), apagada por defecto: sin migración y cada caja decide.
   - No cambian: `detalle_venta`, `factura_pdf`, `editar_venta`, `lista_ventas`, compartir. Fuera de alcance: factura electrónica autorizada por el SRI (proveedor externo, guía sección 1).
+- **L6 (T1, 3.1.0, c3dab20, 2026-10-25):** IVA validado en servidor. `ventas/forms.py` nuevo (`PorcentajeIvaForm`, 0–30, 2 decimales, mensajes en español), validadores en `ConfiguracionFactura.porcentaje_iva` (`models.py`) y migración `0009_valida_porcentaje_iva` (solo validadores, no toca datos). `configuracion_facturas` valida antes de tocar nada: si el IVA es inválido responde 200 con el error y no guarda ningún campo; si la clave falta en el POST conserva el valor actual. Input con `min="0" max="30" step="0.01"`. RED observado: 10 fallos y 6 errores en 8 pruebas (`-5`, `-0.01`, `30.01`, `150`, `1e9` se guardaban con 302; `abc`, `NaN`, `Infinity`, `-Infinity`, `15.555` y vacío daban excepción/500; el formulario del admin aceptaba `-5`, `150`, `30.01`). GREEN: 8/8. Suite completa: 150 pruebas OK. Pendiente menor: al rechazar el IVA, los demás campos del formulario vuelven a mostrar lo guardado, no lo escrito (observación de GGA).
+- **L7 (T2, 3.2.0, adc43d9, 2026-10-25):** `leer_monto` y `leer_gastos` en `ventas/forms.py`, usados por `crear_venta` y `editar_venta` (una sola lógica). Rechazan texto, NaN/Infinity, notación científica, negativos, más de 2 decimales, montos > 99999999.99 y descuento > subtotal sin IVA (suma de precios; en edición, de los detalles de la venta); vacío cuenta como 0. Con error: `messages.error` en español, redirect a la misma pantalla, sin Venta nueva / venta sin cambios / stock intacto. Descuento igual al subtotal se acepta. Las plantillas ya traían `min="0"` en envío/otros y `min="0" max="100"` en el descuento (%): se fijó con una prueba, sin cambios en `crear_venta.html`. RED observado: 12 pruebas, 3 fallos y 50 errores (negativos y descuento > subtotal se guardaban; texto, NaN y espacios daban `InvalidOperation`/`ValidationError` = 500). GREEN: 12/12. Suite completa: 162 pruebas OK; `makemigrations --check` sin cambios. Queda para T5 que la edición muestra el descuento en $ dentro del input de % (L2).
