@@ -3,7 +3,9 @@ from decimal import Decimal
 from unittest import mock
 
 from django.apps import apps as django_apps
+from django.contrib import admin as admin_site
 from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db import IntegrityError
@@ -559,3 +561,162 @@ class ConsumidorFinalCompartidoTests(TestCase):
         venta_b.refresh_from_db()
         self.assertEqual(venta_a.nombre_cliente, 'CONSUMIDOR FINAL')
         self.assertEqual(venta_b.nombre_cliente, 'Consumidor Final Cafeteria Beto')
+
+
+def mensajes(response):
+    """Textos de los mensajes que dejó la petición (sin renderizar la plantilla)."""
+    return [str(m) for m in get_messages(response.wsgi_request)]
+
+
+class PorcentajeIvaConfiguracionTests(TestCase):
+    """S2: el % de IVA solo admite 0–30 con hasta 2 decimales, validado en el servidor."""
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('iva-tienda')
+        self.config = ConfiguracionFactura.obtener_configuracion(self.empresa.id)
+        self.config.porcentaje_iva = Decimal('12.00')
+        self.config.direccion_empresa = 'Dirección original'
+        self.config.save()
+        self.client.force_login(self.dueno)
+        self.url = reverse('configuracion_facturas')
+
+    def datos(self, **extra):
+        datos = {
+            'nombre_empresa': '',
+            'direccion_empresa': 'Dirección nueva',
+            'telefono_empresa': '0991234567',
+            'email_empresa': 'tienda@example.com',
+            'mensaje_factura': 'Gracias',
+            'mensaje_deuda': 'Debes',
+            'porcentaje_iva': '15',
+            'texto_consumidor_final': 'CONSUMIDOR FINAL',
+            'id_consumidor_final': '9999999999',
+        }
+        datos.update(extra)
+        return datos
+
+    def assertConfigIntacta(self):
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.porcentaje_iva, Decimal('12.00'))
+        self.assertEqual(self.config.direccion_empresa, 'Dirección original')
+
+    def test_valores_invalidos_se_rechazan_con_mensaje_y_no_guardan_nada(self):
+        negativo = 'El porcentaje de IVA no puede ser negativo.'
+        excedido = 'El porcentaje de IVA no puede ser mayor a 30.'
+        no_numero = 'El porcentaje de IVA debe ser un número válido.'
+        casos = {
+            '-5': negativo,
+            '-0.01': negativo,
+            '30.01': excedido,
+            '150': excedido,
+            '1e9': excedido,
+            '15.555': 'El porcentaje de IVA admite como máximo 2 decimales.',
+            'abc': no_numero,
+            'NaN': no_numero,
+            'Infinity': no_numero,
+            '-Infinity': no_numero,
+            '': 'El porcentaje de IVA es obligatorio.',
+        }
+        for valor, mensaje in casos.items():
+            with self.subTest(valor=valor):
+                response = self.client.post(self.url, self.datos(porcentaje_iva=valor))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, mensaje)
+                self.assertConfigIntacta()
+
+    def test_valores_validos_se_guardan(self):
+        for valor in ['0', '12', '15', '15.5', '30', '0.01', '29.99']:
+            with self.subTest(valor=valor):
+                response = self.client.post(self.url, self.datos(porcentaje_iva=valor))
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url, self.url)
+                self.config.refresh_from_db()
+                self.assertEqual(self.config.porcentaje_iva, Decimal(valor))
+
+    def test_sin_el_campo_conserva_el_porcentaje_actual(self):
+        datos = self.datos()
+        del datos['porcentaje_iva']
+        response = self.client.post(self.url, datos)
+        self.assertEqual(response.status_code, 302)
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.porcentaje_iva, Decimal('12.00'))
+        self.assertEqual(self.config.direccion_empresa, 'Dirección nueva')
+
+    def test_los_demas_campos_siguen_guardandose(self):
+        response = self.client.post(self.url, self.datos(
+            nombre_empresa='Mi Negocio SA', porcentaje_iva='8',
+            texto_consumidor_final='CLIENTE GENERAL', id_consumidor_final='1111111111',
+        ))
+        self.assertEqual(response.status_code, 302)
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.nombre_empresa, 'Mi Negocio SA')
+        self.assertTrue(self.config.nombre_personalizado)
+        self.assertEqual(self.config.direccion_empresa, 'Dirección nueva')
+        self.assertEqual(self.config.telefono_empresa, '0991234567')
+        self.assertEqual(self.config.email_empresa, 'tienda@example.com')
+        self.assertEqual(self.config.mensaje_factura, 'Gracias')
+        self.assertEqual(self.config.mensaje_deuda, 'Debes')
+        self.assertEqual(self.config.porcentaje_iva, Decimal('8.00'))
+        self.assertEqual(self.config.texto_consumidor_final, 'CLIENTE GENERAL')
+        self.assertEqual(self.config.id_consumidor_final, '1111111111')
+
+    def test_nombre_vacio_vuelve_al_de_la_empresa(self):
+        self.config.nombre_empresa = 'Otro'
+        self.config.nombre_personalizado = True
+        self.config.save()
+        response = self.client.post(self.url, self.datos(nombre_empresa=''))
+        self.assertEqual(response.status_code, 302)
+        self.config.refresh_from_db()
+        self.assertEqual(self.config.nombre_empresa, self.empresa.nombre)
+        self.assertFalse(self.config.nombre_personalizado)
+
+    def test_el_campo_del_formulario_declara_el_rango(self):
+        html = self.client.get(self.url).content.decode()
+        inicio = html.rindex('<input', 0, html.index('name="porcentaje_iva"'))
+        campo = html[inicio:html.index('>', inicio)]
+        self.assertIn('min="0"', campo)
+        self.assertIn('max="30"', campo)
+        self.assertIn('step="0.01"', campo)
+
+
+class PorcentajeIvaAdminTests(TestCase):
+    """El formulario del admin de Django también rechaza porcentajes fuera de rango (validadores del modelo)."""
+
+    def setUp(self):
+        self.empresa, _ = crear_empresa_con_dueno('iva-admin')
+        self.config = ConfiguracionFactura.obtener_configuracion(self.empresa.id)
+        self.config.porcentaje_iva = Decimal('12.00')
+        self.config.save()
+        request = RequestFactory().get('/')
+        request.user = get_user_model().objects.create_superuser('root-iva', 'root@example.com', 'Clave-prueba-123')
+        modelo_admin = admin_site.site._registry[ConfiguracionFactura]
+        self.formulario = modelo_admin.get_form(request, self.config)
+
+    def formulario_con(self, iva):
+        return self.formulario({
+            'empresa': self.empresa.pk,
+            'nombre_empresa': 'Iva Admin',
+            'ruc_empresa': '', 'direccion_empresa': '', 'telefono_empresa': '', 'email_empresa': '',
+            'porcentaje_iva': iva,
+            'texto_consumidor_final': 'CONSUMIDOR FINAL',
+            'id_consumidor_final': '9999999999',
+            'mensaje_factura': '', 'mensaje_deuda': '',
+        }, instance=self.config)
+
+    def test_admin_rechaza_valores_fuera_de_rango(self):
+        casos = {
+            '-5': 'El porcentaje de IVA no puede ser negativo.',
+            '150': 'El porcentaje de IVA no puede ser mayor a 30.',
+            '30.01': 'El porcentaje de IVA no puede ser mayor a 30.',
+        }
+        for valor, mensaje in casos.items():
+            with self.subTest(valor=valor):
+                form = self.formulario_con(valor)
+                self.assertFalse(form.is_valid())
+                self.assertEqual(form.errors['porcentaje_iva'], [mensaje])
+
+    def test_admin_acepta_valores_dentro_del_rango(self):
+        for valor in ['0', '15.5', '30']:
+            with self.subTest(valor=valor):
+                form = self.formulario_con(valor)
+                self.assertTrue(form.is_valid(), form.errors)

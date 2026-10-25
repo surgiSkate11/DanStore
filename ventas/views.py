@@ -15,6 +15,7 @@ from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.urls import reverse
 from productos.models import Producto
+from .forms import PorcentajeIvaForm
 from .models import Venta, DetalleVenta, ConfiguracionFactura
 from clientes.models import Cliente
 from empresas.mixins import requiere_modulo
@@ -525,6 +526,18 @@ def configuracion_facturas(request):
     config = ConfiguracionFactura.obtener_configuracion(empresa_id)
 
     if request.method == 'POST':
+        datos = request.POST.copy()
+        if 'porcentaje_iva' not in datos:
+            datos['porcentaje_iva'] = config.porcentaje_iva
+        form_iva = PorcentajeIvaForm(datos, instance=config)
+        if not form_iva.is_valid():
+            # Nada se guarda: el formulario vuelve a mostrarse con el error y lo que escribió el usuario.
+            messages.error(request, form_iva.errors['porcentaje_iva'][0])
+            return render(request, 'ventas/configuracion_facturas.html', {
+                'config': config,
+                'iva_ingresado': datos['porcentaje_iva'],
+            })
+
         nuevo_nombre = request.POST.get('nombre_empresa', '').strip()
 
         nombre_base = empresa.nombre if empresa else getattr(request.user.profile, 'nombre_negocio', 'Tiendita')
@@ -541,7 +554,7 @@ def configuracion_facturas(request):
         config.email_empresa = request.POST.get('email_empresa', '')
         config.mensaje_factura = request.POST.get('mensaje_factura', '')
         config.mensaje_deuda = request.POST.get('mensaje_deuda', '')
-        config.porcentaje_iva = Decimal(request.POST.get('porcentaje_iva', config.porcentaje_iva or 15))
+        config.porcentaje_iva = form_iva.cleaned_data['porcentaje_iva']
         config.texto_consumidor_final = request.POST.get('texto_consumidor_final', config.texto_consumidor_final or 'CONSUMIDOR FINAL')
         config.id_consumidor_final = request.POST.get('id_consumidor_final', config.id_consumidor_final or '9999999999')
 

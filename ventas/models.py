@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.db import transaction
@@ -157,7 +158,13 @@ class ConfiguracionFactura(models.Model):
     email_empresa = models.EmailField(blank=True, verbose_name="Email")
     
     # Configuración de Impuestos y Cliente por defecto
-    porcentaje_iva = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, verbose_name="Porcentaje de IVA")
+    porcentaje_iva = models.DecimalField(
+        max_digits=5, decimal_places=2, default=15.00, verbose_name="Porcentaje de IVA",
+        validators=[
+            MinValueValidator(0, message="El porcentaje de IVA no puede ser negativo."),
+            MaxValueValidator(30, message="El porcentaje de IVA no puede ser mayor a 30."),
+        ],
+    )
     texto_consumidor_final = models.CharField(max_length=100, default="CONSUMIDOR FINAL", verbose_name="Texto Consumidor Final")
     id_consumidor_final = models.CharField(max_length=20, default="9999999999", verbose_name="ID Consumidor Final")
     
