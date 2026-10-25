@@ -4,10 +4,8 @@ from decimal import Decimal, InvalidOperation
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import ConfiguracionFactura
+from .models import MONTO_MAXIMO, ConfiguracionFactura
 
-# Venta.descuento, envio y otros_gastos son DecimalField(max_digits=10, decimal_places=2).
-MONTO_MAXIMO = Decimal('99999999.99')
 _FORMATO_MONTO = re.compile(r'\d+(\.\d*)?|\.\d+', re.ASCII)
 ETIQUETAS_GASTOS = {'descuento': 'descuento', 'envio': 'envío', 'otros_gastos': 'otros gastos'}
 

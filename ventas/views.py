@@ -1,13 +1,14 @@
 import json
 import logging
 import re
+import uuid
 from decimal import Decimal
 from datetime import datetime
 from collections import defaultdict
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count, Q
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
@@ -103,6 +104,163 @@ def lista_deudas(request):
     return render(request, 'ventas/lista_deudas.html', context)
 
 
+class VentaRechazada(Exception):
+    """La venta no se puede guardar; el mensaje (en español) se muestra al usuario."""
+
+
+def _leer_token_envio(post):
+    """UUID del envío, o None si falta o no es válido (la venta se acepta igual, pero se avisa)."""
+    crudo = post.get('token_envio', '')
+    try:
+        return uuid.UUID(crudo)
+    except ValueError:
+        logger.warning('Venta enviada sin token_envio válido (valor recibido: %r)', crudo[:50])
+        return None
+
+
+def _venta_con_token(empresa, token):
+    return Venta.objects.filter(empresa=empresa, token_envio=token).first()
+
+
+def _venta_ya_registrada(request, venta):
+    messages.info(request, 'Esta venta ya se registró.')
+    return redirect('detalle_venta', venta_id=venta.id)
+
+
+@transaction.atomic
+def _registrar_venta(request, empresa, config, token):
+    """Cliente, venta, detalles y stock en una sola transacción (S5).
+
+    Si algo falla se revierte todo: ni venta, ni detalles, ni cliente nuevo, ni cambio de stock.
+    Lanza VentaRechazada o ValidationError con el mensaje que ve el usuario.
+    """
+    factura_sin_datos = request.POST.get('factura_sin_datos') == '1'
+    cliente_id_o_nombre = request.POST.get('cliente_id', '').strip()
+    nombre_cliente = request.POST.get('nombre_cliente', '').strip()
+
+    if factura_sin_datos:
+        cliente_nombre = (config.texto_consumidor_final or 'CONSUMIDOR FINAL').strip() or 'CONSUMIDOR FINAL'
+        cliente_ruc = (request.POST.get('ruc_cliente') or config.id_consumidor_final or '9999999999').strip() or '9999999999'
+        # El RUC viene del POST: solo se reutiliza un cliente ya ligado a esta empresa.
+        # El RUC genérico de consumidor final es el único que se comparte entre empresas.
+        cliente = Cliente.objects.filter(ruc_cedula=cliente_ruc, empresas=empresa).first()
+        if not cliente:
+            existente = Cliente.objects.filter(ruc_cedula=cliente_ruc).first()
+            if existente is None:
+                cliente = Cliente.objects.create(
+                    ruc_cedula=cliente_ruc, nombre=cliente_nombre,
+                    telefono='', direccion='', email=None,
+                )
+            elif cliente_ruc == RUC_CONSUMIDOR_FINAL:
+                cliente = existente
+            else:
+                raise VentaRechazada('Ya existe un cliente con ese RUC/Cédula en otra empresa y sus datos no están disponibles.')
+        # El consumidor final es una sola fila para todas las empresas: nunca se renombra,
+        # cada venta guarda su propio nombre. Los demás clientes solo se renombran si son
+        # exclusivos de esta empresa.
+        if (
+            cliente.ruc_cedula != RUC_CONSUMIDOR_FINAL
+            and cliente.nombre != cliente_nombre
+            and cliente.empresas.exclude(pk=getattr(empresa, 'pk', None)).count() == 0
+        ):
+            cliente.nombre = cliente_nombre
+            cliente.save(update_fields=['nombre'])
+    elif cliente_id_o_nombre:
+        if cliente_id_o_nombre.isdigit():
+            try:
+                cliente = Cliente.objects.get(
+                    pk=cliente_id_o_nombre,
+                    empresas=empresa,
+                )
+            except Cliente.DoesNotExist:
+                raise VentaRechazada('El cliente seleccionado no pertenece a tu empresa.')
+        else:
+            cliente = Cliente.objects.filter(
+                nombre=cliente_id_o_nombre,
+                empresas=empresa,
+            ).first()
+            if not cliente:
+                cliente = Cliente.objects.create(nombre=cliente_id_o_nombre)
+    elif nombre_cliente:
+        cliente = Cliente.objects.filter(
+            nombre=nombre_cliente,
+            empresas=empresa,
+        ).first()
+        if not cliente:
+            cliente = Cliente.objects.create(nombre=nombre_cliente)
+    else:
+        raise VentaRechazada('Debes seleccionar o crear un cliente')
+
+    if empresa:
+        cliente.empresas.add(empresa)
+
+    # Nombre con el que se factura: el de la empresa para el consumidor final, no el de la fila compartida.
+    nombre_en_venta = cliente_nombre if factura_sin_datos else cliente.nombre
+
+    productos_seleccionados = request.POST.getlist('productos')
+    if not productos_seleccionados:
+        raise VentaRechazada('Debes seleccionar al menos un producto para la venta.')
+
+    # Se leen de nuevo con bloqueo de fila: el stock que se valida es el que se descuenta.
+    ids = [int(i) for i in productos_seleccionados if i.isascii() and i.isdigit()]
+    bloqueados = {
+        p.id: p
+        for p in Producto.objects.select_for_update().filter(pk__in=ids, empresa=empresa).order_by('pk')
+    }
+    productos_a_vender = [bloqueados[i] for i in ids if i in bloqueados]
+
+    for producto in productos_a_vender:
+        if producto.estado != 'disponible':
+            raise VentaRechazada(f'El producto "{producto.nombre}" ya no está disponible.')
+
+    if not productos_a_vender:
+        raise VentaRechazada('Los productos seleccionados no están disponibles.')
+
+    cantidades = {}
+    for producto in productos_a_vender:
+        cantidades[producto.id] = cantidades.get(producto.id, 0) + 1
+    for producto_id, cantidad in cantidades.items():
+        producto = bloqueados[producto_id]
+        if producto.stock and cantidad > producto.stock:
+            raise VentaRechazada(f'No puedes vender {cantidad} unidades de "{producto.nombre}" porque solo quedan {producto.stock} en stock.')
+
+    gastos = leer_gastos(request.POST, sum(Decimal(p.precio or 0) for p in productos_a_vender))
+
+    venta = Venta.objects.create(
+        empresa=empresa,
+        cliente=cliente,
+        token_envio=token,
+        **gastos,
+        descripcion_otros=request.POST.get('descripcion_otros', ''),
+        notas=request.POST.get('notas', ''),
+        metodo_pago=request.POST.get('metodo_pago', 'efectivo'),
+        nombre_cliente=nombre_en_venta,
+        ruc_cliente=request.POST.get('ruc_cliente', '') or (config.id_consumidor_final if factura_sin_datos else ''),
+    )
+
+    for producto in productos_a_vender:
+        DetalleVenta.objects.create(
+            venta=venta,
+            producto=producto,
+            precio_unitario=producto.precio or 0
+        )
+
+        nuevo_stock = max(0, producto.stock - 1)
+        producto.stock = nuevo_stock
+
+        if nuevo_stock <= 0:
+            producto.estado = 'vendido'
+            producto.vendido_a = nombre_en_venta
+        else:
+            producto.estado = 'disponible'
+            producto.vendido_a = ''
+
+        producto.save(update_fields=['estado', 'stock', 'vendido_a', 'actualizado_en'])
+
+    venta.calcular_total()
+    return venta
+
+
 @login_required
 @requiere_modulo('ventas', accion='crear')
 def crear_venta(request):
@@ -182,144 +340,27 @@ def crear_venta(request):
         empresa = request.empresa
         config = ConfiguracionFactura.obtener_configuracion(empresa.id)
 
-        factura_sin_datos = request.POST.get('factura_sin_datos') == '1'
-        cliente_id_o_nombre = request.POST.get('cliente_id', '').strip()
-        nombre_cliente = request.POST.get('nombre_cliente', '').strip()
-
-        if factura_sin_datos:
-            cliente_nombre = (config.texto_consumidor_final or 'CONSUMIDOR FINAL').strip() or 'CONSUMIDOR FINAL'
-            cliente_ruc = (request.POST.get('ruc_cliente') or config.id_consumidor_final or '9999999999').strip() or '9999999999'
-            # El RUC viene del POST: solo se reutiliza un cliente ya ligado a esta empresa.
-            # El RUC genérico de consumidor final es el único que se comparte entre empresas.
-            cliente = Cliente.objects.filter(ruc_cedula=cliente_ruc, empresas=empresa).first()
-            if not cliente:
-                existente = Cliente.objects.filter(ruc_cedula=cliente_ruc).first()
-                if existente is None:
-                    cliente = Cliente.objects.create(
-                        ruc_cedula=cliente_ruc, nombre=cliente_nombre,
-                        telefono='', direccion='', email=None,
-                    )
-                elif cliente_ruc == RUC_CONSUMIDOR_FINAL:
-                    cliente = existente
-                else:
-                    messages.error(request, 'Ya existe un cliente con ese RUC/Cédula en otra empresa y sus datos no están disponibles.')
-                    return redirect('crear_venta')
-            # El consumidor final es una sola fila para todas las empresas: nunca se renombra,
-            # cada venta guarda su propio nombre. Los demás clientes solo se renombran si son
-            # exclusivos de esta empresa.
-            if (
-                cliente.ruc_cedula != RUC_CONSUMIDOR_FINAL
-                and cliente.nombre != cliente_nombre
-                and cliente.empresas.exclude(pk=getattr(empresa, 'pk', None)).count() == 0
-            ):
-                cliente.nombre = cliente_nombre
-                cliente.save(update_fields=['nombre'])
-        elif cliente_id_o_nombre:
-            if cliente_id_o_nombre.isdigit():
-                try:
-                    cliente = Cliente.objects.get(
-                        pk=cliente_id_o_nombre,
-                        empresas=empresa,
-                    )
-                except Cliente.DoesNotExist:
-                    messages.error(request, 'El cliente seleccionado no pertenece a tu empresa.')
-                    return redirect('crear_venta')
-            else:
-                cliente = Cliente.objects.filter(
-                    nombre=cliente_id_o_nombre,
-                    empresas=empresa,
-                ).first()
-                if not cliente:
-                    cliente = Cliente.objects.create(nombre=cliente_id_o_nombre)
-        elif nombre_cliente:
-            cliente = Cliente.objects.filter(
-                nombre=nombre_cliente,
-                empresas=empresa,
-            ).first()
-            if not cliente:
-                cliente = Cliente.objects.create(nombre=nombre_cliente)
-        else:
-            messages.error(request, 'Debes seleccionar o crear un cliente')
-            return redirect('crear_venta')
-
-        if empresa:
-            cliente.empresas.add(empresa)
-
-        # Nombre con el que se factura: el de la empresa para el consumidor final, no el de la fila compartida.
-        nombre_en_venta = cliente_nombre if factura_sin_datos else cliente.nombre
-
-        productos_seleccionados = request.POST.getlist('productos')
-        if not productos_seleccionados:
-            messages.error(request, 'Debes seleccionar al menos un producto para la venta.')
-            return redirect('crear_venta')
-
-        productos_a_vender = []
-        for producto_id in productos_seleccionados:
-            try:
-                producto = Producto.objects.get(pk=producto_id, empresa=empresa)
-            except Producto.DoesNotExist:
-                continue
-
-            if producto.estado != 'disponible':
-                messages.error(request, f'El producto "{producto.nombre}" ya no está disponible.')
-                return redirect('crear_venta')
-            productos_a_vender.append(producto)
-
-        if not productos_a_vender:
-            messages.error(request, 'Los productos seleccionados no están disponibles.')
-            return redirect('crear_venta')
-
-        if productos_a_vender:
-            cantidades = {}
-            for producto in productos_a_vender:
-                cantidades[producto.id] = cantidades.get(producto.id, 0) + 1
-            for producto_id, cantidad in cantidades.items():
-                producto = Producto.objects.get(pk=producto_id, empresa=empresa)
-                if producto.stock and cantidad > producto.stock:
-                    messages.error(request, f'No puedes vender {cantidad} unidades de "{producto.nombre}" porque solo quedan {producto.stock} en stock.')
-                    return redirect('crear_venta')
+        # Un envío repetido (doble clic, reintento del navegador) no crea otra venta.
+        token = _leer_token_envio(request.POST)
+        if token:
+            ya_registrada = _venta_con_token(empresa, token)
+            if ya_registrada:
+                return _venta_ya_registrada(request, ya_registrada)
 
         try:
-            gastos = leer_gastos(request.POST, sum(Decimal(p.precio or 0) for p in productos_a_vender))
+            venta = _registrar_venta(request, empresa, config, token)
+        except VentaRechazada as error:
+            messages.error(request, str(error))
+            return redirect('crear_venta')
         except ValidationError as error:
             messages.error(request, error.message)
             return redirect('crear_venta')
-
-        venta = Venta.objects.create(
-            empresa=empresa,
-            cliente=cliente,
-            **gastos,
-            descripcion_otros=request.POST.get('descripcion_otros', ''),
-            notas=request.POST.get('notas', ''),
-            metodo_pago=request.POST.get('metodo_pago', 'efectivo'),
-            nombre_cliente=nombre_en_venta,
-            ruc_cliente=request.POST.get('ruc_cliente', '') or (config.id_consumidor_final if factura_sin_datos else ''),
-        )
-
-        for producto_id in productos_seleccionados:
-            try:
-                producto = Producto.objects.get(pk=producto_id, empresa=empresa)
-                DetalleVenta.objects.create(
-                    venta=venta,
-                    producto=producto,
-                    precio_unitario=producto.precio or 0
-                )
-
-                nuevo_stock = max(0, producto.stock - 1)
-                producto.stock = nuevo_stock
-
-                if nuevo_stock <= 0:
-                    producto.estado = 'vendido'
-                    producto.vendido_a = nombre_en_venta
-                else:
-                    producto.estado = 'disponible'
-                    producto.vendido_a = ''
-
-                producto.save(update_fields=['estado', 'stock', 'vendido_a', 'actualizado_en'])
-            except Producto.DoesNotExist:
-                continue
-
-        venta.calcular_total()
+        except IntegrityError:
+            # Dos envíos con el mismo token a la vez: gana el primero que confirma.
+            ya_registrada = _venta_con_token(empresa, token) if token else None
+            if ya_registrada is None:
+                raise
+            return _venta_ya_registrada(request, ya_registrada)
 
         messages.success(request, f'Venta {venta.numero_factura} creada exitosamente')
         return redirect('detalle_venta', venta_id=venta.id)
@@ -381,6 +422,7 @@ def crear_venta(request):
         'productos_cliente_ids': productos_cliente_ids,
         'cliente_seleccionado': cliente_nombre_param,
         'clientes_json': json.dumps(clientes),
+        'token_envio': uuid.uuid4(),
     }
 
     return render(request, 'ventas/crear_venta.html', context)
@@ -399,23 +441,26 @@ def editar_venta(request, venta_id):
 
     if request.method == 'POST':
         try:
-            gastos = leer_gastos(request.POST, venta.detalles.aggregate(s=Sum('precio_unitario'))['s'])
+            with transaction.atomic():
+                # La venta queda bloqueada mientras se recalcula: dos ediciones a la vez no se pisan.
+                venta = get_object_or_404(Venta.objects.select_for_update(), pk=venta_id, empresa=request.empresa)
+                gastos = leer_gastos(request.POST, venta.detalles.aggregate(s=Sum('precio_unitario'))['s'])
+
+                venta.descuento = gastos['descuento']
+                venta.envio = gastos['envio']
+                venta.otros_gastos = gastos['otros_gastos']
+                venta.descripcion_otros = request.POST.get('descripcion_otros', '')
+                venta.notas = request.POST.get('notas', '')
+                venta.metodo_pago = request.POST.get('metodo_pago', venta.metodo_pago)
+
+                # La edición de facturas ahora solo permite ajustar gastos adicionales y descuentos.
+                # El listado de productos de la factura se mantiene intacto.
+
+                venta.calcular_total()
+                venta.save()
         except ValidationError as error:
             messages.error(request, error.message)
-            return redirect('editar_venta', venta_id=venta.id)
-
-        venta.descuento = gastos['descuento']
-        venta.envio = gastos['envio']
-        venta.otros_gastos = gastos['otros_gastos']
-        venta.descripcion_otros = request.POST.get('descripcion_otros', '')
-        venta.notas = request.POST.get('notas', '')
-        venta.metodo_pago = request.POST.get('metodo_pago', venta.metodo_pago)
-
-        # La edición de facturas ahora solo permite ajustar gastos adicionales y descuentos.
-        # El listado de productos de la factura se mantiene intacto.
-
-        venta.calcular_total()
-        venta.save()
+            return redirect('editar_venta', venta_id=venta_id)
 
         # CORRECTO: numero_factura es campo, sin paréntesis
         messages.success(request, f'Venta {venta.numero_factura} actualizada exitosamente')

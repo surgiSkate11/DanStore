@@ -1085,6 +1085,7 @@
     
     <form method="post" id="formVenta">
         {% csrf_token %}
+        {% if token_envio %}<input type="hidden" name="token_envio" value="{{ token_envio }}">{% endif %}
         <!-- SECCIÓN 1: Información del Cliente -->
         <div class="row">
             <div class="col-12">
@@ -1894,6 +1895,19 @@ document.getElementById('formVenta').addEventListener('submit', function(e) {
         return;
     }
     
+    // Un solo envío: bloquea el botón para evitar ventas repetidas por doble clic
+    if (this.dataset.enviando) {
+        e.preventDefault();
+        return;
+    }
+    this.dataset.enviando = '1';
+    const btnGuardar = document.getElementById('btnCrearVenta');
+    if (btnGuardar) {
+        btnGuardar.dataset.textoOriginal = btnGuardar.innerHTML;
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = 'Guardando…';
+    }
+
     // Limpiar inputs previos
     document.querySelectorAll('input[name="productos"]').forEach(input => input.remove());
     
@@ -1908,6 +1922,18 @@ document.getElementById('formVenta').addEventListener('submit', function(e) {
         input.value = productoId;
         this.appendChild(input);
     });
+});
+
+// Si el navegador restaura la página desde el historial, el botón vuelve a quedar disponible
+window.addEventListener('pageshow', function(e) {
+    const form = document.getElementById('formVenta');
+    const btn = document.getElementById('btnCrearVenta');
+    if (!e.persisted || !form || !form.dataset.enviando) return;
+    delete form.dataset.enviando;
+    if (btn && btn.dataset.textoOriginal) {
+        btn.innerHTML = btn.dataset.textoOriginal;
+        btn.disabled = false;
+    }
 });
 
 // ==================== CÁLCULO DE TOTALES EN TIEMPO REAL ====================

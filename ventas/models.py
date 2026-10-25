@@ -1,5 +1,6 @@
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -10,6 +11,9 @@ from clientes.models import Cliente
 
 
 CENTAVO = Decimal('0.01')
+# Venta.subtotal, iva, descuento, envio, otros_gastos y total son DecimalField(max_digits=10, decimal_places=2).
+MONTO_MAXIMO = Decimal('99999999.99')
+MENSAJE_TOTAL_MAXIMO = 'El total de la venta no puede superar $99,999,999.99.'
 
 
 def redondear_dinero(valor):
@@ -73,6 +77,10 @@ class Venta(models.Model):
     descripcion_otros = models.CharField(max_length=200, blank=True, verbose_name="Descripción otros gastos")
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Total")
     notas = models.TextField(blank=True, verbose_name="Notas de la venta")
+    token_envio = models.UUIDField(
+        null=True, blank=True, editable=False, verbose_name="Token de envío",
+        help_text="Lo genera la pantalla de venta; evita crear dos ventas por un envío repetido.",
+    )
     
     ORIGEN_CHOICES = [
         ('sistema', 'Sistema / Manual'),
@@ -98,6 +106,13 @@ class Venta(models.Model):
         verbose_name_plural = "Ventas"
         ordering = ['-fecha', '-creado_en']
         unique_together = ('empresa', 'numero_factura')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['empresa', 'token_envio'],
+                condition=models.Q(token_envio__isnull=False),
+                name='venta_token_envio_unico_por_empresa',
+            ),
+        ]
     
     def __str__(self):
         return f"Factura {self.numero_factura} - {self.cliente.nombre} - ${self.total}"
@@ -147,11 +162,16 @@ class Venta(models.Model):
 
         base_imponible = max(subtotal - self.descuento, Decimal('0'))
         iva = redondear_dinero(base_imponible * self.porcentaje_iva / Decimal('100'))
+        # El envío y los otros gastos se suman sin IVA (confirmado por el dueño, ver L8).
+        total = redondear_dinero(base_imponible + iva + self.envio + self.otros_gastos)
+
+        # Si no cabe en DecimalField(10, 2) no se guarda nada; quien llama revierte su transacción.
+        if max(subtotal, iva, total) > MONTO_MAXIMO:
+            raise ValidationError(MENSAJE_TOTAL_MAXIMO)
 
         self.subtotal = subtotal
         self.iva = iva
-        # El envío y los otros gastos se suman sin IVA (confirmado por el dueño, ver L8).
-        self.total = redondear_dinero(base_imponible + iva + self.envio + self.otros_gastos)
+        self.total = total
 
         self.save(update_fields=[
             'subtotal', 'iva', 'total', 'porcentaje_iva',

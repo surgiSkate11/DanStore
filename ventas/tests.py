@@ -1,4 +1,6 @@
 import importlib
+import re
+import uuid
 from decimal import Decimal
 from unittest import mock
 
@@ -8,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
@@ -1080,3 +1082,252 @@ class MigracionPorcentajeIvaTests(GastosVentaBase):
         migracion.asignar_porcentaje_iva(django_apps, None)
         venta.refresh_from_db()
         self.assertEqual(venta.porcentaje_iva, Decimal('8.00'))
+
+
+class IntegridadVentaTests(GastosVentaBase):
+    """S5: la venta se guarda completa o no se guarda, y un envío repetido no la duplica."""
+
+    def setUp(self):
+        super().setUp()
+        self.token = str(uuid.uuid4())
+
+    def estado(self):
+        self.producto.refresh_from_db()
+        return {
+            'ventas': Venta.objects.count(),
+            'detalles': DetalleVenta.objects.count(),
+            'clientes': Cliente.objects.count(),
+            'stock': self.producto.stock,
+            'estado': self.producto.estado,
+        }
+
+    def assertSinCambios(self, antes):
+        self.assertEqual(self.estado(), antes)
+
+    def test_mismo_token_dos_veces_crea_una_sola_venta_y_descuenta_stock_una_vez(self):
+        primera = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
+        venta = Venta.objects.get()
+        self.assertEqual(primera.status_code, 302)
+        self.assertEqual(primera.url, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(venta.token_envio, uuid.UUID(self.token))
+        self.client.get(primera.url)  # el usuario ve el detalle y se consume el mensaje de creación
+
+        segunda = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
+        self.assertEqual(segunda.status_code, 302)
+        self.assertEqual(segunda.url, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(mensajes(segunda), ['Esta venta ya se registró.'])
+        self.assertEqual(Venta.objects.count(), 1)
+        self.assertEqual(DetalleVenta.objects.count(), 1)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 2)
+
+    def test_token_repetido_ni_siquiera_valida_el_resto_del_envio(self):
+        primera = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
+        self.client.get(primera.url)
+        antes = self.estado()
+        repetido = self.client.post(
+            reverse('crear_venta'), self.datos(token_envio=self.token, descuento='-5', unidades=9),
+        )
+        self.assertEqual(repetido.url, reverse('detalle_venta', args=[Venta.objects.get().id]))
+        self.assertEqual(mensajes(repetido), ['Esta venta ya se registró.'])
+        self.assertSinCambios(antes)
+
+    def test_token_usado_por_otra_empresa_no_bloquea_esta_empresa(self):
+        otra, _ = crear_empresa_con_dueno('otra-tienda')
+        ajena = Venta.objects.create(
+            empresa=otra, cliente=self.cliente, token_envio=uuid.UUID(self.token),
+        )
+        response = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
+        propia = Venta.objects.get(empresa=self.empresa)
+        self.assertEqual(response.url, reverse('detalle_venta', args=[propia.id]))
+        self.assertNotEqual(propia.id, ajena.id)
+        self.assertEqual(propia.token_envio, uuid.UUID(self.token))
+        self.assertNotIn('Esta venta ya se registró.', mensajes(response))
+        self.assertEqual(Venta.objects.count(), 2)
+
+    def test_sin_token_o_con_token_invalido_crea_la_venta_y_deja_una_advertencia(self):
+        casos = {'sin token': {}, 'vacío': {'token_envio': ''}, 'texto': {'token_envio': 'no-es-uuid'}}
+        for nombre, extra in casos.items():
+            with self.subTest(caso=nombre):
+                Venta.objects.all().delete()
+                Producto.objects.filter(pk=self.producto.pk).update(stock=3, estado='disponible')
+                with self.assertLogs('ventas.views', level='WARNING') as registro:
+                    response = self.client.post(reverse('crear_venta'), self.datos(**extra))
+                venta = Venta.objects.get()
+                self.assertEqual(response.url, reverse('detalle_venta', args=[venta.id]))
+                self.assertIsNone(venta.token_envio)
+                self.assertTrue(any('token_envio' in linea for linea in registro.output))
+                self.producto.refresh_from_db()
+                self.assertEqual(self.producto.stock, 2)
+
+    def test_la_base_impide_dos_ventas_con_el_mismo_token_en_una_empresa_pero_no_con_nulos(self):
+        token = uuid.UUID(self.token)
+        Venta.objects.create(empresa=self.empresa, cliente=self.cliente, token_envio=token)
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Venta.objects.create(empresa=self.empresa, cliente=self.cliente, token_envio=token)
+        Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        self.assertEqual(Venta.objects.count(), 3)
+
+    def test_carrera_entre_dos_envios_con_el_mismo_token_redirige_a_la_venta_existente(self):
+        existente = Venta.objects.create(
+            empresa=self.empresa, cliente=self.cliente, token_envio=uuid.UUID(self.token),
+        )
+        antes = self.estado()
+        # La primera consulta no la ve (el otro envío aún no había confirmado); la base sí la rechaza.
+        with mock.patch('ventas.views._venta_con_token', side_effect=[None, existente]):
+            response = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('detalle_venta', args=[existente.id]))
+        self.assertEqual(mensajes(response), ['Esta venta ya se registró.'])
+        self.assertSinCambios(antes)
+
+    def test_stock_insuficiente_no_deja_venta_detalle_cliente_nuevo_ni_cambio_de_stock(self):
+        antes = self.estado()
+        response = self.client.post(
+            reverse('crear_venta'), self.datos(unidades=4, cliente_id='Cliente Nuevo SA', token_envio=self.token),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('crear_venta'))
+        self.assertEqual(
+            mensajes(response),
+            ['No puedes vender 4 unidades de "Camisa" porque solo quedan 3 en stock.'],
+        )
+        self.assertFalse(Cliente.objects.filter(nombre='Cliente Nuevo SA').exists())
+        self.assertSinCambios(antes)
+
+    def test_producto_ya_vendido_no_deja_cliente_nuevo_ni_venta(self):
+        Producto.objects.filter(pk=self.producto.pk).update(estado='vendido', stock=0)
+        antes = self.estado()
+        response = self.client.post(
+            reverse('crear_venta'), self.datos(cliente_id='Otro Cliente Nuevo'),
+        )
+        self.assertEqual(response.url, reverse('crear_venta'))
+        self.assertEqual(mensajes(response), ['El producto "Camisa" ya no está disponible.'])
+        self.assertFalse(Cliente.objects.filter(nombre='Otro Cliente Nuevo').exists())
+        self.assertSinCambios(antes)
+
+    def test_si_falla_algo_despues_de_crear_la_venta_no_queda_nada_escrito(self):
+        antes = self.estado()
+        with mock.patch.object(Venta, 'calcular_total', side_effect=RuntimeError('falla simulada')):
+            with self.assertRaises(RuntimeError):
+                self.client.post(
+                    reverse('crear_venta'),
+                    self.datos(unidades=2, cliente_id='Cliente Fallido', token_envio=self.token),
+                )
+        self.assertFalse(Cliente.objects.filter(nombre='Cliente Fallido').exists())
+        self.assertSinCambios(antes)
+        # Como no quedó nada, reintentar con el mismo token funciona.
+        response = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
+        self.assertEqual(response.url, reverse('detalle_venta', args=[Venta.objects.get().id]))
+
+    def test_la_pantalla_trae_un_token_nuevo_en_cada_carga(self):
+        patron = re.compile(r'<input type="hidden" name="token_envio" value="([^"]+)"')
+        tokens = []
+        for _ in range(2):
+            response = self.client.get(reverse('crear_venta'))
+            self.assertEqual(response.status_code, 200)
+            encontrados = patron.findall(response.content.decode())
+            self.assertEqual(len(encontrados), 1)
+            tokens.append(uuid.UUID(encontrados[0]))
+        self.assertNotEqual(tokens[0], tokens[1])
+
+    def test_el_boton_se_bloquea_al_enviar(self):
+        html = self.client.get(reverse('crear_venta')).content.decode()
+        self.assertIn('Guardando…', html)
+
+    def test_la_edicion_no_lleva_token(self):
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        html = self.client.get(reverse('editar_venta', args=[venta.id])).content.decode()
+        self.assertNotIn('name="token_envio"', html)
+
+
+class TotalMaximoVentaTests(GastosVentaBase):
+    """R3: el total no puede superar lo que cabe en DecimalField(10, 2)."""
+
+    MENSAJE = 'El total de la venta no puede superar $99,999,999.99.'
+
+    def setUp(self):
+        super().setUp()
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('15.00')},
+        )
+
+    def precio(self, valor):
+        Producto.objects.filter(pk=self.producto.pk).update(precio=Decimal(valor), stock=5)
+
+    def assertNadaCambio(self):
+        self.assertEqual(Venta.objects.count(), 0)
+        self.assertEqual(DetalleVenta.objects.count(), 0)
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 5)
+        self.assertEqual(self.producto.estado, 'disponible')
+
+    def test_total_con_iva_que_no_cabe_se_rechaza_sin_error_500(self):
+        self.precio('90000000.00')
+        response = self.client.post(reverse('crear_venta'), self.datos())
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('crear_venta'))
+        self.assertEqual(mensajes(response), [self.MENSAJE])
+        self.assertNadaCambio()
+
+    def test_subtotal_de_varias_unidades_que_no_cabe_se_rechaza(self):
+        self.precio('60000000.00')
+        response = self.client.post(reverse('crear_venta'), self.datos(unidades=2))
+        self.assertEqual(response.url, reverse('crear_venta'))
+        self.assertEqual(mensajes(response), [self.MENSAJE])
+        self.assertNadaCambio()
+
+    def test_envio_que_empuja_el_total_sobre_el_maximo_se_rechaza(self):
+        self.precio('90000000.00')
+        ConfiguracionFactura.objects.filter(empresa=self.empresa).update(porcentaje_iva=Decimal('0'))
+        response = self.client.post(reverse('crear_venta'), self.datos(envio='10000000'))
+        self.assertEqual(response.url, reverse('crear_venta'))
+        self.assertEqual(mensajes(response), [self.MENSAJE])
+        self.assertNadaCambio()
+
+    def test_total_exactamente_en_el_maximo_se_acepta(self):
+        self.precio('99999999.99')
+        ConfiguracionFactura.objects.filter(empresa=self.empresa).update(porcentaje_iva=Decimal('0'))
+        response = self.client.post(reverse('crear_venta'), self.datos())
+        venta = Venta.objects.get()
+        self.assertEqual(response.url, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(venta.total, Decimal('99999999.99'))
+
+    def venta_grande(self):
+        venta = Venta.objects.create(
+            empresa=self.empresa, cliente=self.cliente, porcentaje_iva=Decimal('0'),
+        )
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal('90000000.00'))
+        venta.calcular_total()
+        venta.refresh_from_db()
+        return venta
+
+    def test_editar_con_total_que_no_cabe_se_rechaza_y_la_venta_queda_igual(self):
+        venta = self.venta_grande()
+        response = self.client.post(reverse('editar_venta', args=[venta.id]), {
+            'descuento': '0', 'envio': '20000000', 'otros_gastos': '0',
+            'descripcion_otros': '', 'notas': 'cambio', 'metodo_pago': 'efectivo',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('editar_venta', args=[venta.id]))
+        self.assertEqual(mensajes(response), [self.MENSAJE])
+        despues = Venta.objects.get(pk=venta.pk)
+        self.assertEqual((despues.envio, despues.total, despues.notas), (venta.envio, venta.total, venta.notas))
+
+    def test_editar_revierte_todo_si_falla_despues_de_guardar_algo(self):
+        venta = self.venta_grande()
+
+        def guarda_y_falla(self_venta):
+            self_venta.save()
+            raise RuntimeError('falla simulada')
+
+        with mock.patch.object(Venta, 'calcular_total', autospec=True, side_effect=guarda_y_falla):
+            with self.assertRaises(RuntimeError):
+                self.client.post(reverse('editar_venta', args=[venta.id]), {
+                    'descuento': '0', 'envio': '5', 'otros_gastos': '0',
+                    'descripcion_otros': '', 'notas': 'cambio', 'metodo_pago': 'efectivo',
+                })
+        despues = Venta.objects.get(pk=venta.pk)
+        self.assertEqual((despues.envio, despues.total, despues.notas), (venta.envio, venta.total, venta.notas))
