@@ -15,7 +15,9 @@ def asignar_porcentaje_iva(apps, schema_editor):
 
     Solo escribe porcentaje_iva: subtotal, iva, descuento y total quedan como
     estaban (los datos históricos no se recalculan). Empresas sin configuración
-    usan 15, el valor por defecto de ConfiguracionFactura.
+    usan 15, el valor por defecto de ConfiguracionFactura. Las ventas importadas de
+    Google Sheets usan 0: sus precios son finales y se guardaron sin IVA, así que
+    editarlas después no debe agregarles IVA.
     """
     Venta = apps.get_model('ventas', 'Venta')
     ConfiguracionFactura = apps.get_model('ventas', 'ConfiguracionFactura')
@@ -25,10 +27,13 @@ def asignar_porcentaje_iva(apps, schema_editor):
     # Lotes por pk: así no se escribe mientras hay un cursor abierto sobre la misma tabla.
     ultimo_pk = 0
     while True:
-        lote = list(pendientes.filter(pk__gt=ultimo_pk).order_by('pk').only('pk', 'empresa_id')[:LOTE])
+        lote = list(pendientes.filter(pk__gt=ultimo_pk).order_by('pk').only('pk', 'empresa_id', 'origen')[:LOTE])
         if not lote:
             break
         for venta in lote:
+            if venta.origen == 'sheets':
+                venta.porcentaje_iva = Decimal('0')
+                continue
             porcentaje = porcentaje_por_empresa.get(venta.empresa_id)
             venta.porcentaje_iva = PORCENTAJE_POR_DEFECTO if porcentaje is None else Decimal(str(porcentaje))
         Venta.objects.bulk_update(lote, ['porcentaje_iva'])

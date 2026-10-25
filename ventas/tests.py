@@ -1050,6 +1050,27 @@ class MigracionPorcentajeIvaTests(GastosVentaBase):
             for campo, valor in historicos.items():
                 self.assertEqual(getattr(venta, campo), valor, campo)
 
+    def test_ventas_antiguas_de_sheets_quedan_sin_iva_y_editarlas_no_lo_agrega(self):
+        migracion = importlib.import_module('ventas.migrations.0010_venta_porcentaje_iva')
+        ConfiguracionFactura.objects.update_or_create(
+            empresa=self.empresa, defaults={'porcentaje_iva': Decimal('15.00')},
+        )
+        venta = Venta.objects.create(
+            empresa=self.empresa, cliente=self.cliente, origen='sheets',
+            subtotal=Decimal('100.00'), iva=Decimal('0.00'), total=Decimal('100.00'),
+        )
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        Venta.objects.filter(pk=venta.pk).update(porcentaje_iva=None)
+
+        migracion.asignar_porcentaje_iva(django_apps, None)
+
+        venta.refresh_from_db()
+        self.assertEqual(venta.porcentaje_iva, Decimal('0'))
+        venta.calcular_total()
+        venta.refresh_from_db()
+        self.assertEqual(venta.iva, Decimal('0.00'))
+        self.assertEqual(venta.total, Decimal('100.00'))
+
     def test_la_migracion_no_pisa_un_porcentaje_ya_guardado(self):
         migracion = importlib.import_module('ventas.migrations.0010_venta_porcentaje_iva')
         ConfiguracionFactura.objects.update_or_create(
