@@ -145,6 +145,12 @@
         </tr>
         {% endif %}
         
+        <tr>
+            <td class="text-right">IVA{% if venta.porcentaje_iva is not None %} ({{ venta.porcentaje_iva|floatformat:"-2" }}%){% endif %}:</td>
+            <td></td>
+            <td class="text-right">$ {{ venta.iva|floatformat:2 }}</td>
+        </tr>
+        
         {% if venta.envio > 0 %}
         <tr>
             <td class="text-right">Envío:</td>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Crear Venta - {{ empresa.nombre|default:app_name }}{% endblock %}
 
@@ -1387,15 +1388,16 @@
                                 
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold" style="font-size: 0.9rem; color: #374151; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;">
-                                        <i class="bi bi-percent" style="color: #dc2626;"></i> Descuento (%)
+                                        <i class="bi bi-percent" style="color: #dc2626;"></i> Descuento ({% if modo_edicion %}${% else %}%{% endif %})
                                     </label>
                                     <div class="input-group" style="border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);">
-                                        <span class="input-group-text" style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white; border: none; font-weight: 600; font-family: 'Courier New', monospace;">%</span>
+                                        <span class="input-group-text" style="background: linear-gradient(135deg, #dc2626, #991b1b); color: white; border: none; font-weight: 600; font-family: 'Courier New', monospace;">{% if modo_edicion %}${% else %}%{% endif %}</span>
+                                        {% comment %}Al editar, el descuento guardado es dinero: se muestra y se reenvía tal cual, sin pasarlo por porcentaje.{% endcomment %}
                                         <input type="number" id="inputDescuento" class="form-control" 
-                                               value="{% if modo_edicion and venta.descuento %}{{ venta.descuento|floatformat:2 }}{% else %}0{% endif %}" step="1" min="0" max="100" placeholder="0"
+                                               {% if modo_edicion %}data-modo="dinero" value="{{ venta.descuento|floatformat:'2u' }}" step="0.01" min="0" max="{{ venta.subtotal|floatformat:'2u' }}" placeholder="0.00"{% else %}data-modo="porcentaje" value="0" step="1" min="0" max="100" placeholder="0"{% endif %}
                                                style="border: 1px solid #fecaca; font-weight: 600; color: #111827; font-family: 'Courier New', monospace; font-size: 1.1rem;">
                                     </div>
-                                    <input type="hidden" name="descuento" id="hiddenDescuento" value="{% if modo_edicion and venta.descuento %}{{ venta.descuento|floatformat:2 }}{% else %}0{% endif %}">
+                                    <input type="hidden" name="descuento" id="hiddenDescuento" value="{% if modo_edicion %}{{ venta.descuento|floatformat:'2u' }}{% else %}0{% endif %}">
                                 </div>
                                 
                                 <div class="mb-3">
@@ -1448,14 +1450,14 @@
                                 
                                 <div class="resumen-fila" id="ivaRow" style="display: flex;">
                                     <span style="font-weight: 600; color: #374151; font-size: 0.95rem;">
-                                        <i class="bi bi-percent" style="color: #f59e0b;"></i> IVA:
+                                        <i class="bi bi-percent" style="color: #f59e0b;"></i> IVA (<span id="ivaPorcentajeEtiqueta">{{ porcentaje_iva|unlocalize }}</span>%):
                                     </span>
                                     <span style="font-weight: 800; color: #f59e0b; font-size: 1.1rem; font-family: 'Courier New', monospace;" id="ivaDisplay">+$0.00</span>
                                 </div>
 
                                 <div class="resumen-fila" id="descuentoRow" style="display: none;">
                                     <span style="font-weight: 600; color: #374151; font-size: 0.95rem;">
-                                        <i class="bi bi-dash-circle" style="color: #dc2626;"></i> Descuento (<span id="descuentoPorcentaje">0</span>%):
+                                        <i class="bi bi-dash-circle" style="color: #dc2626;"></i> Descuento{% if not modo_edicion %} (<span id="descuentoPorcentaje">0</span>%){% endif %}:
                                     </span>
                                     <span style="font-weight: 800; color: #dc2626; font-size: 1.1rem; font-family: 'Courier New', monospace;" id="descuentoDisplay">-$0.00</span>
                                 </div>
@@ -1941,7 +1943,25 @@ const inputDescuento = document.getElementById('inputDescuento');
 const inputEnvio = document.getElementById('inputEnvio');
 const inputOtrosGastos = document.getElementById('inputOtrosGastos');
 const hiddenDescuento = document.getElementById('hiddenDescuento');
-const ivaPorcentaje = Number('{{ config.porcentaje_iva|default:15.00 }}') || 15;
+const ivaPorcentaje = Number('{{ porcentaje_iva|unlocalize }}');
+const descuentoEnDinero = inputDescuento.dataset.modo === 'dinero';
+
+// Misma fórmula que Venta.calcular_total: el IVA se calcula sobre (subtotal - descuento);
+// envío y otros gastos no llevan IVA; todo se redondea a centavos, mitad hacia arriba.
+function redondearCentavos(valor) {
+    return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
+
+function calcularMontos(subtotal, descuentoIngresado, envio, otrosGastos) {
+    subtotal = redondearCentavos(subtotal);
+    const descuento = redondearCentavos(
+        descuentoEnDinero ? descuentoIngresado : (subtotal * descuentoIngresado) / 100
+    );
+    const base = Math.max(redondearCentavos(subtotal - descuento), 0);
+    const iva = redondearCentavos((base * ivaPorcentaje) / 100);
+    const total = redondearCentavos(base + iva + envio + otrosGastos);
+    return { subtotal, descuento, base, iva, total };
+}
 
 // Objeto para almacenar precios de productos
 const preciosProductos = {};
@@ -1976,15 +1996,14 @@ function calcularTotales() {
     const envio = parseFloat(inputEnvio.value) || 0;
     const otrosGastos = parseFloat(inputOtrosGastos.value) || 0;
     
-    // Calcular descuento en dinero
-    const descuentoDinero = (subtotal * descuentoPorcentaje) / 100;
-    const iva = (subtotal * ivaPorcentaje) / 100;
+    const montos = calcularMontos(subtotal, descuentoPorcentaje, envio, otrosGastos);
+    const descuentoDinero = montos.descuento;
+    const iva = montos.iva;
+    const total = montos.total;
+    subtotal = montos.subtotal;
 
     // Guardar el descuento en dinero en el campo hidden
     hiddenDescuento.value = descuentoDinero.toFixed(2);
-
-    // Calcular total
-    const total = subtotal + iva - descuentoDinero + envio + otrosGastos;
 
     // Actualizar display
     document.getElementById('subtotalDisplay').textContent = `$${subtotal.toFixed(2)}`;
@@ -1998,7 +2017,8 @@ function calcularTotales() {
     
     if (descuentoPorcentaje > 0) {
         descuentoRow.style.display = 'flex';
-        document.getElementById('descuentoPorcentaje').textContent = descuentoPorcentaje;
+        const etiquetaPorcentaje = document.getElementById('descuentoPorcentaje');
+        if (etiquetaPorcentaje) etiquetaPorcentaje.textContent = descuentoPorcentaje;
         document.getElementById('descuentoDisplay').textContent = `-$${descuentoDinero.toFixed(2)}`;
     } else {
         descuentoRow.style.display = 'none';
@@ -2215,7 +2235,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const inputEnvio = document.getElementById('inputEnvio');
     const inputOtrosGastos = document.getElementById('inputOtrosGastos');
     const hiddenDescuento = document.getElementById('hiddenDescuento');
-    const ivaPorcentaje = parseFloat('{{ config.porcentaje_iva|default:15.00 }}') || 15;
     
     // Poblar la tabla con los productos de la venta
     const tbody = document.getElementById('tablaProductosSeleccionados');
@@ -2282,17 +2301,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const envio = parseFloat(inputEnvio.value) || 0;
         const otrosGastos = parseFloat(inputOtrosGastos.value) || 0;
         
-        // Calcular descuento y IVA
-        const descuentoDinero = (subtotal * descuentoPorcentaje) / 100;
-        const iva = (subtotal * ivaPorcentaje) / 100;
+        // Calcular descuento, IVA y total con la misma fórmula del servidor
+        const montos = calcularMontos(subtotal, descuentoPorcentaje, envio, otrosGastos);
+        const descuentoDinero = montos.descuento;
+        const iva = montos.iva;
+        const total = montos.total;
+        subtotal = montos.subtotal;
         
         // Guardar el descuento en dinero en el campo hidden
         if (hiddenDescuento) {
             hiddenDescuento.value = descuentoDinero.toFixed(2);
         }
-        
-        // Calcular total
-        const total = subtotal + iva - descuentoDinero + envio + otrosGastos;
         
         console.log('Total calculado:', total);
         
@@ -2323,7 +2342,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (descuentoPorcentaje > 0) {
             descuentoRow.style.display = 'flex';
-            document.getElementById('descuentoPorcentaje').textContent = descuentoPorcentaje;
+            const etiquetaPorcentaje = document.getElementById('descuentoPorcentaje');
+            if (etiquetaPorcentaje) etiquetaPorcentaje.textContent = descuentoPorcentaje;
             document.getElementById('descuentoDisplay').textContent = `-$${descuentoDinero.toFixed(2)}`;
         } else {
             descuentoRow.style.display = 'none';

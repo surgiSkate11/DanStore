@@ -370,6 +370,7 @@ def crear_venta(request):
 
     # OPTIMIZACIÓN: Cargar clientes sin N+1 Queries y calcular compras masivamente
     empresa = getattr(request, 'empresa', None)
+    config = ConfiguracionFactura.obtener_configuracion(empresa.id) if empresa else None
     # El consumidor final es compartido entre empresas: no se ofrece como cliente.
     clientes_bd = Cliente.objects.filter(empresas=empresa).exclude(ruc_cedula=RUC_CONSUMIDOR_FINAL).annotate(
         num_compras=Count('ventas', filter=Q(ventas__empresa=empresa) & ~Q(ventas__estado='anulada'))
@@ -423,6 +424,9 @@ def crear_venta(request):
         'cliente_seleccionado': cliente_nombre_param,
         'clientes_json': json.dumps(clientes),
         'token_envio': uuid.uuid4(),
+        # El % que la pantalla usa para mostrar el IVA: el de la configuración de la empresa.
+        'config': config,
+        'porcentaje_iva': config.porcentaje_iva if config else Decimal('15.00'),
     }
 
     return render(request, 'ventas/crear_venta.html', context)
@@ -467,10 +471,14 @@ def editar_venta(request, venta_id):
         return redirect('detalle_venta', venta_id=venta.id)
 
     # GET
+    config = ConfiguracionFactura.obtener_configuracion(request.empresa.id)
     context = {
         'venta': venta,
         'cliente': venta.cliente,
         'modo_edicion': True,
+        'config': config,
+        # Una venta se muestra con el % con que se guardó; la configuración solo cubre las que no lo tienen.
+        'porcentaje_iva': venta.porcentaje_iva if venta.porcentaje_iva is not None else config.porcentaje_iva,
     }
 
     return render(request, 'ventas/crear_venta.html', context)

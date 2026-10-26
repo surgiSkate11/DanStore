@@ -1,7 +1,8 @@
 import importlib
 import re
 import uuid
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
+from html.parser import HTMLParser
 from unittest import mock
 
 from django.apps import apps as django_apps
@@ -1331,3 +1332,218 @@ class TotalMaximoVentaTests(GastosVentaBase):
                 })
         despues = Venta.objects.get(pk=venta.pk)
         self.assertEqual((despues.envio, despues.total, despues.notas), (venta.envio, venta.total, venta.notas))
+
+
+class _FormularioRenderizado(HTMLParser):
+    """Lee los campos del formulario de la pantalla como los vería el navegador."""
+
+    def __init__(self):
+        super().__init__()
+        self.campos = {}
+        self.por_id = {}
+        self.productos = []
+        self._textarea = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == 'input':
+            if attrs.get('id'):
+                self.por_id[attrs['id']] = attrs
+            nombre = attrs.get('name')
+            if nombre == 'productos':
+                self.productos.append(attrs.get('value', ''))
+            elif nombre:
+                self.campos[nombre] = attrs.get('value', '')
+        elif tag == 'textarea' and attrs.get('name'):
+            self._textarea = attrs['name']
+            self.campos[self._textarea] = ''
+
+    def handle_data(self, data):
+        if self._textarea:
+            self.campos[self._textarea] += data
+
+    def handle_endtag(self, tag):
+        if tag == 'textarea':
+            self._textarea = None
+
+
+def _centavos_half_up(valor):
+    return valor.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+class IvaPantallaYEdicionTests(GastosVentaBase):
+    """S6/S4: el % de IVA correcto llega a la pantalla y editar sin tocar nada no cambia la venta."""
+
+    def venta_con(self, precio, descuento, envio='0', otros='0'):
+        venta = Venta.objects.create(
+            empresa=self.empresa, cliente=self.cliente, descuento=Decimal(descuento),
+            envio=Decimal(envio), otros_gastos=Decimal(otros),
+        )
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal(precio))
+        venta.calcular_total()
+        venta.save()
+        return venta
+
+    def configurar_iva(self, porcentaje):
+        config = ConfiguracionFactura.obtener_configuracion(self.empresa.id)
+        config.porcentaje_iva = Decimal(porcentaje)
+        config.save()
+
+    def lo_que_enviaria_el_navegador(self, html, subtotal):
+        """Reproduce el envío del formulario, incluido el cálculo del descuento que hace el JS al cargar."""
+        formulario = _FormularioRenderizado()
+        formulario.feed(html)
+        visible = formulario.por_id['inputDescuento']
+        valor = Decimal(visible.get('value') or '0')
+        if visible.get('data-modo') == 'dinero':
+            descuento = _centavos_half_up(valor)
+        else:  # modo antiguo: el input es un porcentaje y el JS lo convierte a dinero
+            descuento = _centavos_half_up(Decimal(subtotal) * valor / 100)
+        datos = {nombre: valor for nombre, valor in formulario.campos.items()}
+        datos['descuento'] = str(descuento)
+        datos['productos'] = formulario.productos
+        return datos
+
+    # -- % de IVA en la pantalla --------------------------------------------------
+
+    def test_crear_venta_usa_el_iva_de_la_configuracion(self):
+        self.configurar_iva('12.00')
+        html = self.client.get(reverse('crear_venta')).content.decode()
+        self.assertIn("const ivaPorcentaje = Number('12.00')", html)
+        self.assertRegex(html, r'id="ivaPorcentajeEtiqueta">12\.00<')
+
+    def test_editar_venta_usa_el_iva_guardado_aunque_la_configuracion_cambie(self):
+        venta = self.venta_con('100.00', '0')
+        self.assertEqual(venta.porcentaje_iva, Decimal('15.00'))
+        self.configurar_iva('12.00')
+        html = self.client.get(reverse('editar_venta', args=[venta.id])).content.decode()
+        self.assertIn("const ivaPorcentaje = Number('15.00')", html)
+        self.assertRegex(html, r'id="ivaPorcentajeEtiqueta">15\.00<')
+        self.assertNotIn("Number('12.00')", html)
+
+    def test_editar_venta_sin_iva_guardado_usa_la_configuracion(self):
+        venta = self.venta_con('100.00', '0')
+        Venta.objects.filter(pk=venta.pk).update(porcentaje_iva=None)
+        self.configurar_iva('12.00')
+        html = self.client.get(reverse('editar_venta', args=[venta.id])).content.decode()
+        self.assertIn("const ivaPorcentaje = Number('12.00')", html)
+
+    # -- editar sin tocar nada ----------------------------------------------------
+
+    def test_abrir_y_guardar_sin_tocar_nada_no_cambia_descuento_iva_ni_total(self):
+        casos = [
+            ('30.00', '7.00'),     # 23,33 % del subtotal: no es un porcentaje redondo
+            ('100.00', '33.33'),
+            ('30.00', '0.01'),
+            ('45.50', '12.34'),
+            ('100.00', '15.00'),   # 15 % exacto
+            ('100.00', '0.00'),
+        ]
+        for precio, descuento in casos:
+            with self.subTest(precio=precio, descuento=descuento):
+                venta = self.venta_con(precio, descuento, envio='2.50', otros='1.25')
+                antes = Venta.objects.get(pk=venta.pk)
+                url = reverse('editar_venta', args=[venta.id])
+                html = self.client.get(url).content.decode()
+                datos = self.lo_que_enviaria_el_navegador(html, precio)
+                self.assertEqual(datos['descuento'], str(antes.descuento))
+                response = self.client.post(url, datos)
+                self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+                despues = Venta.objects.get(pk=venta.pk)
+                self.assertEqual(
+                    (despues.descuento, despues.iva, despues.total, despues.envio, despues.otros_gastos, despues.porcentaje_iva),
+                    (antes.descuento, antes.iva, antes.total, antes.envio, antes.otros_gastos, antes.porcentaje_iva),
+                )
+
+    def test_editar_muestra_el_descuento_guardado_en_dinero(self):
+        venta = self.venta_con('30.00', '7.00')
+        html = self.client.get(reverse('editar_venta', args=[venta.id])).content.decode()
+        formulario = _FormularioRenderizado()
+        formulario.feed(html)
+        visible = formulario.por_id['inputDescuento']
+        self.assertEqual(visible['data-modo'], 'dinero')
+        self.assertEqual(visible['value'], '7.00')
+        self.assertEqual(formulario.campos['descuento'], '7.00')
+
+    def test_crear_venta_sigue_pidiendo_el_descuento_en_porcentaje(self):
+        formulario = _FormularioRenderizado()
+        formulario.feed(self.client.get(reverse('crear_venta')).content.decode())
+        self.assertEqual(formulario.por_id['inputDescuento'].get('data-modo'), 'porcentaje')
+
+
+class IvaEnDocumentosTests(GastosVentaBase):
+    """S6: el detalle y la factura impresa muestran la línea de IVA guardada, en el orden del cálculo."""
+
+    def setUp(self):
+        super().setUp()
+        self.venta = Venta.objects.create(
+            empresa=self.empresa, cliente=self.cliente, descuento=Decimal('5.00'),
+            envio=Decimal('2.00'), otros_gastos=Decimal('1.00'), descripcion_otros='',
+        )
+        DetalleVenta.objects.create(venta=self.venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        self.venta.calcular_total()
+        self.venta.save()
+        self.assertEqual((self.venta.iva, self.venta.total), (Decimal('14.25'), Decimal('112.25')))
+
+    def assertOrden(self, html, marcas):
+        posicion = 0
+        for marca in marcas:
+            indice = html.find(marca, posicion)
+            self.assertNotEqual(indice, -1, f'{marca!r} no aparece después de la marca anterior')
+            posicion = indice + len(marca)
+
+    def test_detalle_muestra_iva_con_porcentaje_y_monto_guardados(self):
+        html = self.client.get(reverse('detalle_venta', args=[self.venta.id])).content.decode()
+        self.assertIn('IVA (15%)', html)
+        self.assertOrden(html, ['Subtotal (', 'Descuento:', 'IVA (15%)', '14.25', 'Envío:', 'Otros gastos', 'Total Pagado', '112.25'])
+
+    def test_factura_html_muestra_iva_con_porcentaje_y_monto_guardados(self):
+        response = self.client.get(reverse('factura_pdf', args=[self.venta.id]) + '?html=1')
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn('IVA (15%)', html)
+        self.assertOrden(html, ['Subtotal:', 'Descuento:', 'IVA (15%)', '14.25', 'Envío:', 'Otros gastos', 'TOTAL FINAL:', '112.25'])
+
+    def test_el_iva_mostrado_es_el_guardado_no_el_de_la_configuracion_actual(self):
+        config = ConfiguracionFactura.obtener_configuracion(self.empresa.id)
+        config.porcentaje_iva = Decimal('12.00')
+        config.save()
+        for html in (
+            self.client.get(reverse('detalle_venta', args=[self.venta.id])).content.decode(),
+            self.client.get(reverse('factura_pdf', args=[self.venta.id]) + '?html=1').content.decode(),
+        ):
+            self.assertIn('IVA (15%)', html)
+            self.assertNotIn('IVA (12%)', html)
+
+    def test_porcentaje_decimal_se_muestra_sin_ceros_de_mas(self):
+        Venta.objects.filter(pk=self.venta.pk).update(porcentaje_iva=Decimal('12.50'))
+        html = self.client.get(reverse('detalle_venta', args=[self.venta.id])).content.decode()
+        self.assertIn('IVA (12.50%)', html)
+
+    def test_sin_porcentaje_guardado_muestra_el_monto_sin_texto_de_porcentaje(self):
+        Venta.objects.filter(pk=self.venta.pk).update(porcentaje_iva=None)
+        for html in (
+            self.client.get(reverse('detalle_venta', args=[self.venta.id])).content.decode(),
+            self.client.get(reverse('factura_pdf', args=[self.venta.id]) + '?html=1').content.decode(),
+        ):
+            self.assertIn('IVA', html)
+            self.assertIn('14.25', html)
+            self.assertNotIn('IVA (', html)
+
+    def test_iva_cero_se_muestra_como_linea(self):
+        Venta.objects.filter(pk=self.venta.pk).update(porcentaje_iva=Decimal('0.00'), iva=Decimal('0.00'))
+        html = self.client.get(reverse('factura_pdf', args=[self.venta.id]) + '?html=1').content.decode()
+        self.assertIn('IVA (0%)', html)
+
+    def test_la_factura_sigue_generando_pdf(self):
+        response = self.client.get(reverse('factura_pdf', args=[self.venta.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))
+        self.assertIn(f'factura-{self.venta.numero_factura}.pdf', response['Content-Disposition'])
+
+    def test_el_detalle_conserva_sus_botones_de_impresion(self):
+        html = self.client.get(reverse('detalle_venta', args=[self.venta.id])).content.decode()
+        self.assertIn(reverse('factura_pdf', args=[self.venta.id]), html)
+        self.assertIn(reverse('editar_venta', args=[self.venta.id]), html)
+

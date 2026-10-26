@@ -357,6 +357,11 @@
                         </div>
                         {% endif %}
                         
+                        <div class="total-row">
+                            <span class="fw-semibold" style="color: #f59e0b;"><i class="bi bi-percent"></i> IVA{% if venta.porcentaje_iva is not None %} ({{ venta.porcentaje_iva|floatformat:"-2" }}%){% endif %}:</span>
+                            <span class="fw-bold" style="color: #f59e0b; font-family: 'Courier New', monospace;">+${{ venta.iva|floatformat:2 }}</span>
+                        </div>
+                        
                         {% if venta.envio > 0 %}
                         <div class="total-row">
                             <span class="text-primary fw-semibold"><i class="bi bi-truck"></i> Envío:</span>
