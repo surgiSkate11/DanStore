@@ -16,13 +16,15 @@ from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.urls import reverse
-from productos.models import Producto
+from django.views.decorators.http import require_GET
+from productos.models import Producto, normalizar_busqueda
 from .forms import PorcentajeIvaForm, leer_gastos
 from .models import Venta, DetalleVenta, ConfiguracionFactura
 from clientes.models import Cliente
 from empresas.mixins import requiere_modulo
 
 RUC_CONSUMIDOR_FINAL = '9999999999'
+LIMITE_BUSQUEDA_PRODUCTOS = 20
 
 logger = logging.getLogger(__name__)
 
@@ -429,6 +431,32 @@ def crear_venta(request):
     }
 
     return render(request, 'ventas/crear_venta.html', context)
+
+
+@login_required
+@requiere_modulo('ventas', accion='crear')
+@require_GET
+def api_buscar_productos(request):
+    """Productos que se pueden vender ahora, de la empresa del usuario (S7/S8).
+
+    Sin texto devuelve los más recientes. Solo expone lo que la caja necesita: nunca costos.
+    """
+    productos = Producto.objects.filter(
+        empresa=request.empresa, estado='disponible', stock__gt=0,
+    )
+    for termino in normalizar_busqueda(request.GET.get('q', '')).split():
+        productos = productos.filter(texto_busqueda__icontains=termino)
+
+    return JsonResponse([
+        {
+            'id': p.id,
+            'nombre': p.nombre,
+            'precio': f'{p.precio:.2f}',
+            'stock': p.stock,
+            'categoria': p.categoria,
+        }
+        for p in productos.order_by('-creado_en', '-id')[:LIMITE_BUSQUEDA_PRODUCTOS]
+    ], safe=False)
 
 
 @login_required

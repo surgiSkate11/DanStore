@@ -11,6 +11,9 @@ urlpatterns = [
     # Crear venta
     path('crear/', views.crear_venta, name='crear_venta'),
     
+    # Búsqueda de productos para la venta rápida
+    path('api/productos/', views.api_buscar_productos, name='api_buscar_productos'),
+
     # Editar venta
     path('<int:venta_id>/editar/', views.editar_venta, name='editar_venta'),
     

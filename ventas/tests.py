@@ -1574,3 +1574,91 @@ class DatosDeClienteSinXssTests(TestCase):
         bloque = html[html.index('>', inicio) + 1:html.index('</script>', inicio)]
         clientes = json.loads(bloque)
         self.assertIn(self.NOMBRE_MALICIOSO, [c['nombre'] for c in clientes])
+
+
+class ApiBuscarProductosTests(TestCase):
+    """S7/S8: la búsqueda de productos de la venta rápida es del servidor, por empresa y sin costos."""
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('api-panaderia')
+        self.otra, _ = crear_empresa_con_dueno('api-cafeteria')
+        self.tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Camisetas')
+        self.client.force_login(self.dueno)
+        self.url = reverse('api_buscar_productos')
+
+    def producto(self, nombre, empresa=None, **extra):
+        datos = {'precio': Decimal('10.00'), 'stock': 5, 'estado': 'disponible'}
+        datos.update(extra)
+        return Producto.objects.create(empresa=empresa or self.empresa, nombre=nombre, **datos)
+
+    def buscar(self, q=None):
+        respuesta = self.client.get(self.url, {} if q is None else {'q': q})
+        self.assertEqual(respuesta.status_code, 200)
+        return respuesta.json()
+
+    def test_la_ruta_es_ventas_api_productos(self):
+        self.assertEqual(self.url, '/ventas/api/productos/')
+
+    def test_devuelve_id_nombre_precio_con_dos_decimales_stock_y_categoria(self):
+        p = self.producto('Camisón de seda', precio=Decimal('12.5'), stock=4, categoria='Mujer')
+        self.assertEqual(self.buscar('seda'), [{
+            'id': p.id, 'nombre': 'Camisón de seda', 'precio': '12.50', 'stock': 4, 'categoria': 'Mujer',
+        }])
+
+    def test_nunca_devuelve_productos_de_otra_empresa(self):
+        propio = self.producto('Pan de yuca')
+        self.producto('Pan de yuca ajeno', empresa=self.otra)
+        self.assertEqual([r['id'] for r in self.buscar('pan')], [propio.id])
+        self.assertEqual([r['id'] for r in self.buscar('')], [propio.id])
+
+    def test_excluye_agotados_y_no_disponibles(self):
+        visible = self.producto('Gorra azul')
+        self.producto('Gorra agotada', stock=0)
+        self.producto('Gorra vendida', estado='vendido')
+        self.producto('Gorra reservada', estado='reservado')
+        self.assertEqual([r['id'] for r in self.buscar('gorra')], [visible.id])
+
+    def test_devuelve_como_maximo_20(self):
+        for i in range(25):
+            self.producto(f'Taza {i}')
+        self.assertEqual(len(self.buscar('taza')), 20)
+        self.assertEqual(len(self.buscar()), 20)
+
+    def test_sin_texto_devuelve_los_mas_recientes_primero(self):
+        ids = [self.producto(f'Item {i}').id for i in range(3)]
+        self.assertEqual([r['id'] for r in self.buscar('')], ids[::-1])
+        self.assertEqual([r['id'] for r in self.buscar('   ')], ids[::-1])
+
+    def test_busca_sin_importar_mayusculas_ni_acentos(self):
+        p = self.producto('Camisón de Seda')
+        self.assertEqual([r['id'] for r in self.buscar('CAMISON')], [p.id])
+        self.assertEqual([r['id'] for r in self.buscar('camisón')], [p.id])
+
+    def test_busca_por_tipo_de_producto_y_por_varias_palabras(self):
+        p = self.producto('Polo rojo', tipo_producto=self.tipo)
+        self.producto('Polo verde')
+        self.assertEqual([r['id'] for r in self.buscar('camisetas')], [p.id])
+        self.assertEqual([r['id'] for r in self.buscar('polo rojo')], [p.id])
+        self.assertEqual(self.buscar('rojo verde'), [])
+
+    def test_los_comodines_de_like_se_buscan_como_texto(self):
+        self.producto('Oferta 50% hoy')
+        self.assertEqual(len(self.buscar('%')), 1)
+        self.assertEqual(self.buscar('zzz%'), [])
+
+    def test_no_incluye_el_precio_de_costo_ni_otros_campos(self):
+        self.producto('Bolso', precio_costo=Decimal('3.21'), precio_real=Decimal('4.56'))
+        respuesta = self.client.get(self.url, {'q': 'bolso'})
+        self.assertNotContains(respuesta, '3.21')
+        self.assertNotContains(respuesta, '4.56')
+        self.assertNotContains(respuesta, 'costo')
+        self.assertEqual(set(respuesta.json()[0]), {'id', 'nombre', 'precio', 'stock', 'categoria'})
+
+    def test_un_anonimo_es_enviado_al_login(self):
+        self.client.logout()
+        respuesta = self.client.get(self.url, {'q': 'a'})
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertIn('login', respuesta.url)
+
+    def test_solo_acepta_get(self):
+        self.assertEqual(self.client.post(self.url, {'q': 'a'}).status_code, 405)
