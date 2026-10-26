@@ -311,7 +311,7 @@ class AislamientoVentasTests(TestCase):
     def test_formulario_de_venta_no_ofrece_clientes_ni_productos_de_otra_empresa(self):
         respuesta = self.client.get(reverse('crear_venta'))
         self.assertEqual(respuesta.status_code, 200)
-        self.assertContains(respuesta, 'baguette')  # la plantilla pinta data-nombre en minúsculas
+        self.assertContains(respuesta, 'data-titulo="Baguette"')  # la tarjeta lleva el nombre del producto
         for ajeno in ('Carlos Cafetero', 'capuchino', 'Bebida caliente', 'Beto Cafetero'):
             self.assertNotContains(respuesta, ajeno)
 
@@ -1662,3 +1662,54 @@ class ApiBuscarProductosTests(TestCase):
 
     def test_solo_acepta_get(self):
         self.assertEqual(self.client.post(self.url, {'q': 'a'}).status_code, 405)
+
+
+class PantallaVentaRapidaTests(GastosVentaBase):
+    """S7/S8: la pantalla arranca con pocos productos, enfoca el buscador y consulta la API."""
+
+    def crear_productos(self, cantidad):
+        return [
+            Producto.objects.create(
+                empresa=self.empresa, nombre=f'Lote {i:02d}', precio=Decimal('1.00'),
+                stock=2, estado='disponible',
+            )
+            for i in range(cantidad)
+        ]
+
+    def pagina(self):
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertEqual(respuesta.status_code, 200)
+        return respuesta.content.decode()
+
+    def test_la_lista_inicial_trae_solo_los_24_mas_recientes(self):
+        lotes = self.crear_productos(30)
+        html = self.pagina()
+        ids = [int(i) for i in re.findall(r'class="card producto-seleccionable"\s+data-producto-id="(\d+)"', html)]
+        self.assertEqual(len(ids), 24)
+        self.assertEqual(set(ids), {p.id for p in lotes[6:]})
+        self.assertNotIn(self.producto.id, ids)
+
+    def test_la_lista_inicial_no_ofrece_productos_agotados(self):
+        Producto.objects.filter(pk=self.producto.pk).update(stock=0)
+        self.assertNotIn(f'data-producto-id="{self.producto.id}"', self.pagina())
+
+    def test_el_buscador_tiene_foco_y_consulta_la_api(self):
+        html = self.pagina()
+        buscador = re.search(r'<input[^>]*id="searchProductos"[^>]*>', html, re.S).group(0)
+        self.assertIn('autofocus', buscador)
+        self.assertIn(f'data-url-api="{reverse("api_buscar_productos")}"', html)
+
+    def test_la_tabla_de_la_venta_tiene_columna_de_cantidad(self):
+        self.assertIn('<th style="text-align: center;">Cantidad</th>', self.pagina())
+
+    def test_cada_tarjeta_lleva_el_nombre_del_producto_para_la_tabla(self):
+        self.assertIn(f'data-titulo="{self.producto.nombre}"', self.pagina())
+
+    def test_la_pantalla_de_edicion_no_cambia_no_hay_buscador_ni_cantidades(self):
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        venta.calcular_total()
+        html = self.client.get(reverse('editar_venta', args=[venta.id])).content.decode()
+        self.assertNotIn('id="searchProductos"', html)
+        self.assertNotIn('>Cantidad</th>', html)
+        self.assertIn('producto-card-edicion', html)

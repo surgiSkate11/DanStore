@@ -25,6 +25,7 @@ from empresas.mixins import requiere_modulo
 
 RUC_CONSUMIDOR_FINAL = '9999999999'
 LIMITE_BUSQUEDA_PRODUCTOS = 20
+PRODUCTOS_INICIALES_VENTA = 24
 
 logger = logging.getLogger(__name__)
 
@@ -404,10 +405,12 @@ def crear_venta(request):
             ).values_list('id', flat=True)
         )
 
+    # Solo los más recientes con stock: el resto se encuentra con el buscador (api_buscar_productos).
     productos_disponibles = Producto.objects.filter(
         empresa=empresa,
-        estado='disponible'
-    ).select_related('tipo_producto').order_by('-creado_en')[:200]
+        estado='disponible',
+        stock__gt=0,
+    ).select_related('tipo_producto').order_by('-creado_en', '-id')[:PRODUCTOS_INICIALES_VENTA]
 
     if productos_cliente_ids:
         productos_del_cliente = Producto.objects.filter(

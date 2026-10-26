@@ -1271,8 +1271,9 @@
                                 <div class="search-productos-wrapper">
                                     <i class="bi bi-search search-icon"></i>
                                     <input type="text" class="form-control search-productos-input" 
-                                           id="searchProductos" 
-                                           placeholder="Buscar por nombre o tipo...">
+                                           id="searchProductos" autofocus autocomplete="off"
+                                           data-url-api="{% url 'api_buscar_productos' %}"
+                                           placeholder="Buscar por nombre o código (Enter agrega el primero)">
                                 </div>
                             </div>
                         </div>
@@ -1283,10 +1284,10 @@
                         {% for producto in productos %}
                         <div class="card producto-seleccionable" 
                              data-producto-id="{{ producto.id }}" 
-                             data-precio="{{ producto.precio }}"
-                             data-stock="{{ producto.stock }}"
+                             data-precio="{{ producto.precio|unlocalize }}"
+                             data-stock="{{ producto.stock|unlocalize }}"
                          data-categoria="{{ producto.categoria }}"
-                         data-nombre="{{ producto.tipo_producto|lower }} {{ producto.nombre|lower }}">
+                         data-titulo="{{ producto.nombre }}">
                             <div class="position-relative">
                                 {% if producto.imagen %}
                                 <img src="{{ producto.imagen.url }}" class="card-img-top" 
@@ -1354,8 +1355,11 @@
                         <thead>
                             <tr>
                                 <th style="width: 10%; text-align: center;">#</th>
-                                <th style="width: {% if modo_edicion %}45%{% else %}40%{% endif %};">Producto</th>
-                                <th style="width: 25%;">Categoría</th>
+                                <th style="width: {% if modo_edicion %}45%{% else %}30%{% endif %};">Producto</th>
+                                <th style="width: {% if modo_edicion %}25%{% else %}20%{% endif %};">Categoría</th>
+                                {% if not modo_edicion %}
+                                <th style="text-align: center;">Cantidad</th>
+                                {% endif %}
                                 <th style="width: {% if modo_edicion %}20%{% else %}15%{% endif %}; text-align: center;">Precio</th>
                                 {% if not modo_edicion %}
                                 <th style="width: 10%; text-align: center;">Acción</th>
@@ -1364,11 +1368,11 @@
                         </thead>
                         <tbody id="tablaProductosSeleccionados">
                             <tr class="tabla-vacia">
-                                <td colspan="{% if modo_edicion %}4{% else %}5{% endif %}">
+                                <td colspan="{% if modo_edicion %}4{% else %}6{% endif %}">
                                     <div style="padding: 2rem; text-align: center; color: #9ca3af;">
                                         <i class="bi bi-cart-x" style="font-size: 3rem; opacity: 0.3;"></i>
                                         <p style="margin-top: 1rem; font-size: 1.1rem; font-weight: 600; color: #6b7280;">No hay productos seleccionados</p>
-                                        <p style="margin: 0; font-size: 0.9rem;">Haz clic en los productos del catálogo para agregarlos a la factura</p>
+                                        <p style="margin: 0; font-size: 0.9rem;">Escribe en el buscador y presiona Enter, o haz clic en un producto del catálogo</p>
                                     </div>
                                 </td>
                             </tr>
@@ -1520,38 +1524,119 @@
 function escaparHtml(valor) {
     return String(valor ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"}[c]));
 }
-let productosSeleccionados = new Set();
-const productosCountMap = new Map(); // Mapa de producto_id -> cantidad seleccionada
+// En edición no hay catálogo ni buscador: todo lo de abajo que lo usa solo corre al crear.
+const ES_EDICION = "{{ modo_edicion|yesno:'true,false' }}" === "true";
+const carrito = new Map(); // producto_id -> { id, nombre, categoria, precio, stock, cantidad }
 const PRODUCTOS_POR_PAGINA = 12;
+const ESPERA_BUSQUEDA_MS = 250;
 let paginaActual = 1;
 let categoriaActual = 'todos';
-let busquedaActual = '';
 let todosLosProductos = [];
+let tarjetasIniciales = [];
+let temporizadorBusqueda = null;
+let busquedaVigente = 0;
+
+function generarBotonesCategoria() {
+    const contenedorFiltros = document.getElementById('categoriasFiltroContainer');
+    if (!contenedorFiltros) return;
+    contenedorFiltros.querySelectorAll('.filter-btn:not([data-categoria="todos"])').forEach(b => b.remove());
+    const categoriasUnicas = new Set();
+    todosLosProductos.forEach(p => {
+        const categoria = (p.dataset.categoria || '').trim();
+        if (categoria !== '' && categoria !== 'None') categoriasUnicas.add(categoria);
+    });
+    categoriasUnicas.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'filter-btn';
+        btn.dataset.categoria = cat;
+        btn.innerHTML = `<i class="bi bi-tag"></i> ${escaparHtml(cat)}`;
+        contenedorFiltros.appendChild(btn);
+    });
+    categoriaActual = 'todos';
+    contenedorFiltros.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.categoria === 'todos');
+    });
+}
+
+// Muestra un conjunto de tarjetas en el catálogo (los 24 iniciales o el resultado de una búsqueda).
+function mostrarTarjetas(tarjetas) {
+    const grid = document.getElementById('productosGrid');
+    grid.querySelectorAll('.producto-seleccionable').forEach(t => t.remove());
+    tarjetas.forEach(t => {
+        t.classList.toggle('producto-seleccionado', carrito.has(t.dataset.productoId));
+        grid.appendChild(t);
+    });
+    todosLosProductos = tarjetas;
+    paginaActual = 1;
+    generarBotonesCategoria();
+    aplicarFiltrosYPaginacion();
+}
+
+// Tarjeta de un resultado del API. Los datos del producto van por dataset y escaparHtml, nunca como HTML crudo.
+function crearTarjetaDeApi(p) {
+    const tarjeta = document.createElement('div');
+    tarjeta.className = 'card producto-seleccionable';
+    tarjeta.dataset.productoId = String(p.id);
+    tarjeta.dataset.precio = String(p.precio);
+    tarjeta.dataset.stock = String(p.stock);
+    tarjeta.dataset.categoria = p.categoria || '';
+    tarjeta.dataset.titulo = p.nombre;
+    tarjeta.innerHTML = `
+        <div class="position-relative">
+            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                <i class="bi bi-image" style="font-size: 2rem; color: #d1d5db;"></i>
+            </div>
+            <div style="position: absolute; top: 8px; right: 8px; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);">
+                <i class="bi bi-box2" style="margin-right: 0.3rem;"></i>Stock: ${escaparHtml(p.stock)}
+            </div>
+        </div>
+        <div class="card-body p-2">
+            <h6 class="card-title mb-1" style="font-size: 0.875rem;">${escaparHtml(p.nombre)}</h6>
+            <p class="card-text mb-1"><small class="text-muted">${escaparHtml(p.categoria || 'General')}</small></p>
+            <p class="card-text mb-0"><strong style="color: #10b981;">$${escaparHtml(p.precio)}</strong></p>
+        </div>
+    `;
+    return tarjeta;
+}
+
+// Consulta el API con el texto escrito. Una respuesta vieja nunca pisa a una más reciente.
+async function buscarProductos(texto) {
+    const consulta = texto.trim();
+    const numero = ++busquedaVigente;
+    if (consulta === '') {
+        mostrarTarjetas(tarjetasIniciales);
+        return;
+    }
+    const url = document.getElementById('searchProductos').dataset.urlApi;
+    try {
+        const respuesta = await fetch(`${url}?q=${encodeURIComponent(consulta)}`, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+        const productos = await respuesta.json();
+        if (numero !== busquedaVigente) return;
+        mostrarTarjetas(productos.map(crearTarjetaDeApi));
+    } catch (error) {
+        if (numero !== busquedaVigente) return;
+        showDjangoToast('No se pudo buscar productos. Intenta de nuevo.', 'warning');
+    }
+}
+
+function programarBusqueda(texto) {
+    clearTimeout(temporizadorBusqueda);
+    temporizadorBusqueda = setTimeout(() => buscarProductos(texto), ESPERA_BUSQUEDA_MS);
+}
 
 // Inicializar productos
 document.addEventListener('DOMContentLoaded', function() {
+    if (ES_EDICION) return;
+    const buscador = document.getElementById('searchProductos');
     todosLosProductos = Array.from(document.querySelectorAll('.producto-seleccionable'));
-    
-    // Generar botones de categoría dinámicamente
-    const categoriasUnicas = new Set();
-    todosLosProductos.forEach(p => {
-        if (p.dataset.categoria && p.dataset.categoria.trim() !== '' && p.dataset.categoria.trim() !== 'None') {
-            categoriasUnicas.add(p.dataset.categoria.trim());
-        }
-    });
-    
-    const contenedorFiltros = document.getElementById('categoriasFiltroContainer');
-    if (contenedorFiltros) {
-        categoriasUnicas.forEach(cat => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'filter-btn';
-            btn.dataset.categoria = cat;
-            btn.innerHTML = `<i class="bi bi-tag"></i> ${escaparHtml(cat)}`;
-            contenedorFiltros.appendChild(btn);
-        });
-    }
+    tarjetasIniciales = todosLosProductos.slice();
 
+    generarBotonesCategoria();
     aplicarFiltrosYPaginacion();
     
     // Event listeners para filtros
@@ -1565,11 +1650,34 @@ document.addEventListener('DOMContentLoaded', function() {
         aplicarFiltrosYPaginacion();
     });
     
-    // Event listener para búsqueda
-    document.getElementById('searchProductos').addEventListener('input', function() {
-        busquedaActual = this.value.toLowerCase();
-        paginaActual = 1;
-        aplicarFiltrosYPaginacion();
+    // Búsqueda en vivo: escribe, espera un momento y consulta al servidor
+    buscador.addEventListener('input', function() {
+        programarBusqueda(this.value);
+    });
+
+    // Enter agrega el primer resultado; Escape limpia la búsqueda.
+    // Enter nunca envía el formulario desde aquí: guardar es el botón o F9.
+    buscador.addEventListener('keydown', async function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(temporizadorBusqueda);
+            if (this.value.trim() === '') return;
+            await buscarProductos(this.value);
+            const primero = filtrarProductos()[0];
+            if (!primero) {
+                showDjangoToast('No hay productos que coincidan con la búsqueda.', 'warning');
+                return;
+            }
+            if (agregarProducto(primero)) {
+                this.value = '';
+                await buscarProductos('');
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            clearTimeout(temporizadorBusqueda);
+            this.value = '';
+            buscarProductos('');
+        }
     });
     
     // Event listeners para paginación
@@ -1593,17 +1701,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function filtrarProductos() {
-    return todosLosProductos.filter(producto => {
-        // Filtro por categoría
-        const categoria = producto.dataset.categoria;
-        const cumpleCategoria = categoriaActual === 'todos' || categoria === categoriaActual;
-        
-        // Filtro por búsqueda
-        const nombre = producto.dataset.nombre;
-        const cumpleBusqueda = busquedaActual === '' || nombre.includes(busquedaActual);
-        
-        return cumpleCategoria && cumpleBusqueda;
-    });
+    return todosLosProductos.filter(producto => categoriaActual === 'todos' || producto.dataset.categoria === categoriaActual);
 }
 
 function aplicarFiltrosYPaginacion() {
@@ -1649,156 +1747,180 @@ function aplicarFiltrosYPaginacion() {
 }
 
 function limpiarFiltros() {
-    categoriaActual = 'todos';
-    busquedaActual = '';
-    paginaActual = 1;
+    clearTimeout(temporizadorBusqueda);
     document.getElementById('searchProductos').value = '';
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('.filter-btn[data-categoria="todos"]').classList.add('active');
-    aplicarFiltrosYPaginacion();
+    buscarProductos('');
 }
 
-// Función para agregar producto a la tabla de facturación
-function agregarProductoTabla(productoId) {
-    const card = document.querySelector(`.producto-seleccionable[data-producto-id="${productoId}"]`);
-    if (!card) return;
-    
-    const nombre = card.querySelector('.card-title').textContent.trim();
-    const precio = parseFloat(card.dataset.precio) || 0;
-    const categoria = card.dataset.categoria || 'Sin categoría';
-    const categoriaNombre = categoria;
-    
-    const tbody = document.getElementById('tablaProductosSeleccionados');
-    
-    // Eliminar mensaje de tabla vacía si existe
-    const filaVacia = tbody.querySelector('.tabla-vacia');
-    if (filaVacia) {
-        filaVacia.remove();
-    }
-    
-    // Colores genéricos
-    const colores = { bg: '#f8f9ff', border: '#667eea', icon: '#4f46e5' };
-    
-    // Crear nueva fila con diseño tipo factura profesional
+function textoTablaVacia() {
+    return `
+        <tr class="tabla-vacia">
+            <td colspan="6">
+                <div style="padding: 2rem; text-align: center; color: #9ca3af;">
+                    <i class="bi bi-cart-x" style="font-size: 3rem; opacity: 0.3;"></i>
+                    <p style="margin-top: 1rem; font-size: 1.1rem; font-weight: 600; color: #6b7280;">No hay productos seleccionados</p>
+                    <p style="margin: 0; font-size: 0.9rem;">Escribe en el buscador y presiona Enter, o haz clic en un producto del catálogo</p>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+function numerarFilas() {
+    document.querySelectorAll('#tablaProductosSeleccionados tr[data-producto-id]').forEach((fila, indice) => {
+        fila.querySelector('td:first-child').textContent = indice + 1;
+    });
+}
+
+// Pone en la fila lo que dice el carrito: cantidad, total de la línea y límites de los botones.
+function actualizarFila(item) {
+    const fila = document.querySelector(`#tablaProductosSeleccionados tr[data-producto-id="${item.id}"]`);
+    if (!fila) return;
+    fila.querySelector('.cantidad-input').value = item.cantidad;
+    fila.querySelector('.total-linea').textContent = `$${redondearCentavos(item.precio * item.cantidad).toFixed(2)}`;
+    fila.querySelector('[data-accion="menos"]').disabled = item.cantidad <= 1;
+    fila.querySelector('[data-accion="mas"]').disabled = item.stock > 0 && item.cantidad >= item.stock;
+}
+
+function crearFila(item) {
     const fila = document.createElement('tr');
-    fila.dataset.productoId = productoId;
-    fila.style.animation = 'slideIn 0.3s ease-out';
+    fila.dataset.productoId = item.id;
+    const colores = { bg: '#f8f9ff', border: '#667eea', icon: '#4f46e5' };
+    const maximo = item.stock > 0 ? ` max="${item.stock}"` : '';
     fila.innerHTML = `
-        <td style="text-align: center; font-weight: 800; color: #1f2937; font-size: 1.1rem; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-right: 3px solid #e5e7eb;">
-            ${tbody.children.length + 1}
-        </td>
+        <td style="text-align: center; font-weight: 800; color: #1f2937; font-size: 1.1rem; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-right: 3px solid #e5e7eb;"></td>
         <td style="font-weight: 600; color: #111827; font-size: 1rem; padding-left: 1.25rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <i class="bi bi-box-seam-fill" style="color: #667eea; font-size: 1.1rem;"></i>
-                <span>${escaparHtml(nombre)}</span>
+                <span>${escaparHtml(item.nombre)}</span>
             </div>
+            <small class="text-muted">$${item.precio.toFixed(2)} c/u</small>
         </td>
         <td>
             <span style="background: ${colores.bg}; color: ${colores.icon}; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; border: 2px solid ${colores.border}; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                <i class="bi bi-tag-fill"></i> ${escaparHtml(categoriaNombre)}
+                <i class="bi bi-tag-fill"></i> ${escaparHtml(item.categoria)}
             </span>
         </td>
-        <td style="text-align: center; font-weight: 800; font-size: 1.25rem; color: #059669; font-family: 'Courier New', monospace; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 3px solid #10b981;">
-            $${precio.toFixed(2)}
+        <td style="text-align: center; white-space: nowrap;">
+            <div class="input-group input-group-sm justify-content-center flex-nowrap" style="max-width: 150px; margin: 0 auto;">
+                <button type="button" class="btn btn-outline-secondary" data-accion="menos" aria-label="Quitar una unidad">&minus;</button>
+                <input type="number" class="form-control text-center cantidad-input" min="1"${maximo} step="1" value="${item.cantidad}" aria-label="Cantidad" style="font-weight: 700;">
+                <button type="button" class="btn btn-outline-secondary" data-accion="mas" aria-label="Agregar una unidad">+</button>
+            </div>
         </td>
+        <td class="total-linea" style="text-align: center; font-weight: 800; font-size: 1.25rem; color: #059669; font-family: 'Courier New', monospace; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 3px solid #10b981;"></td>
         <td style="text-align: center;">
-            <button type="button" class="btn btn-sm" onclick="eliminarProductoTabla('${productoId}')" 
-                    style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); color: #dc2626; border: 2px solid #fca5a5; border-radius: 10px; padding: 0.5rem 0.75rem; font-weight: 700; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);" 
-                    onmouseover="this.style.background='linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)'; this.style.color='white'; this.style.transform='scale(1.1)';" 
-                    onmouseout="this.style.background='linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'; this.style.color='#dc2626'; this.style.transform='scale(1)';">
+            <button type="button" class="btn btn-sm btn-outline-danger" data-accion="quitar" aria-label="Quitar producto">
                 <i class="bi bi-trash-fill"></i>
             </button>
         </td>
     `;
-    
-    tbody.appendChild(fila);
-    calcularTotales();
+    return fila;
 }
 
-// Función para eliminar producto de la tabla
-function eliminarProductoTabla(productoId) {
-    const tbody = document.getElementById('tablaProductosSeleccionados');
-    const fila = tbody.querySelector(`tr[data-producto-id="${productoId}"]`);
-    
-    if (fila) {
-        fila.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => {
-            fila.remove();
-            
-            // Actualizar contador del producto
-            const cantidadActual = productosCountMap.get(productoId) || 1;
-            productosCountMap.set(productoId, cantidadActual - 1);
-            
-            // Verificar si hay más filas de este producto en la tabla
-            const filasDelProducto = tbody.querySelectorAll(`tr[data-producto-id="${productoId}"]`);
-            if (filasDelProducto.length === 0) {
-                productosSeleccionados.delete(productoId);
-                // Deseleccionar el producto en el grid
-                const card = document.querySelector(`.producto-seleccionable[data-producto-id="${productoId}"]`);
-                if (card) {
-                    card.classList.remove('producto-seleccionado');
-                }
-            }
-            
-            // Renumerar filas
-            const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
-            filas.forEach((f, index) => {
-                const numeroCell = f.querySelector('td:first-child');
-                if (numeroCell) numeroCell.textContent = index + 1;
-            });
-            
-            // Si no hay productos, mostrar mensaje vacío
-            if (filas.length === 0) {
-                tbody.innerHTML = `
-                    <tr class="tabla-vacia">
-                        <td colspan="5">
-                            <div style="padding: 2rem; text-align: center; color: #9ca3af;">
-                                <i class="bi bi-cart-x" style="font-size: 3rem; opacity: 0.3;"></i>
-                                <p style="margin-top: 1rem; font-size: 1.1rem; font-weight: 600; color: #6b7280;">No hay productos seleccionados</p>
-                                <p style="margin: 0; font-size: 0.9rem;">Haz clic en los productos del catálogo para agregarlos a la factura</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-            
-            calcularTotales();
-            actualizarContador();
-        }, 300);
+// Agrega una unidad del producto de la tarjeta. Devuelve false si no hay más stock.
+function agregarProducto(card) {
+    const id = card.dataset.productoId;
+    let item = carrito.get(id);
+    if (!item) {
+        item = {
+            id,
+            nombre: card.dataset.titulo || '',
+            categoria: card.dataset.categoria || 'Sin categoría',
+            precio: parseFloat(card.dataset.precio) || 0,
+            stock: parseInt(card.dataset.stock, 10) || 0,
+            cantidad: 0,
+        };
     }
-}
-
-// Seleccionar/deseleccionar productos usando delegación de eventos
-document.getElementById('productosGrid').addEventListener('click', function(e) {
-    const card = e.target.closest('.producto-seleccionable');
-    if (!card) return;
-    
-    const productoId = card.dataset.productoId;
-    const stock = parseInt(card.dataset.stock) || 0;
-    const cantidadActual = productosCountMap.get(productoId) || 0;
-    
-    // Si ya se seleccionó este producto el máximo de veces disponibles, mostrar error
-    if (stock > 0 && cantidadActual >= stock) {
-        showDjangoToast(`No hay más stock disponible. Máximo: ${stock} unidades de este producto.`, 'warning');
-        return;
+    // stock 0 = sin límite de unidades; el servidor valida de nuevo con el stock real
+    if (item.stock > 0 && item.cantidad >= item.stock) {
+        showDjangoToast(`No hay más stock disponible. Máximo: ${item.stock} unidades de este producto.`, 'warning');
+        return false;
     }
-    
-    // Agregar el producto a la tabla (permitir duplicados)
-    productosSeleccionados.add(productoId);
-    productosCountMap.set(productoId, cantidadActual + 1);
+    item.cantidad += 1;
+    if (item.cantidad === 1) {
+        carrito.set(id, item);
+        const tbody = document.getElementById('tablaProductosSeleccionados');
+        const filaVacia = tbody.querySelector('.tabla-vacia');
+        if (filaVacia) filaVacia.remove();
+        tbody.appendChild(crearFila(item));
+        numerarFilas();
+    }
     card.classList.add('producto-seleccionado');
-    agregarProductoTabla(productoId);
+    actualizarFila(item);
     actualizarContador();
-});
+    return true;
+}
+
+function fijarCantidad(id, cantidad) {
+    const item = carrito.get(id);
+    if (!item) return;
+    const limite = item.stock > 0 ? item.stock : Infinity;
+    if (cantidad > limite) {
+        showDjangoToast(`No hay más stock disponible. Máximo: ${item.stock} unidades de este producto.`, 'warning');
+    }
+    item.cantidad = Math.min(Math.max(cantidad, 1), limite);
+    actualizarFila(item);
+    actualizarContador();
+}
+
+function quitarProducto(id) {
+    carrito.delete(id);
+    const tbody = document.getElementById('tablaProductosSeleccionados');
+    const fila = tbody.querySelector(`tr[data-producto-id="${id}"]`);
+    if (fila) fila.remove();
+    document.querySelectorAll(`.producto-seleccionable[data-producto-id="${id}"]`).forEach(c => c.classList.remove('producto-seleccionado'));
+    if (carrito.size === 0) tbody.innerHTML = textoTablaVacia();
+    numerarFilas();
+    actualizarContador();
+}
+
+if (!ES_EDICION) {
+    // Seleccionar productos del catálogo usando delegación de eventos
+    document.getElementById('productosGrid').addEventListener('click', function(e) {
+        const card = e.target.closest('.producto-seleccionable');
+        if (card) agregarProducto(card);
+    });
+
+    // Botones − / + / quitar y cantidad escrita a mano, también por delegación
+    const tbodyVenta = document.getElementById('tablaProductosSeleccionados');
+    tbodyVenta.addEventListener('click', function(e) {
+        const boton = e.target.closest('[data-accion]');
+        const fila = e.target.closest('tr[data-producto-id]');
+        if (!boton || !fila) return;
+        const item = carrito.get(fila.dataset.productoId);
+        if (!item) return;
+        if (boton.dataset.accion === 'mas') fijarCantidad(item.id, item.cantidad + 1);
+        else if (boton.dataset.accion === 'menos') fijarCantidad(item.id, item.cantidad - 1);
+        else if (boton.dataset.accion === 'quitar') quitarProducto(item.id);
+    });
+    tbodyVenta.addEventListener('change', function(e) {
+        const fila = e.target.closest('tr[data-producto-id]');
+        if (!fila || !e.target.classList.contains('cantidad-input')) return;
+        const escrita = parseInt(e.target.value, 10);
+        fijarCantidad(fila.dataset.productoId, Number.isNaN(escrita) ? 1 : escrita);
+    });
+    // Enter en la cantidad confirma y vuelve al buscador; nunca envía el formulario
+    tbodyVenta.addEventListener('keydown', function(e) {
+        if (e.key !== 'Enter' || !e.target.classList.contains('cantidad-input')) return;
+        e.preventDefault();
+        e.target.dispatchEvent(new Event('change', { bubbles: true }));
+        document.getElementById('searchProductos').focus();
+    });
+}
 
 function actualizarContador() {
     const contador = document.getElementById('contadorProductos');
     const badge = document.getElementById('badgeContador');
     const facturaSinDatosCheckbox = document.getElementById('facturaSinDatos');
     
-    // Contar el total de filas en la tabla (incluyendo duplicados)
-    const tbody = document.getElementById('tablaProductosSeleccionados');
-    const totalProductos = tbody.querySelectorAll('tr:not(.tabla-vacia)').length;
+    // Total de unidades; en edición, las filas ya cargadas de la venta
+    let totalProductos = 0;
+    if (ES_EDICION) {
+        totalProductos = document.getElementById('tablaProductosSeleccionados').querySelectorAll('tr:not(.tabla-vacia)').length;
+    } else {
+        carrito.forEach(item => { totalProductos += item.cantidad; });
+    }
     
     if (contador) contador.textContent = totalProductos;
     
@@ -1811,8 +1933,7 @@ function actualizarContador() {
     // Habilitar/deshabilitar botón
     const btnCrear = document.getElementById('btnCrearVenta');
     if (btnCrear) {
-        const modoEdicion = "{{ modo_edicion|yesno:'true,false' }}" === "true";
-        if (modoEdicion) {
+        if (ES_EDICION) {
             btnCrear.disabled = !(totalProductos > 0);
         } else {
             const selectCliente = document.getElementById('selectCliente');
@@ -1915,19 +2036,33 @@ document.getElementById('formVenta').addEventListener('submit', function(e) {
     }
 
     // Limpiar inputs previos
-    document.querySelectorAll('input[name="productos"]').forEach(input => input.remove());
-    
-    // Agregar productos seleccionados - una entrada por cada fila en la tabla
-    const tbody = document.getElementById('tablaProductosSeleccionados');
-    const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
-    filas.forEach(fila => {
-        const productoId = fila.dataset.productoId;
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'productos';
-        input.value = productoId;
-        this.appendChild(input);
-    });
+    // Al crear: un `productos` por unidad (el id repetido tantas veces como la cantidad).
+    // El servidor cuenta, valida el stock y recalcula todo. Al editar, los inputs ya vienen en la página.
+    if (!ES_EDICION) {
+        document.querySelectorAll('input[name="productos"]').forEach(input => input.remove());
+        carrito.forEach(item => {
+            for (let i = 0; i < item.cantidad; i++) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'productos';
+                input.value = item.id;
+                this.appendChild(input);
+            }
+        });
+    }
+});
+
+// F9 guarda con las mismas guardas que el botón: si está deshabilitado (sin productos o sin cliente),
+// no hace nada; si no, el clic pasa por la validación y el bloqueo de doble envío del submit.
+document.addEventListener('keydown', function(e) {
+    if (ES_EDICION || e.key !== 'F9') return;
+    e.preventDefault();
+    const btn = document.getElementById('btnCrearVenta');
+    if (btn && !btn.disabled) {
+        btn.click();
+    } else {
+        showDjangoToast('Agrega al menos un producto y elige un cliente (o consumidor final) para guardar.', 'warning');
+    }
 });
 
 // Si el navegador restaura la página desde el historial, el botón vuelve a quedar disponible
@@ -1967,14 +2102,6 @@ function calcularMontos(subtotal, descuentoIngresado, envio, otrosGastos) {
     return { subtotal, descuento, base, iva, total };
 }
 
-// Objeto para almacenar precios de productos
-const preciosProductos = {};
-document.querySelectorAll('.producto-seleccionable').forEach(card => {
-    const productoId = card.dataset.productoId;
-    const precio = parseFloat(card.dataset.precio) || 0;
-    preciosProductos[productoId] = precio;
-});
-
 function calcularTotales() {
     let subtotal = 0;
     const isModoEdicion = "{{ modo_edicion|yesno:'true,false' }}" === "true";
@@ -1984,15 +2111,9 @@ function calcularTotales() {
             subtotal += parseFloat(elem.dataset.precio) || 0;
         });
     } else {
-        // Contar subtotal basado en las filas de la tabla (incluyendo duplicados)
-        const tbody = document.getElementById('tablaProductosSeleccionados');
-        const filas = tbody.querySelectorAll('tr:not(.tabla-vacia)');
-        filas.forEach(fila => {
-            const precioCell = fila.querySelector('td:nth-child(4)');
-            if (precioCell) {
-                const precioText = precioCell.textContent.replace('$', '').trim();
-                subtotal += parseFloat(precioText) || 0;
-            }
+        // Subtotal = precio × cantidad de cada producto del carrito
+        carrito.forEach(item => {
+            subtotal += redondearCentavos(item.precio * item.cantidad);
         });
     }
     
