@@ -422,7 +422,6 @@ def crear_venta(request):
         'productos': productos,
         'productos_cliente_ids': productos_cliente_ids,
         'cliente_seleccionado': cliente_nombre_param,
-        'clientes_json': json.dumps(clientes),
         'token_envio': uuid.uuid4(),
         # El % que la pantalla usa para mostrar el IVA: el de la configuración de la empresa.
         'config': config,

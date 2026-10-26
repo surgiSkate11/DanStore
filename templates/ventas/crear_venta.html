@@ -1516,6 +1516,10 @@
 </div>
 
 <script>
+// Escapa texto del usuario antes de insertarlo con innerHTML (nombres, cédulas, categorías).
+function escaparHtml(valor) {
+    return String(valor ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"}[c]));
+}
 let productosSeleccionados = new Set();
 const productosCountMap = new Map(); // Mapa de producto_id -> cantidad seleccionada
 const PRODUCTOS_POR_PAGINA = 12;
@@ -1543,7 +1547,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.type = 'button';
             btn.className = 'filter-btn';
             btn.dataset.categoria = cat;
-            btn.innerHTML = `<i class="bi bi-tag"></i> ${cat}`;
+            btn.innerHTML = `<i class="bi bi-tag"></i> ${escaparHtml(cat)}`;
             contenedorFiltros.appendChild(btn);
         });
     }
@@ -1686,12 +1690,12 @@ function agregarProductoTabla(productoId) {
         <td style="font-weight: 600; color: #111827; font-size: 1rem; padding-left: 1.25rem;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <i class="bi bi-box-seam-fill" style="color: #667eea; font-size: 1.1rem;"></i>
-                <span>${nombre}</span>
+                <span>${escaparHtml(nombre)}</span>
             </div>
         </td>
         <td>
             <span style="background: ${colores.bg}; color: ${colores.icon}; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; border: 2px solid ${colores.border}; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                <i class="bi bi-tag-fill"></i> ${categoriaNombre}
+                <i class="bi bi-tag-fill"></i> ${escaparHtml(categoriaNombre)}
             </span>
         </td>
         <td style="text-align: center; font-weight: 800; font-size: 1.25rem; color: #059669; font-family: 'Courier New', monospace; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 3px solid #10b981;">
@@ -2057,7 +2061,8 @@ calcularTotales();
 <!-- Búsqueda de Cliente Personalizada (solo en modo creación) -->
 {% if not modo_edicion %}
 <!-- Contenedores seguros de JSON para evitar errores en el editor de código -->
-<script id="clientes-data" type="application/json">{{ clientes_json|safe }}</script>
+{# json_script escapa < > & : un nombre de cliente no puede cerrar el bloque ni ejecutar código. #}
+{{ clientes|json_script:"clientes-data" }}
 <script id="productos-cliente-ids" type="application/json">{{ productos_cliente_ids|default:"[]"|safe }}</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -2079,7 +2084,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (results.length === 0) {
                 const div = document.createElement('div');
                 div.className = 'no-results-message';
-                div.innerHTML = `<i class="bi bi-person-plus-fill text-primary" style="font-size: 1.5rem; display: block; margin-bottom: 5px;"></i> <span>Crear nuevo cliente: <strong>${searchTerm}</strong></span>`;
+                div.innerHTML = `<i class="bi bi-person-plus-fill text-primary" style="font-size: 1.5rem; display: block; margin-bottom: 5px;"></i> <span>Crear nuevo cliente: <strong>${escaparHtml(searchTerm)}</strong></span>`;
                 searchDropdown.appendChild(div);
             } else {
                 if (isTop5 && results.length > 0) {
@@ -2099,11 +2104,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             <i class="bi bi-person-fill"></i>
                         </div>
                         <div class="search-result-info">
-                            <div class="search-result-nombre">${cliente.nombre} ${comprasHtml}</div>
+                            <div class="search-result-nombre">${escaparHtml(cliente.nombre)} ${comprasHtml}</div>
                             <div class="search-result-telefono">
-                                ${cliente.ruc_cedula ? `CI/RUC: <strong>${cliente.ruc_cedula}</strong>` : ''}
+                                ${cliente.ruc_cedula ? `CI/RUC: <strong>${escaparHtml(cliente.ruc_cedula)}</strong>` : ''}
                                 ${cliente.ruc_cedula && cliente.telefono ? ' | ' : ''}
-                                ${cliente.telefono ? `<i class="bi bi-telephone"></i> ${cliente.telefono}` : ''}
+                                ${cliente.telefono ? `<i class="bi bi-telephone"></i> ${escaparHtml(cliente.telefono)}` : ''}
                             </div>
                         </div>
                     `;
@@ -2265,12 +2270,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td style="font-weight: 600; color: #111827; font-size: 1rem; padding-left: 1.25rem;">
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <i class="bi bi-box-seam-fill" style="color: #667eea; font-size: 1.1rem;"></i>
-                        <span>${nombre}</span>
+                        <span>${escaparHtml(nombre)}</span>
                     </div>
                 </td>
                 <td>
                     <span style="background: ${colores.bg}; color: ${colores.icon}; padding: 0.5rem 1rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; border: 2px solid ${colores.border}; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-                        <i class="bi bi-tag-fill"></i> ${categoria}
+                        <i class="bi bi-tag-fill"></i> ${escaparHtml(categoria)}
                     </span>
                 </td>
                 <td style="text-align: center; font-weight: 800; font-size: 1.25rem; color: #059669; font-family: 'Courier New', monospace; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 3px solid #10b981;">

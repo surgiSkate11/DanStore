@@ -1,4 +1,5 @@
 import importlib
+import json
 import re
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
@@ -1547,3 +1548,29 @@ class IvaEnDocumentosTests(GastosVentaBase):
         self.assertIn(reverse('factura_pdf', args=[self.venta.id]), html)
         self.assertIn(reverse('editar_venta', args=[self.venta.id]), html)
 
+
+
+class DatosDeClienteSinXssTests(TestCase):
+    """Un nombre de cliente con HTML no puede ejecutar código en la pantalla de venta."""
+
+    NOMBRE_MALICIOSO = '</script><script>alert(1)</script>'
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('panaderia-xss')
+        cliente = Cliente.objects.create(nombre=self.NOMBRE_MALICIOSO, ruc_cedula='0911111111')
+        cliente.empresas.add(self.empresa)
+        self.client.force_login(self.dueno)
+
+    def test_el_nombre_no_cierra_el_bloque_de_datos_json(self):
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotContains(respuesta, self.NOMBRE_MALICIOSO)
+        self.assertNotContains(respuesta, '<script>alert(1)')
+
+    def test_los_datos_llegan_completos_al_navegador(self):
+        respuesta = self.client.get(reverse('crear_venta'))
+        html = respuesta.content.decode()
+        inicio = html.index('id="clientes-data"')
+        bloque = html[html.index('>', inicio) + 1:html.index('</script>', inicio)]
+        clientes = json.loads(bloque)
+        self.assertIn(self.NOMBRE_MALICIOSO, [c['nombre'] for c in clientes])
