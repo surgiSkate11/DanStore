@@ -17,6 +17,7 @@ from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.urls import reverse
 from django.views.decorators.http import require_GET
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from productos.models import Producto, normalizar_busqueda
 from .forms import PorcentajeIvaForm, leer_gastos
 from .models import Venta, DetalleVenta, ConfiguracionFactura
@@ -366,7 +367,8 @@ def crear_venta(request):
             return _venta_ya_registrada(request, ya_registrada)
 
         messages.success(request, f'Venta {venta.numero_factura} creada exitosamente')
-        return redirect('detalle_venta', venta_id=venta.id)
+        # nueva=1 le pide al detalle el panel de acciones rápidas (imprimir, compartir, nueva venta).
+        return redirect(f"{reverse('detalle_venta', args=[venta.id])}?nueva=1")
 
     # GET
     cliente_nombre_param = request.GET.get('cliente')
@@ -444,6 +446,10 @@ def api_buscar_productos(request):
 
     Sin texto devuelve los más recientes. Solo expone lo que la caja necesita: nunca costos.
     """
+    # Un usuario sin empresa (p. ej. un superusuario) no tiene catálogo propio: nunca se mira el de otras.
+    if not getattr(request, 'empresa', None):
+        return JsonResponse([], safe=False)
+
     productos = Producto.objects.filter(
         empresa=request.empresa, estado='disponible', stock__gt=0,
     )
@@ -525,13 +531,19 @@ def detalle_venta(request, venta_id):
         pk=venta_id,
         empresa=request.empresa,
     )
-    return render(request, 'ventas/detalle_venta.html', {'venta': venta})
+    return render(request, 'ventas/detalle_venta.html', {
+        'venta': venta,
+        # Solo recién guardada (crear_venta redirige con ?nueva=1): muestra el panel de acciones rápidas.
+        'es_venta_nueva': request.GET.get('nueva') == '1',
+    })
 
 
 # ── PDF CON WEASYPRINT (vía template HTML) ────────────────────────────────────
 
 @login_required
 @requiere_modulo('ventas', accion='ver')
+# El panel posterior a la venta carga ?html=1 en un iframe oculto para imprimir sin abrir otra pestaña.
+@xframe_options_sameorigin
 def factura_pdf(request, venta_id):
     """
     Genera PDF de factura usando WeasyPrint + template HTML.

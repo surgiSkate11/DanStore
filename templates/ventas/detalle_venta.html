@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Factura {{ venta.numero_factura }} - {{ empresa.nombre|default:app_name }}{% endblock %}
 
@@ -234,6 +235,42 @@
         </div>
     </div>
     
+    {% if es_venta_nueva %}
+    <!-- Panel posterior a la venta: solo con ?nueva=1 -->
+    <div class="card border-success mb-4" id="panel-nueva-venta" role="status" style="border-width: 2px; border-radius: 16px;">
+        <div class="card-body p-4">
+            <h5 class="text-success fw-bold mb-3">
+                <i class="bi bi-check-circle-fill"></i> Venta N° {{ venta.numero_factura }} guardada — ${{ venta.total|floatformat:2 }}
+            </h5>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" id="btn-imprimir-ticket" class="btn btn-secondary fw-semibold rounded-pill px-3"
+                        data-url-ticket="{% url 'factura_pdf' venta.id %}?html=1">
+                    <i class="bi bi-printer"></i> Imprimir ticket <kbd>Enter</kbd>
+                </button>
+                <a href="{% url 'factura_pdf' venta.id %}" class="btn fw-semibold rounded-pill px-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none;">
+                    <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
+                </a>
+                <button type="button"
+                        data-url="{% url 'factura_pdf' venta.id %}"
+                        data-filename="Factura_{{ venta.numero_factura }}.pdf"
+                        data-title="Factura {{ venta.numero_factura }}"
+                        data-text="Hola, te comparto el comprobante/factura de tu compra."
+                        onclick="compartirDocumento(this.dataset.url, this.dataset.filename, this.dataset.title, this.dataset.text, this)"
+                        class="btn btn-info text-white fw-semibold rounded-pill px-3">
+                    <i class="bi bi-share-fill"></i> Compartir
+                </button>
+                <a href="{% url 'crear_venta' %}" id="btn-nueva-venta" class="btn btn-primary btn-lg fw-bold rounded-pill px-4 ms-lg-auto" autofocus>
+                    <i class="bi bi-plus-circle-fill"></i> Nueva venta <kbd>N</kbd>
+                </a>
+            </div>
+            <div class="form-check form-switch mt-3 mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="imprimir-al-guardar">
+                <label class="form-check-label text-muted" for="imprimir-al-guardar">Imprimir al guardar (solo en este equipo)</label>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="factura-card">
         <!-- Header -->
         <div class="factura-header-premium d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -407,4 +444,74 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 </script>
+
+{% if es_venta_nueva %}
+<script>
+// Panel posterior a la venta: imprimir sin abrir pestañas, atajos y preferencia "imprimir al guardar".
+(function() {
+    const CLAVE_IMPRIMIR = 'imprimirAlGuardar';
+    const CLAVE_YA_IMPRESA = 'ticketImpreso_{{ venta.id|unlocalize }}';
+    const botonImprimir = document.getElementById('btn-imprimir-ticket');
+    const botonNueva = document.getElementById('btn-nueva-venta');
+    const interruptor = document.getElementById('imprimir-al-guardar');
+
+    function leer(almacen, clave) {
+        try { return almacen.getItem(clave); } catch (e) { return null; }
+    }
+    function guardar(almacen, clave, valor) {
+        try { almacen.setItem(clave, valor); } catch (e) { /* sin almacenamiento: la preferencia no se recuerda */ }
+    }
+
+    // Carga el ticket en un iframe oculto del mismo origen y lo manda a imprimir.
+    function imprimirTicket() {
+        const anterior = document.getElementById('iframe-ticket');
+        if (anterior) anterior.remove();
+        const iframe = document.createElement('iframe');
+        iframe.id = 'iframe-ticket';
+        iframe.title = 'Ticket de la venta';
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;';
+        iframe.addEventListener('load', function() {
+            try {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } catch (e) {
+                showDjangoToast('No se pudo abrir la impresión. Usa "Imprimir Ticket" de la barra superior.', 'warning');
+            }
+        });
+        iframe.src = botonImprimir.dataset.urlTicket;
+        document.body.appendChild(iframe);
+    }
+
+    botonImprimir.addEventListener('click', imprimirTicket);
+
+    interruptor.checked = leer(localStorage, CLAVE_IMPRIMIR) === '1';
+    interruptor.addEventListener('change', function() {
+        guardar(localStorage, CLAVE_IMPRIMIR, this.checked ? '1' : '0');
+    });
+
+    // Atajos: Enter imprime, N abre una venta nueva. Se ignoran mientras se escribe,
+    // con Ctrl/Alt/Cmd, y Enter respeta el botón o enlace que tenga el foco (salvo "Nueva venta", que ya lo trae).
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.altKey || e.metaKey || e.repeat) return;
+        const destino = e.target;
+        if (destino && (['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName) || destino.isContentEditable)) return;
+        if (e.key === 'Enter') {
+            if (destino !== document.body && destino !== botonNueva) return;
+            e.preventDefault();
+            imprimirTicket();
+        } else if (e.key === 'n' || e.key === 'N') {
+            e.preventDefault();
+            window.location.href = botonNueva.href;
+        }
+    });
+
+    // Con "Imprimir al guardar" activo, imprime una vez al cargar (recargar la página no reimprime).
+    if (interruptor.checked && leer(sessionStorage, CLAVE_YA_IMPRESA) !== '1') {
+        guardar(sessionStorage, CLAVE_YA_IMPRESA, '1');
+        imprimirTicket();
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

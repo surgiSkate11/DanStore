@@ -152,7 +152,7 @@ class VentaFlowTests(TestCase):
         response = crear_venta(request)
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse('detalle_venta', args=[Venta.objects.latest('id').id]))
+        self.assertEqual(response.url, url_detalle_nueva(Venta.objects.latest('id').id))
 
     def test_productos_con_stock_restante_no_quedan_en_estado_vendido(self):
         """Si aún queda stock, el producto debe seguir disponible."""
@@ -572,6 +572,11 @@ def mensajes(response):
     return [str(m) for m in get_messages(response.wsgi_request)]
 
 
+def url_detalle_nueva(venta_id):
+    """Adónde lleva guardar una venta nueva: al detalle, con el panel de acciones rápidas."""
+    return reverse('detalle_venta', args=[venta_id]) + '?nueva=1'
+
+
 class PorcentajeIvaConfiguracionTests(TestCase):
     """S2: el % de IVA solo admite 0–30 con hasta 2 decimales, validado en el servidor."""
 
@@ -809,7 +814,7 @@ class GastosCrearVentaTests(GastosVentaBase):
     def test_descuento_igual_al_subtotal_se_acepta(self):
         response = self.client.post(reverse('crear_venta'), self.datos(descuento='100'))
         venta = Venta.objects.get()
-        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        self.assertRedirects(response, url_detalle_nueva(venta.id))
         self.assertEqual(venta.descuento, Decimal('100.00'))
         self.producto.refresh_from_db()
         self.assertEqual(self.producto.stock, 2)
@@ -820,7 +825,7 @@ class GastosCrearVentaTests(GastosVentaBase):
             self.datos(descuento='10.5', envio='5', otros_gastos='2.25'),
         )
         venta = Venta.objects.get()
-        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        self.assertRedirects(response, url_detalle_nueva(venta.id))
         self.assertEqual(venta.descuento, Decimal('10.50'))
         self.assertEqual(venta.envio, Decimal('5.00'))
         self.assertEqual(venta.otros_gastos, Decimal('2.25'))
@@ -833,7 +838,7 @@ class GastosCrearVentaTests(GastosVentaBase):
             self.datos(descuento='', envio=' ', otros_gastos=''),
         )
         venta = Venta.objects.get()
-        self.assertRedirects(response, reverse('detalle_venta', args=[venta.id]))
+        self.assertRedirects(response, url_detalle_nueva(venta.id))
         self.assertEqual((venta.descuento, venta.envio, venta.otros_gastos), (0, 0, 0))
 
     def test_el_formulario_declara_los_limites_de_los_campos(self):
@@ -1110,7 +1115,7 @@ class IntegridadVentaTests(GastosVentaBase):
         primera = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
         venta = Venta.objects.get()
         self.assertEqual(primera.status_code, 302)
-        self.assertEqual(primera.url, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(primera.url, url_detalle_nueva(venta.id))
         self.assertEqual(venta.token_envio, uuid.UUID(self.token))
         self.client.get(primera.url)  # el usuario ve el detalle y se consume el mensaje de creación
 
@@ -1141,7 +1146,7 @@ class IntegridadVentaTests(GastosVentaBase):
         )
         response = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
         propia = Venta.objects.get(empresa=self.empresa)
-        self.assertEqual(response.url, reverse('detalle_venta', args=[propia.id]))
+        self.assertEqual(response.url, reverse('detalle_venta', args=[propia.id]) + '?nueva=1')
         self.assertNotEqual(propia.id, ajena.id)
         self.assertEqual(propia.token_envio, uuid.UUID(self.token))
         self.assertNotIn('Esta venta ya se registró.', mensajes(response))
@@ -1156,7 +1161,7 @@ class IntegridadVentaTests(GastosVentaBase):
                 with self.assertLogs('ventas.views', level='WARNING') as registro:
                     response = self.client.post(reverse('crear_venta'), self.datos(**extra))
                 venta = Venta.objects.get()
-                self.assertEqual(response.url, reverse('detalle_venta', args=[venta.id]))
+                self.assertEqual(response.url, reverse('detalle_venta', args=[venta.id]) + '?nueva=1')
                 self.assertIsNone(venta.token_envio)
                 self.assertTrue(any('token_envio' in linea for linea in registro.output))
                 self.producto.refresh_from_db()
@@ -1222,7 +1227,7 @@ class IntegridadVentaTests(GastosVentaBase):
         self.assertSinCambios(antes)
         # Como no quedó nada, reintentar con el mismo token funciona.
         response = self.client.post(reverse('crear_venta'), self.datos(token_envio=self.token))
-        self.assertEqual(response.url, reverse('detalle_venta', args=[Venta.objects.get().id]))
+        self.assertEqual(response.url, url_detalle_nueva(Venta.objects.get().id))
 
     def test_la_pantalla_trae_un_token_nuevo_en_cada_carga(self):
         patron = re.compile(r'<input type="hidden" name="token_envio" value="([^"]+)"')
@@ -1294,7 +1299,7 @@ class TotalMaximoVentaTests(GastosVentaBase):
         ConfiguracionFactura.objects.filter(empresa=self.empresa).update(porcentaje_iva=Decimal('0'))
         response = self.client.post(reverse('crear_venta'), self.datos())
         venta = Venta.objects.get()
-        self.assertEqual(response.url, reverse('detalle_venta', args=[venta.id]))
+        self.assertEqual(response.url, url_detalle_nueva(venta.id))
         self.assertEqual(venta.total, Decimal('99999999.99'))
 
     def venta_grande(self):
@@ -1713,3 +1718,85 @@ class PantallaVentaRapidaTests(GastosVentaBase):
         self.assertNotIn('id="searchProductos"', html)
         self.assertNotIn('>Cantidad</th>', html)
         self.assertIn('producto-card-edicion', html)
+
+
+class PanelPosteriorVentaTests(GastosVentaBase):
+    """S7/S8: tras guardar, el detalle ofrece imprimir, descargar, compartir y nueva venta."""
+
+    def guardar(self):
+        self.client.post(reverse('crear_venta'), self.datos())
+        return Venta.objects.get()
+
+    def detalle(self, venta, consulta=''):
+        return self.client.get(reverse('detalle_venta', args=[venta.id]) + consulta)
+
+    def test_guardar_redirige_al_detalle_con_nueva_1_y_deja_el_mensaje_de_exito(self):
+        response = self.client.post(reverse('crear_venta'), self.datos())
+        venta = Venta.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, url_detalle_nueva(venta.id))
+        self.assertEqual(mensajes(response), [f'Venta {venta.numero_factura} creada exitosamente'])
+
+    def test_con_nueva_1_el_detalle_muestra_el_panel_con_numero_total_y_acciones(self):
+        venta = self.guardar()
+        html = self.detalle(venta, '?nueva=1').content.decode()
+        self.assertIn('id="panel-nueva-venta"', html)
+        self.assertIn(f'Venta N° {venta.numero_factura} guardada — ${venta.total:.2f}', html)
+        panel = html[html.index('id="panel-nueva-venta"'):]
+        self.assertIn(f'data-url-ticket="{reverse("factura_pdf", args=[venta.id])}?html=1"', panel)
+        self.assertIn('Imprimir ticket', panel)
+        self.assertIn(f'href="{reverse("factura_pdf", args=[venta.id])}"', panel)
+        self.assertIn('Descargar PDF', panel)
+        self.assertIn('compartirDocumento(', panel)
+        self.assertIn('Imprimir al guardar', panel)
+        nueva = re.search(r'<a[^>]*id="btn-nueva-venta"[^>]*>', panel).group(0)
+        self.assertIn(f'href="{reverse("crear_venta")}"', nueva)
+        self.assertIn('autofocus', nueva)
+
+    def test_sin_nueva_1_el_detalle_no_muestra_el_panel_pero_conserva_sus_botones(self):
+        venta = self.guardar()
+        for consulta in ('', '?nueva=0', '?nueva=si'):
+            with self.subTest(consulta=consulta):
+                html = self.detalle(venta, consulta).content.decode()
+                self.assertNotIn('panel-nueva-venta', html)
+                self.assertNotIn('guardada —', html)
+                for existente in ('Volver a Ventas', 'Ver Cliente', 'Editar Venta', 'Compartir', 'Imprimir Ticket', 'Descargar PDF'):
+                    self.assertIn(existente, html)
+
+    def test_el_detalle_con_nueva_1_conserva_los_botones_existentes(self):
+        html = self.detalle(self.guardar(), '?nueva=1').content.decode()
+        for existente in ('Volver a Ventas', 'Ver Cliente', 'Editar Venta', 'Imprimir Ticket'):
+            self.assertIn(existente, html)
+
+    def test_venta_de_otra_empresa_con_nueva_1_da_404(self):
+        otra, _ = crear_empresa_con_dueno('panel-otra')
+        cliente = Cliente.objects.create(nombre='Cliente Ajeno', ruc_cedula='0987654321')
+        cliente.empresas.add(otra)
+        ajena = Venta.objects.create(empresa=otra, cliente=cliente)
+        respuesta = self.detalle(ajena, '?nueva=1')
+        self.assertEqual(respuesta.status_code, 404)
+        self.assertNotContains(respuesta, 'panel-nueva-venta', status_code=404)
+
+    def test_factura_html_se_puede_incrustar_en_el_iframe_oculto_de_impresion(self):
+        venta = self.guardar()
+        respuesta = self.client.get(reverse('factura_pdf', args=[venta.id]), {'html': '1'})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta['X-Frame-Options'], 'SAMEORIGIN')
+
+    def test_factura_pdf_sigue_devolviendo_el_pdf(self):
+        venta = self.guardar()
+        respuesta = self.client.get(reverse('factura_pdf', args=[venta.id]))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta['Content-Type'], 'application/pdf')
+        self.assertIn(f'factura-{venta.numero_factura}.pdf', respuesta['Content-Disposition'])
+
+    def test_el_resto_de_la_aplicacion_sigue_sin_poder_incrustarse(self):
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertEqual(respuesta['X-Frame-Options'], 'DENY')
+
+    def test_la_api_sin_empresa_devuelve_lista_vacia(self):
+        superusuario = get_user_model().objects.create_superuser('root-panel', 'root-panel@example.com', 'clave-segura-1')
+        self.client.force_login(superusuario)
+        respuesta = self.client.get(reverse('api_buscar_productos'), {'q': 'camisa'})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.json(), [])
