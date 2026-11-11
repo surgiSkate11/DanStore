@@ -23,7 +23,7 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/tiendita_test
       ADMIN_URL: panel-ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # gitleaks necesita el historial de los commits que revisa
       - uses: actions/setup-python@v5
