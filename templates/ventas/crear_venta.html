@@ -1273,7 +1273,7 @@
                                     <input type="text" class="form-control search-productos-input" 
                                            id="searchProductos" autofocus autocomplete="off"
                                            data-url-api="{% url 'api_buscar_productos' %}"
-                                           placeholder="Buscar por nombre o código (Enter agrega el primero)">
+                                           placeholder="Buscar producto por nombre (Enter agrega el primero)">
                                 </div>
                             </div>
                         </div>
@@ -2188,7 +2188,7 @@ calcularTotales();
 <!-- Contenedores seguros de JSON para evitar errores en el editor de código -->
 {# json_script escapa < > & : un nombre de cliente no puede cerrar el bloque ni ejecutar código. #}
 {{ clientes|json_script:"clientes-data" }}
-<script id="productos-cliente-ids" type="application/json">{{ productos_cliente_ids|default:"[]"|safe }}</script>
+{{ productos_cliente_ids|json_script:"productos-cliente-ids" }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectCliente = document.getElementById('selectCliente');
@@ -2222,7 +2222,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const div = document.createElement('div');
                     div.className = 'search-result-item';
                     
-                    const comprasHtml = cliente.compras ? `<span class="badge bg-success bg-opacity-10 text-success rounded-pill ms-2" style="font-size: 0.7rem;">${cliente.compras} compras</span>` : '';
+                    const comprasHtml = cliente.compras ? `<span class="badge bg-success bg-opacity-10 text-success rounded-pill ms-2" style="font-size: 0.7rem;">${escaparHtml(cliente.compras)} compras</span>` : '';
                     
                     div.innerHTML = `
                         <div class="search-result-icon">
@@ -2332,7 +2332,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const productosClienteIds = JSON.parse(document.getElementById('productos-cliente-ids').textContent);
     
     if (productosClienteIds.length > 0) {
-        console.log('Preseleccionando productos del cliente:', productosClienteIds);
         
         // Esperar a que el DOM esté completamente cargado
         setTimeout(function() {
@@ -2342,7 +2341,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (card) {
                     // Simular clic en la tarjeta para seleccionarla
                     card.click();
-                    console.log('Producto seleccionado:', productoId);
                 }
             });
             
@@ -2358,7 +2356,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Modo Edición: Cálculo simplificado de totales -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Modo edición cargado');
     
     // En modo edición, calcular solo basado en los productos ya en la venta
     const inputDescuento = document.getElementById('inputDescuento');
@@ -2416,15 +2413,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let subtotal = 0;
         const productosPrecios = document.querySelectorAll('.precio-producto-edicion');
         
-        console.log('Productos encontrados:', productosPrecios.length);
-        
         productosPrecios.forEach(function(elem) {
             const precio = parseFloat(elem.dataset.precio) || 0;
-            console.log('Precio encontrado:', precio);
             subtotal += precio;
         });
-        
-        console.log('Subtotal calculado:', subtotal);
         
         // Obtener valores de gastos
         const descuentoPorcentaje = parseFloat(inputDescuento.value) || 0;
@@ -2442,8 +2434,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (hiddenDescuento) {
             hiddenDescuento.value = descuentoDinero.toFixed(2);
         }
-        
-        console.log('Total calculado:', total);
         
         // Actualizar display
         const subtotalDisplay = document.getElementById('subtotalDisplay');

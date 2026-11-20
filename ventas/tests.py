@@ -1800,3 +1800,45 @@ class PanelPosteriorVentaTests(GastosVentaBase):
         respuesta = self.client.get(reverse('api_buscar_productos'), {'q': 'camisa'})
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json(), [])
+
+
+class LimpiezaPantallaVentaTests(GastosVentaBase):
+    """T7 (3.7.0): ids de productos del cliente como JSON seguro y buscador sin promesas falsas."""
+
+    def pagina(self, **parametros):
+        respuesta = self.client.get(reverse('crear_venta'), parametros)
+        self.assertEqual(respuesta.status_code, 200)
+        return respuesta.content.decode()
+
+    def test_los_ids_de_productos_del_cliente_van_como_json_en_su_elemento(self):
+        otro = Producto.objects.create(
+            empresa=self.empresa, nombre='Falda', precio=Decimal('10.00'), stock=1,
+            estado='disponible', vendido_a='Ana García',
+        )
+        Producto.objects.filter(pk=self.producto.pk).update(vendido_a='Ana García')
+        html = self.pagina(cliente='Ana García')
+        bloque = re.search(
+            r'<script id="productos-cliente-ids" type="application/json">(.*?)</script>', html, re.S,
+        )
+        self.assertIsNotNone(bloque)
+        self.assertEqual(sorted(json.loads(bloque.group(1))), sorted([self.producto.id, otro.id]))
+
+    def test_sin_cliente_preseleccionado_la_lista_de_ids_es_un_json_vacio(self):
+        html = self.pagina()
+        bloque = re.search(
+            r'<script id="productos-cliente-ids" type="application/json">(.*?)</script>', html, re.S,
+        )
+        self.assertIsNotNone(bloque)
+        self.assertEqual(json.loads(bloque.group(1)), [])
+
+    def test_el_buscador_no_promete_buscar_por_codigo(self):
+        html = self.pagina()
+        buscador = re.search(r'<input[^>]*id="searchProductos"[^>]*>', html, re.S).group(0)
+        self.assertIn('placeholder="Buscar producto por nombre (Enter agrega el primero)"', buscador)
+        self.assertNotIn('código', buscador)
+
+    def test_la_pantalla_no_deja_console_log_de_depuracion(self):
+        self.assertNotIn('console.log(', self.pagina())
+
+    def test_las_compras_del_cliente_se_escapan_al_insertarlas_en_el_buscador(self):
+        self.assertIn('${escaparHtml(cliente.compras)} compras', self.pagina())
