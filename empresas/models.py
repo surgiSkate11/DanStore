@@ -1,4 +1,5 @@
 import calendar
+import math
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -139,17 +140,23 @@ class SuscripcionEmpresa(models.Model):
 
     def dias_restantes(self):
         delta = self.fecha_vencimiento - timezone.now()
-        return max(0, delta.days)
+        if delta.total_seconds() <= 0:
+            return 0
+        return math.ceil(delta.total_seconds() / 86400)
 
     @property
     def puede_renovarse(self):
         return self.fecha_vencimiento <= timezone.now()
 
     def porcentaje_consumido(self):
+        ahora = timezone.now()
+        if ahora >= self.fecha_vencimiento:
+            return 100
+
         total_dias = (self.fecha_vencimiento - self.fecha_inicio).days
         if total_dias <= 0: return 100
 
-        dias_consumidos = (timezone.now() - self.fecha_inicio).days
+        dias_consumidos = (ahora - self.fecha_inicio).days
         porcentaje = (dias_consumidos / total_dias) * 100
         return min(100, max(0, int(porcentaje)))
 

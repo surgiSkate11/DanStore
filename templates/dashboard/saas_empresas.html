@@ -176,6 +176,7 @@
                         <th>Enlace Público</th>
                         <th>Estado</th>
                         <th>Fecha Registro</th>
+                        <th>Suscripción</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
@@ -210,6 +211,14 @@
                             {% endif %}
                         </td>
                         <td><span class="text-dark fw-medium">{{ emp.fecha_creacion|date:"d M Y" }}</span></td>
+                        <td>
+                            {% if emp.suscripcion %}
+                                <div class="small fw-semibold text-dark">{{ emp.suscripcion.plan|default:"Sin plan" }}</div>
+                                <div class="small text-muted">Vence {{ emp.suscripcion.fecha_vencimiento|date:"d M Y" }}</div>
+                            {% else %}
+                                <span class="small text-muted">Sin suscripción</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             <div class="d-flex justify-content-end gap-2">
                             <a href="{% url 'tienda_publica' emp.slug %}" target="_blank" class="action-btn" title="Ver Tienda Pública">
@@ -221,12 +230,20 @@
                                     <i class="bi {% if emp.acceso_activo %}bi-pause-fill{% else %}bi-play-fill{% endif %}"></i>
                                 </button>
                             </form>
+                            {% if emp.suscripcion and emp.suscripcion.plan and emp.suscripcion.puede_renovarse %}
+                            <form action="{% url 'saas_renovar_suscripcion' emp.suscripcion.id %}" method="POST" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="action-btn text-success" title="Renovar suscripción">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </form>
+                            {% endif %}
                             </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-5">
+                        <td colspan="6" class="text-center py-5">
                             <div class="d-flex flex-column align-items-center justify-content-center opacity-75">
                                 <i class="bi bi-buildings text-muted" style="font-size: 3.5rem;"></i>
                                 <h5 class="mt-3 fw-bold text-dark">No hay inquilinos registrados</h5>

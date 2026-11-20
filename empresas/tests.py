@@ -86,4 +86,29 @@ class SuspensionMiddlewareTests(TestCase):
 		self.assertIsNone(TenantMiddleware(lambda request: None).process_request(request))
 		self.assertEqual(request.empresa, self.empresa)
 
+
+class SuscripcionEmpresaTests(TestCase):
+	def setUp(self):
+		self.empresa = Empresa.objects.create(nombre='Empresa suscrita', slug='empresa-suscrita')
+
+	def test_dias_restantes_no_redondea_a_cero_una_fecha_futura(self):
+		suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa,
+			fecha_inicio=timezone.now() - timedelta(days=30),
+			fecha_vencimiento=timezone.now() + timedelta(hours=1),
+		)
+
+		self.assertEqual(suscripcion.dias_restantes(), 1)
+		self.assertFalse(suscripcion.puede_renovarse)
+
+	def test_suscripcion_vencida_muestra_cien_por_ciento(self):
+		suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa,
+			fecha_inicio=timezone.now() - timedelta(days=31),
+			fecha_vencimiento=timezone.now() - timedelta(seconds=1),
+		)
+
+		self.assertEqual(suscripcion.porcentaje_consumido(), 100)
+		self.assertTrue(suscripcion.puede_renovarse)
+
 # Create your tests here.

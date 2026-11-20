@@ -341,12 +341,9 @@ def toggle_estado_empresa(request, empresa_id):
         empresa.save(update_fields=['activa', 'suspension_manual'])
     
     if empresa.activa:
-        # Si se está reactivando, verificar si la suscripción está vencida
+        # Activar administrativamente no cambia el período contratado.
         if hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0:
-            # Otorgar 24 horas de gracia para que puedan entrar a pagar o usar el sistema
-            empresa.suscripcion.fecha_vencimiento = timezone.now() + timedelta(days=1)
-            empresa.suscripcion.save()
-            messages.warning(request, f"Empresa '{empresa.nombre}' activada. Su suscripción estaba vencida, se le otorgó 1 día de gracia.")
+            messages.warning(request, f"Empresa '{empresa.nombre}' activada administrativamente, pero su suscripción está vencida y requiere renovación.")
         else:
             messages.success(request, f"La empresa '{empresa.nombre}' ha sido activada con éxito.")
     else:
@@ -679,6 +676,8 @@ def saas_crear_registro(request, app_label, model_name):
         #   a este SaaS (los permisos reales se gestionan vía UserProfile.rol).
         campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
         FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
+    elif Modelo is SuscripcionEmpresa:
+        FormularioDinamico = modelform_factory(Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'])
     else:
         FormularioDinamico = modelform_factory(Modelo, exclude=[])
 
@@ -696,7 +695,13 @@ def saas_crear_registro(request, app_label, model_name):
                     instancia = form.save(commit=False)
                     if es_modelo_user:
                         instancia.set_password(password_nueva)
+                    elif Modelo is SuscripcionEmpresa:
+                        ahora = timezone.now()
+                        instancia.fecha_inicio = ahora
+                        instancia.fecha_vencimiento = ahora
                     instancia.save()
+                    if Modelo is SuscripcionEmpresa:
+                        instancia.renovar(ahora=ahora)
                     if hasattr(form, 'save_m2m'):
                         form.save_m2m()
                 messages.success(request, f"¡Registro creado exitosamente en {Modelo._meta.verbose_name.title()}!")
