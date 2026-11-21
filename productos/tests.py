@@ -271,3 +271,262 @@ class SheetsVentaSinIvaTests(TestCase):
         self.assertEqual(venta.iva, Decimal('0.00'))
         self.assertEqual(venta.porcentaje_iva, Decimal('0.00'))
         self.assertEqual(venta.total, Decimal('13.00'))
+
+
+MENSAJE_VENDIDO_CON_STOCK = (
+    'Un producto con stock no puede estar vendido. Si se vendió todo, pon el stock en 0.'
+)
+MENSAJE_DISPONIBLE_SIN_STOCK = (
+    'Un producto disponible necesita al menos 1 unidad en stock. Si se agotó, márcalo como vendido.'
+)
+
+
+class StockSegunEstadoReglaTests(TestCase):
+    """L21: cuando manda el estado (Google Sheets), una sola regla ajusta el stock."""
+
+    def test_regla_de_stock_segun_estado(self):
+        regla = Producto.stock_segun_estado
+        self.assertEqual(regla('vendido', 6), 0)
+        self.assertEqual(regla('vendido', 0), 0)
+        self.assertEqual(regla('vendido', None), 0)
+        self.assertEqual(regla('disponible', 0), 1)
+        self.assertEqual(regla('disponible', 3), 3)
+        self.assertEqual(regla('disponible', None), 1)
+        self.assertEqual(regla('reservado', 0), 0)
+        self.assertEqual(regla('reservado', 6), 6)
+        self.assertEqual(regla('reservado', None), 1)
+
+
+class EstadoSegunStockEdicionTests(TestCase):
+    """S8: la edición manual no permite vendido con stock."""
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('estado-stock-form')
+        self.client.force_login(self.dueno)
+
+    def crear(self, **extra):
+        datos = dict(
+            empresa=self.empresa, nombre='Pan', categoria='Panes',
+            precio=Decimal('0.25'), stock=6, estado='disponible',
+        )
+        datos.update(extra)
+        return Producto.objects.create(**datos)
+
+    def datos_post(self, **extra):
+        datos = {
+            'nombre': 'Pan', 'categoria': 'Panes', 'precio': '0.25',
+            'stock': '6', 'estado': 'disponible',
+        }
+        datos.update(extra)
+        return datos
+
+    def test_editar_a_vendido_con_stock_se_rechaza_y_no_guarda(self):
+        producto = self.crear(stock=6, estado='disponible')
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(nombre='Cambiado', stock='6', estado='vendido'),
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.context['form'].errors['stock'], [MENSAJE_VENDIDO_CON_STOCK])
+        producto.refresh_from_db()
+        self.assertEqual(producto.nombre, 'Pan')
+        self.assertEqual(producto.stock, 6)
+        self.assertEqual(producto.estado, 'disponible')
+
+    def test_crear_vendido_con_stock_se_rechaza_y_no_crea(self):
+        respuesta = self.client.post(
+            reverse('crear_producto'), self.datos_post(stock='1', estado='vendido'),
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta.context['form'].errors['stock'], [MENSAJE_VENDIDO_CON_STOCK])
+        self.assertEqual(Producto.objects.filter(empresa=self.empresa).count(), 0)
+
+    def test_vendido_con_stock_cero_se_guarda(self):
+        producto = self.crear(stock=6)
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(stock='0', estado='vendido'),
+        )
+        self.assertRedirects(respuesta, reverse('lista_productos'))
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (0, 'vendido'))
+
+    def test_reservado_se_guarda_con_cualquier_stock(self):
+        producto = self.crear(stock=6)
+        for stock in ('6', '0'):
+            respuesta = self.client.post(
+                reverse('editar_producto', args=[producto.pk]),
+                self.datos_post(stock=stock, estado='reservado'),
+            )
+            self.assertRedirects(respuesta, reverse('lista_productos'))
+            producto.refresh_from_db()
+            self.assertEqual((producto.stock, producto.estado), (int(stock), 'reservado'))
+
+    def test_disponible_con_stock_cero_conserva_el_mensaje_anterior(self):
+        producto = self.crear(stock=6)
+        respuesta = self.client.post(
+            reverse('editar_producto', args=[producto.pk]),
+            self.datos_post(stock='0', estado='disponible'),
+        )
+        self.assertEqual(respuesta.context['form'].errors['stock'], [MENSAJE_DISPONIBLE_SIN_STOCK])
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (6, 'disponible'))
+
+
+class EstadoSegunStockCambioRapidoTests(TestCase):
+    """S8: el cambio rápido de estado (AJAX) respeta el stock."""
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('estado-stock-rapido')
+        self.client.force_login(self.dueno)
+
+    def crear(self, stock, estado):
+        return Producto.objects.create(
+            empresa=self.empresa, nombre='Pan', categoria='Panes',
+            precio=Decimal('0.25'), stock=stock, estado=estado,
+        )
+
+    def cambiar(self, producto, estado):
+        return self.client.post(
+            reverse('cambiar_estado_producto', args=[producto.pk]), {'estado': estado},
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest',
+        )
+
+    def test_vendido_con_stock_se_rechaza_sin_tocar_la_base(self):
+        producto = self.crear(6, 'disponible')
+        respuesta = self.cambiar(producto, 'vendido')
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertEqual(
+            respuesta.json(), {'success': False, 'error': MENSAJE_VENDIDO_CON_STOCK},
+        )
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (6, 'disponible'))
+
+    def test_disponible_con_stock_cero_se_rechaza_sin_tocar_la_base(self):
+        producto = self.crear(0, 'vendido')
+        respuesta = self.cambiar(producto, 'disponible')
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertEqual(
+            respuesta.json(), {'success': False, 'error': MENSAJE_DISPONIBLE_SIN_STOCK},
+        )
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (0, 'vendido'))
+
+    def test_reservado_se_permite_con_cualquier_stock(self):
+        for stock in (6, 0):
+            producto = self.crear(stock, 'disponible' if stock else 'vendido')
+            respuesta = self.cambiar(producto, 'reservado')
+            self.assertEqual(respuesta.status_code, 200)
+            self.assertEqual(respuesta.json(), {'success': True, 'estado': 'Reservado'})
+            producto.refresh_from_db()
+            self.assertEqual((producto.stock, producto.estado), (stock, 'reservado'))
+
+    def test_cambios_coherentes_se_siguen_guardando(self):
+        con_stock = self.crear(3, 'reservado')
+        self.assertEqual(self.cambiar(con_stock, 'disponible').status_code, 200)
+        con_stock.refresh_from_db()
+        self.assertEqual(con_stock.estado, 'disponible')
+        sin_stock = self.crear(0, 'reservado')
+        self.assertEqual(self.cambiar(sin_stock, 'vendido').status_code, 200)
+        sin_stock.refresh_from_db()
+        self.assertEqual(sin_stock.estado, 'vendido')
+
+    def test_estado_invalido_sigue_dando_400(self):
+        producto = self.crear(2, 'disponible')
+        self.assertEqual(self.cambiar(producto, 'inventado').status_code, 400)
+        producto.refresh_from_db()
+        self.assertEqual(producto.estado, 'disponible')
+
+
+class EstadoSegunStockSheetsTests(TestCase):
+    """S8 / L21: la hoja no trae stock, así que manda su estado y el stock se ajusta; cada ajuste queda anotado."""
+
+    ENCABEZADOS = ['Nombre', 'Tipo', 'Categoría', 'Variante', 'Precio Venta',
+                   'Precio Real', 'Estado', 'Vendido a']
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('estado-stock-sheets')
+        self.client.force_login(self.dueno)
+
+    def fila(self, nombre, estado, vendido_a=''):
+        return [nombre, 'Ropa', 'Camisas', 'M', '10', '8', estado, vendido_a]
+
+    def crear(self, nombre, fila_hoja, stock, estado):
+        tipo, _ = TipoProducto.objects.get_or_create(empresa=self.empresa, nombre='Ropa')
+        return Producto.objects.create(
+            empresa=self.empresa, nombre=nombre, categoria='Camisas', variante='M',
+            precio=Decimal('10'), precio_real=Decimal('8'), stock=stock, estado=estado,
+            google_sheets_row=fila_hoja, origen='sheets', tipo_producto=tipo,
+        )
+
+    def sincronizar(self, filas):
+        hoja = mock.Mock()
+        hoja.get_all_values.return_value = [self.ENCABEZADOS] + filas
+        libro = mock.Mock()
+        libro.get_worksheet.return_value = hoja
+        cliente = mock.Mock()
+        cliente.open_by_url.return_value = libro
+        with mock.patch.object(sheets_sync, 'conectar_google_sheets', return_value=(cliente, None)):
+            respuesta = self.client.post(
+                reverse('sincronizar_sheets'),
+                {'sheet_url': 'https://docs.google.com/spreadsheets/d/x'}, follow=True,
+            )
+        return [str(m) for m in respuesta.context['messages']]
+
+    def correcciones(self, mensajes):
+        return [m for m in mensajes if 'se ajustó el stock' in m.lower()]
+
+    def test_vendido_en_la_hoja_deja_el_stock_en_cero_y_se_anota(self):
+        producto = self.crear('Camisa A', 2, 6, 'disponible')
+        mensajes = self.sincronizar([self.fila('Camisa A', 'Vendido')])
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (0, 'vendido'))
+        resumen = self.correcciones(mensajes)
+        self.assertEqual(len(resumen), 1, mensajes)
+        self.assertIn('Fila 2', resumen[0])
+
+    def test_vendido_importado_con_stock_uno_sigue_vendido(self):
+        # Antes de L21 los vendidos de Sheets quedaban con el stock por defecto (1):
+        # la hoja manda, siguen vendidos y no se pierden como disponibles.
+        producto = self.crear('Camisa A', 2, 1, 'vendido')
+        self.sincronizar([self.fila('Camisa A', 'Vendido', 'Ana')])
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (0, 'vendido'))
+
+    def test_disponible_en_la_hoja_con_stock_cero_pasa_a_uno_y_se_anota(self):
+        producto = self.crear('Camisa A', 2, 0, 'vendido')
+        mensajes = self.sincronizar([self.fila('Camisa A', 'Disponible')])
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (1, 'disponible'))
+        resumen = self.correcciones(mensajes)
+        self.assertEqual(len(resumen), 1, mensajes)
+        self.assertIn('Fila 2', resumen[0])
+
+    def test_reservado_no_se_toca_con_ningun_stock(self):
+        con_stock = self.crear('Camisa A', 2, 6, 'disponible')
+        sin_stock = self.crear('Camisa B', 3, 0, 'vendido')
+        mensajes = self.sincronizar([
+            self.fila('Camisa A', 'Reservado'), self.fila('Camisa B', 'Reservado'),
+        ])
+        for producto, stock in ((con_stock, 6), (sin_stock, 0)):
+            producto.refresh_from_db()
+            self.assertEqual((producto.stock, producto.estado), (stock, 'reservado'))
+        self.assertEqual(self.correcciones(mensajes), [])
+
+    def test_coherente_no_se_corrige_ni_se_anota(self):
+        producto = self.crear('Camisa A', 2, 0, 'vendido')
+        mensajes = self.sincronizar([self.fila('Camisa A', 'Vendido')])
+        producto.refresh_from_db()
+        self.assertEqual((producto.stock, producto.estado), (0, 'vendido'))
+        self.assertEqual(self.correcciones(mensajes), [])
+
+    def test_producto_nuevo_vendido_se_crea_con_stock_cero(self):
+        mensajes = self.sincronizar([self.fila('Camisa N', 'Vendido', 'Ana')])
+        producto = Producto.objects.get(empresa=self.empresa, nombre='Camisa N')
+        self.assertEqual((producto.stock, producto.estado), (0, 'vendido'))
+        self.assertEqual(self.correcciones(mensajes), [])
+
+    def test_producto_nuevo_disponible_se_crea_con_stock_uno(self):
+        self.sincronizar([self.fila('Camisa N', 'Disponible')])
+        producto = Producto.objects.get(empresa=self.empresa, nombre='Camisa N')
+        self.assertEqual((producto.stock, producto.estado), (1, 'disponible'))

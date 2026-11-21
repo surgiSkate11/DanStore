@@ -288,6 +288,39 @@ class Producto(models.Model):
         """Verifica si el producto está disponible"""
         return self.estado == 'disponible'
 
+    # ── REGLA ESTADO ↔ STOCK (única; la usan formulario, cambio rápido y Sheets) ──
+    # vendido solo con stock 0; disponible solo con stock >= 1; reservado con cualquier stock.
+    MENSAJE_VENDIDO_CON_STOCK = (
+        'Un producto con stock no puede estar vendido. Si se vendió todo, pon el stock en 0.'
+    )
+    MENSAJE_DISPONIBLE_SIN_STOCK = (
+        'Un producto disponible necesita al menos 1 unidad en stock. Si se agotó, márcalo como vendido.'
+    )
+
+    @staticmethod
+    def stock_segun_estado(estado, stock):
+        """Stock coherente con el estado cuando manda el estado (Google Sheets, L21).
+
+        Vendido queda en 0; disponible necesita al menos 1; reservado conserva el suyo.
+        stock None es un producto nuevo (vendido 0, los demás 1).
+        """
+        if estado == 'vendido':
+            return 0
+        if stock is None or (estado == 'disponible' and stock == 0):
+            return 1
+        return stock
+
+    @staticmethod
+    def error_estado_stock(estado, stock):
+        """Mensaje en español si el par estado/stock es incoherente; None si es válido."""
+        if stock is None:
+            return None
+        if estado == 'vendido' and stock > 0:
+            return Producto.MENSAJE_VENDIDO_CON_STOCK
+        if estado == 'disponible' and stock == 0:
+            return Producto.MENSAJE_DISPONIBLE_SIN_STOCK
+        return None
+
     def margen(self):
         """Calcula el margen de ganancia si hay precio de costo"""
         if self.precio and self.precio_costo and self.precio_costo > 0:

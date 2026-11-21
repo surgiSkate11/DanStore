@@ -198,6 +198,9 @@ def cambiar_estado_producto(request, pk):
         nuevo_estado = request.POST.get('estado')
 
         if nuevo_estado in dict(Producto.ESTADO_CHOICES):
+            error = Producto.error_estado_stock(nuevo_estado, producto.stock)
+            if error:
+                return JsonResponse({'success': False, 'error': error}, status=400)
             producto.estado = nuevo_estado
             producto.save(update_fields=['estado', 'actualizado_en'])
             return JsonResponse({
