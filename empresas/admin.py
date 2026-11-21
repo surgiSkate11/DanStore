@@ -2,8 +2,21 @@ from django.contrib import admin
 from .models import Empresa, Plan, SuscripcionEmpresa, Ticket, MensajeTicket, ConfiguracionSaaS
 
 
+class SinBorradoAdmin(admin.ModelAdmin):
+    """Empresa y SuscripcionEmpresa no se borran (S7): borrar la empresa arrastra todos sus datos
+    y borrar la suscripción dejaría acceso gratis. Dar de baja = desactivar la empresa."""
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_actions(self, request):
+        acciones = super().get_actions(request)
+        acciones.pop('delete_selected', None)
+        return acciones
+
+
 @admin.register(Empresa)
-class EmpresaAdmin(admin.ModelAdmin):
+class EmpresaAdmin(SinBorradoAdmin):
     list_display = ('nombre', 'slug', 'activa', 'fecha_creacion')
     search_fields = ('nombre', 'slug')
     list_filter = ('activa',)
@@ -16,15 +29,40 @@ class PlanAdmin(admin.ModelAdmin):
 
 
 @admin.register(SuscripcionEmpresa)
-class SuscripcionEmpresaAdmin(admin.ModelAdmin):
+class SuscripcionEmpresaAdmin(SinBorradoAdmin):
     list_display = ('empresa', 'plan', 'tipo_plan', 'fecha_inicio', 'fecha_vencimiento')
     search_fields = ('empresa__nombre', 'plan__nombre')
     list_filter = ('tipo_plan', 'plan')
     readonly_fields = ('fecha_inicio', 'fecha_vencimiento')
+    fieldsets = (
+        (None, {
+            'fields': ('empresa', 'plan', 'tipo_plan'),
+            'description': (
+                'Las fechas se calculan automáticamente al crear la suscripción según el tipo de plan. '
+                'Si cambias el plan o el tipo, el cambio se aplica en la próxima renovación.'
+            ),
+        }),
+        ('Periodo', {'fields': ('fecha_inicio', 'fecha_vencimiento')}),
+    )
     actions = ('renovar_suscripciones',)
+
+    def save_model(self, request, obj, form, change):
+        # Al crear, las fechas salen del tipo de plan (S6); al editar no se recalculan.
+        if not change:
+            obj.iniciar_periodo()
+        super().save_model(request, obj, form, change)
+
+    def get_actions(self, request):
+        acciones = super().get_actions(request)
+        if not request.user.is_superuser:
+            acciones.pop('renovar_suscripciones', None)
+        return acciones
 
     @admin.action(description='Renovar suscripciones según su periodo')
     def renovar_suscripciones(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, 'Solo un superadministrador puede renovar suscripciones.', level='ERROR')
+            return
         renovadas = 0
         reactivadas = 0
 
@@ -39,7 +77,7 @@ class SuscripcionEmpresaAdmin(admin.ModelAdmin):
             if not suscripcion.puede_renovarse:
                 self.message_user(
                     request,
-                    f"{suscripcion.empresa.nombre} todavía está vigente y no fue renovada.",
+                    suscripcion.mensaje_fuera_de_ventana(),
                     level='WARNING',
                 )
                 continue

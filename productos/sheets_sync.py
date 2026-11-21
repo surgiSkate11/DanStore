@@ -226,6 +226,7 @@ def sincronizar_sheets(request):
             productos_creados = 0
             productos_actualizados = 0
             errores = []
+            correcciones = []  # estados corregidos según el stock (S8)
             
             # Primera fila = encabezados
             headers = valores[0]
@@ -344,6 +345,19 @@ def sincronizar_sheets(request):
                     if not estado_sheets and vendido_a:
                         estado = 'vendido'
                     
+                    # Buscar si ya existe producto con este número de fila
+                    producto_existente = productos_existentes.get(idx)
+
+                    # La hoja no trae stock, así que manda su estado y el stock se ajusta
+                    # a la regla única de Producto (L21): vendido -> 0, disponible con 0 -> 1.
+                    stock_actual = producto_existente.stock if producto_existente else None
+                    stock_nuevo = Producto.stock_segun_estado(estado, stock_actual)
+                    if producto_existente and stock_nuevo != stock_actual:
+                        correcciones.append(
+                            f"Fila {idx}: '{nombre_prod}' está {estado} en la hoja; "
+                            f"su stock pasó de {stock_actual} a {stock_nuevo}"
+                        )
+
                     # Generar descripción automática
                     descripcion_partes = []
                     if marca:
@@ -353,9 +367,6 @@ def sincronizar_sheets(request):
                     if observacion:
                         descripcion_partes.append(observacion)
                     descripcion = " | ".join(descripcion_partes)
-                    
-                    # Buscar si ya existe producto con este número de fila
-                    producto_existente = productos_existentes.get(idx)
                     
                     if producto_existente:
                         # OPTIMIZACIÓN: Solo actualizar si hay cambios reales
@@ -370,6 +381,7 @@ def sincronizar_sheets(request):
                             producto_existente.descripcion != descripcion or
                             producto_existente.vendido_a != vendido_a or
                             producto_existente.estado != estado or
+                            producto_existente.stock != stock_nuevo or
                             producto_existente.origen != 'sheets'
                         )
                         
@@ -417,6 +429,7 @@ def sincronizar_sheets(request):
                             producto_existente.descripcion = descripcion
                             producto_existente.vendido_a = vendido_a
                             producto_existente.estado = estado
+                            producto_existente.stock = stock_nuevo
                             producto_existente.origen = 'sheets'
                             productos_a_actualizar.append(producto_existente)
                     else:
@@ -435,6 +448,7 @@ def sincronizar_sheets(request):
                                 descripcion=descripcion,
                                 vendido_a=vendido_a,
                                 estado=estado,
+                                stock=stock_nuevo,
                                 google_sheets_row=idx,
                                 origen='sheets',
                             )
@@ -455,7 +469,7 @@ def sincronizar_sheets(request):
                     producto.actualizar_texto_busqueda()
                 Producto.objects.bulk_update(
                     productos_a_actualizar,
-                    ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante',
+                    ['nombre', 'tipo_producto', 'marca', 'color', 'categoria', 'variante', 'stock',
                      'precio', 'precio_real', 'descripcion', 'vendido_a', 'estado',
                      'origen', 'texto_busqueda'],
                     batch_size=500
@@ -487,6 +501,14 @@ def sincronizar_sheets(request):
             if errores:
                 for error in errores[:10]:  # Mostrar primeros 10 errores directamente
                     messages.warning(request, f'{error}')
+
+            if correcciones:
+                detalle = ' | '.join(correcciones[:10])
+                resto = f' (y {len(correcciones) - 10} más)' if len(correcciones) > 10 else ''
+                messages.warning(
+                    request,
+                    f'Se ajustó el stock de {len(correcciones)} producto(s) según su estado en la hoja: {detalle}{resto}'
+                )
             
             # ========================================
             # LIMPIEZA DE CONSISTENCIA - PASO 1

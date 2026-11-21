@@ -1,0 +1,14 @@
+{% comment %}
+Botón de renovar una suscripción desde una lista de inquilinos (S2).
+Parámetros: suscripcion (puede ser vacía), clase (opcional), etiqueta (opcional, muestra texto).
+Solo aparece si la empresa tiene suscripción con plan y puede_renovarse es verdadero (S3).
+La vista saas_renovar_suscripcion solo acepta POST de superadmin (S5) y vuelve a `next`.
+{% endcomment %}{% if suscripcion and suscripcion.plan and suscripcion.puede_renovarse %}
+<form action="{% url 'saas_renovar_suscripcion' suscripcion.id %}" method="POST" class="m-0 d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit" class="{{ clase|default:'btn btn-sm btn-light text-success shadow-sm border' }}" title="Renovar suscripción">
+        <i class="bi bi-arrow-clockwise"></i>{% if etiqueta %} Renovar{% endif %}
+    </button>
+</form>
+{% endif %}

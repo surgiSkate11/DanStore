@@ -93,12 +93,13 @@
                             {% if app_label == 'empresas' and model_name == 'suscripcionempresa' %}
                             <form method="POST" action="{% url 'saas_renovar_suscripcion' reg.id %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-light text-success shadow-sm border me-1" title="{% if reg.puede_renovarse %}Renovar suscripción{% else %}Disponible al vencer la suscripción{% endif %}" {% if not reg.puede_renovarse %}disabled{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-light text-success shadow-sm border me-1" title="{% if reg.puede_renovarse %}Renovar suscripción{% else %}Disponible desde 7 días antes del vencimiento{% endif %}" {% if not reg.puede_renovarse %}disabled{% endif %}>
                                     <i class="bi bi-arrow-clockwise"></i>
                                 </button>
                             </form>
                             {% endif %}
                             <a href="{% url 'saas_editar_registro' app_label model_name reg.id %}" class="btn btn-sm btn-light text-primary shadow-sm border me-1" title="Editar"><i class="bi bi-pencil-square"></i></a>
+                            {% if permite_eliminar %}
                             <form method="POST" action="{% url 'saas_eliminar_registro' app_label model_name reg.id %}" id="delete-form-{{ reg.id }}" class="d-inline">
                                 {% csrf_token %}
                             </form>
@@ -107,6 +108,7 @@
                                     data-form-id="delete-form-{{ reg.id }}" title="Eliminar">
                                 <i class="bi bi-trash3-fill"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

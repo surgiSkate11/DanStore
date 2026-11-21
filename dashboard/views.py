@@ -18,7 +18,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Case, Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value, When
-from django.db.models.deletion import ProtectedError
+from django.db.models.deletion import ProtectedError, RestrictedError
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth
 from django.forms import modelform_factory
 from django.http import HttpResponse, JsonResponse
@@ -27,6 +27,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from clientes.models import Cliente
@@ -342,7 +343,7 @@ def toggle_estado_empresa(request, empresa_id):
     
     if empresa.activa:
         # Activar administrativamente no cambia el período contratado.
-        if hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0:
+        if hasattr(empresa, 'suscripcion') and empresa.suscripcion.esta_vencida:
             messages.warning(request, f"Empresa '{empresa.nombre}' activada administrativamente, pero su suscripción está vencida y requiere renovación.")
         else:
             messages.success(request, f"La empresa '{empresa.nombre}' ha sido activada con éxito.")
@@ -655,6 +656,13 @@ def saas_control_panel(request):
     return render(request, 'dashboard/saas_database.html', context)
 
 
+# Las fechas de la suscripción se calculan solas (S6); cambiar plan o tipo no las recalcula.
+AYUDA_SUSCRIPCION = {
+    'plan': 'Si cambias el plan, se aplica en la próxima renovación; las fechas actuales no cambian.',
+    'tipo_plan': 'Las fechas se calculan automáticamente al crear la suscripción. Un cambio de tipo se aplica en la próxima renovación.',
+}
+
+
 @login_required
 def saas_crear_registro(request, app_label, model_name):
     """Fábrica de Formularios: Crea dinámicamente el formulario para CUALQUIER modelo"""
@@ -677,7 +685,9 @@ def saas_crear_registro(request, app_label, model_name):
         campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
         FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
     elif Modelo is SuscripcionEmpresa:
-        FormularioDinamico = modelform_factory(Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'])
+        FormularioDinamico = modelform_factory(
+            Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'], help_texts=AYUDA_SUSCRIPCION,
+        )
     else:
         FormularioDinamico = modelform_factory(Modelo, exclude=[])
 
@@ -696,12 +706,8 @@ def saas_crear_registro(request, app_label, model_name):
                     if es_modelo_user:
                         instancia.set_password(password_nueva)
                     elif Modelo is SuscripcionEmpresa:
-                        ahora = timezone.now()
-                        instancia.fecha_inicio = ahora
-                        instancia.fecha_vencimiento = ahora
+                        instancia.iniciar_periodo()
                     instancia.save()
-                    if Modelo is SuscripcionEmpresa:
-                        instancia.renovar(ahora=ahora)
                     if hasattr(form, 'save_m2m'):
                         form.save_m2m()
                 messages.success(request, f"¡Registro creado exitosamente en {Modelo._meta.verbose_name.title()}!")
@@ -802,8 +808,19 @@ def saas_listar_registros(request, app_label, model_name):
         'model_name': model_name,
         'campos': campos,
         'registros_data': registros_data,
+        'permite_eliminar': Modelo not in MODELOS_SIN_BORRADO,
     }
     return render(request, 'dashboard/saas_generic_list.html', context)
+
+
+def _volver_de_renovar(request):
+    """Vuelve a la lista de donde salió el formulario (`next`), solo si es una ruta propia."""
+    destino = request.POST.get('next', '')
+    if destino and url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        return redirect(destino)
+    return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
 
 
 @login_required
@@ -818,13 +835,10 @@ def saas_renovar_suscripcion(request, subscription_id):
     )
     if not suscripcion.plan:
         messages.error(request, f"{suscripcion.empresa.nombre} no tiene un plan asignado.")
-        return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+        return _volver_de_renovar(request)
     if not suscripcion.puede_renovarse:
-        messages.warning(
-            request,
-            f"La suscripción de {suscripcion.empresa.nombre} todavía está vigente y no puede renovarse nuevamente.",
-        )
-        return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+        messages.error(request, suscripcion.mensaje_fuera_de_ventana())
+        return _volver_de_renovar(request)
 
     suscripcion.renovar()
     empresa = suscripcion.empresa
@@ -841,7 +855,7 @@ def saas_renovar_suscripcion(request, subscription_id):
     elif empresa.suspension_manual:
         mensaje += " La suspensión administrativa se mantiene."
     messages.success(request, mensaje)
-    return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+    return _volver_de_renovar(request)
 
 
 @login_required
@@ -863,7 +877,9 @@ def saas_editar_registro(request, app_label, model_name, object_id):
         campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
         FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
     elif Modelo is SuscripcionEmpresa:
-        FormularioDinamico = modelform_factory(Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'])
+        FormularioDinamico = modelform_factory(
+            Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'], help_texts=AYUDA_SUSCRIPCION,
+        )
     else:
         FormularioDinamico = modelform_factory(Modelo, exclude=[])
 
@@ -914,6 +930,11 @@ def saas_editar_registro(request, app_label, model_name, object_id):
     return render(request, 'dashboard/saas_generic_form.html', context)
 
 
+# S7: borrar una empresa arrastra todos sus datos y borrar su suscripción deja acceso gratis.
+MODELOS_SIN_BORRADO = (Empresa, SuscripcionEmpresa)
+MENSAJE_SIN_BORRADO = "Las empresas y sus suscripciones no se borran: para dar de baja una empresa, desactívala."
+
+
 @login_required
 def saas_eliminar_registro(request, app_label, model_name, object_id):
     """Fábrica de Eliminación: Borra dinámicamente un registro"""
@@ -928,10 +949,13 @@ def saas_eliminar_registro(request, app_label, model_name, object_id):
 
     instancia = get_object_or_404(Modelo, id=object_id)
     if request.method == 'POST':
+        if Modelo in MODELOS_SIN_BORRADO:
+            messages.error(request, MENSAJE_SIN_BORRADO)
+            return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
         try:
             instancia.delete()
             messages.success(request, "Registro eliminado exitosamente.")
-        except ProtectedError:
+        except (ProtectedError, RestrictedError):
             # El modelo tiene on_delete=PROTECT/RESTRICT en alguna FK que apunta
             # a este registro (ej. un Plan con empresas todavía suscritas a él).
             # Sin este try/except, Django mostraba la página de error técnica en
@@ -1267,7 +1291,7 @@ def tienda_publica(request, slug):
     suspendida = False
     if not empresa.activa:
         suspendida = True
-    elif hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0:
+    elif not empresa.acceso_activo:  # vencida o sin suscripción (S7)
         suspendida = True
         
     if suspendida:

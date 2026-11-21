@@ -434,6 +434,7 @@
                         <th>Facturación</th>
                         <th>Vencimiento</th>
                         <th>Progreso</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -467,10 +468,13 @@
                                 </span>
                             </div>
                         </td>
+                        <td class="text-end">
+                            {% include 'dashboard/_boton_renovar_suscripcion.html' with suscripcion=sub %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
+                        <td colspan="6" class="text-center py-5 text-muted">
                             <i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>
                             No hay suscripciones activas
                         </td>

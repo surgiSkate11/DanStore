@@ -78,7 +78,8 @@ class TenantMiddleware(MiddlewareMixin):
             request.empresa = empresa
 
             suspendida_admin = not empresa.activa
-            suspendida_pago = hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0
+            # Sin suscripción se trata como vencida (S7): no hay acceso gratis.
+            suspendida_pago = not hasattr(empresa, 'suscripcion') or empresa.suscripcion.esta_vencida
 
             if suspendida_admin or suspendida_pago:
                 try:
