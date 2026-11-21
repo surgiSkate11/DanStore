@@ -230,14 +230,7 @@
                                     <i class="bi {% if emp.acceso_activo %}bi-pause-fill{% else %}bi-play-fill{% endif %}"></i>
                                 </button>
                             </form>
-                            {% if emp.suscripcion and emp.suscripcion.plan and emp.suscripcion.puede_renovarse %}
-                            <form action="{% url 'saas_renovar_suscripcion' emp.suscripcion.id %}" method="POST" class="m-0">
-                                {% csrf_token %}
-                                <button type="submit" class="action-btn text-success" title="Renovar suscripción">
-                                    <i class="bi bi-arrow-clockwise"></i>
-                                </button>
-                            </form>
-                            {% endif %}
+                            {% include 'dashboard/_boton_renovar_suscripcion.html' with suscripcion=emp.suscripcion clase='action-btn text-success' %}
                             </div>
                         </td>
                     </tr>

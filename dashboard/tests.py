@@ -2,6 +2,7 @@ from django.conf import settings
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+import re
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -133,3 +134,127 @@ class RenovarSuscripcionTests(TestCase):
 		self.client.post(self.url)
 		self.assertEqual(self._fechas(), antes)
 
+
+class BotonRenovarEnInquilinosTests(TestCase):
+	"""S2/S5: las listas de inquilinos ofrecen renovar por fila, solo al superadmin."""
+
+	def setUp(self):
+		self.plan = Plan.objects.create(nombre='Basico')
+		self.superadmin = User.objects.create_superuser('super_inq', 'si@example.com', 'Clave-prueba-123')
+		self.cerca, self.dueno_cerca = crear_empresa_con_dueno('cerca')
+		self.lejos, _ = crear_empresa_con_dueno('lejos')
+		self.sin_plan, _ = crear_empresa_con_dueno('sinplan')
+		self.sin_suscripcion, _ = crear_empresa_con_dueno('sinsuscripcion')
+		ahora = timezone.now()
+		self.sub_cerca = self._suscripcion(self.cerca, self.plan, ahora + timedelta(days=3))
+		self.sub_lejos = self._suscripcion(self.lejos, self.plan, ahora + timedelta(days=20))
+		self.sub_sin_plan = self._suscripcion(self.sin_plan, None, ahora + timedelta(days=3))
+
+	def _suscripcion(self, empresa, plan, vencimiento):
+		return SuscripcionEmpresa.objects.create(
+			empresa=empresa, plan=plan, tipo_plan='mensual',
+			fecha_inicio=vencimiento - timedelta(days=30), fecha_vencimiento=vencimiento.replace(microsecond=0),
+		)
+
+	def _url_renovar(self, suscripcion):
+		return reverse('saas_renovar_suscripcion', args=[suscripcion.id])
+
+	def _fechas(self, suscripcion):
+		s = SuscripcionEmpresa.objects.get(pk=suscripcion.pk)
+		return s.fecha_inicio, s.fecha_vencimiento
+
+	def _formulario_de(self, html, url):
+		"""Devuelve el <form> cuyo action es `url`, o None."""
+		for formulario in re.findall(r'<form\b.*?</form>', html, flags=re.S):
+			if f'action="{url}"' in formulario:
+				return formulario
+		return None
+
+	def _paginas(self):
+		return [reverse('saas_empresas'), reverse('dashboard_saas')]
+
+	def test_superadmin_ve_el_boton_dentro_de_la_ventana_con_post_y_csrf(self):
+		self.client.force_login(self.superadmin)
+		for pagina in self._paginas():
+			with self.subTest(pagina=pagina):
+				html = self.client.get(pagina).content.decode()
+				formulario = self._formulario_de(html, self._url_renovar(self.sub_cerca))
+				self.assertIsNotNone(formulario, 'falta el botón de renovar')
+				self.assertRegex(formulario, r'(?i)method="POST"')
+				self.assertIn('csrfmiddlewaretoken', formulario)
+
+	def test_no_hay_boton_para_una_empresa_con_20_dias_restantes(self):
+		self.client.force_login(self.superadmin)
+		for pagina in self._paginas():
+			with self.subTest(pagina=pagina):
+				html = self.client.get(pagina).content.decode()
+				self.assertIsNone(self._formulario_de(html, self._url_renovar(self.sub_lejos)))
+
+	def test_no_hay_boton_para_una_suscripcion_sin_plan(self):
+		self.client.force_login(self.superadmin)
+		for pagina in self._paginas():
+			with self.subTest(pagina=pagina):
+				html = self.client.get(pagina).content.decode()
+				self.assertIsNone(self._formulario_de(html, self._url_renovar(self.sub_sin_plan)))
+
+	def test_empresa_sin_suscripcion_se_muestra_sin_error_y_sin_boton(self):
+		self.client.force_login(self.superadmin)
+		respuesta = self.client.get(reverse('saas_empresas'))
+		self.assertEqual(respuesta.status_code, 200)
+		html = respuesta.content.decode()
+		self.assertIn('Sin suscripción', html)
+		# Solo la empresa "cerca" tiene botón: ni la de sin suscripción ni otras.
+		self.assertEqual(html.count('/renovar-suscripcion/'), 1)
+
+	def test_dueno_no_puede_ver_las_listas_de_inquilinos(self):
+		for pagina in self._paginas():
+			with self.subTest(pagina=pagina):
+				self.client.force_login(self.dueno_cerca)
+				respuesta = self.client.get(pagina)
+				self.assertEqual(respuesta.status_code, 403)
+				self.assertNotIn('/renovar-suscripcion/', respuesta.content.decode())
+
+	def test_dueno_no_renueva_ni_con_el_formulario_de_la_lista(self):
+		antes = self._fechas(self.sub_cerca)
+		self.client.force_login(self.dueno_cerca)
+		respuesta = self.client.post(self._url_renovar(self.sub_cerca), {'next': reverse('saas_empresas')})
+		self.assertIn(respuesta.status_code, (302, 403))
+		self.assertEqual(self._fechas(self.sub_cerca), antes)
+
+	def test_enviar_el_formulario_renueva_desde_el_vencimiento_y_vuelve_a_la_lista(self):
+		inicio, vencimiento = self._fechas(self.sub_cerca)
+		self.client.force_login(self.superadmin)
+		for pagina in self._paginas():
+			with self.subTest(pagina=pagina):
+				SuscripcionEmpresa.objects.filter(pk=self.sub_cerca.pk).update(
+					fecha_inicio=inicio, fecha_vencimiento=vencimiento)
+				html = self.client.get(pagina).content.decode()
+				formulario = self._formulario_de(html, self._url_renovar(self.sub_cerca))
+				self.assertIn('name="next"', formulario)
+				respuesta = self.client.post(self._url_renovar(self.sub_cerca), {'next': pagina}, follow=True)
+				self.assertRedirects(respuesta, pagina)
+				nuevo_inicio, nuevo_vencimiento = self._fechas(self.sub_cerca)
+				self.assertEqual(nuevo_inicio, inicio)
+				self.assertGreaterEqual(nuevo_vencimiento, vencimiento + timedelta(days=28))
+				self.assertLessEqual(nuevo_vencimiento, vencimiento + timedelta(days=31))
+				textos = [str(m) for m in get_messages(respuesta.wsgi_request)]
+				self.assertTrue(any('renovada' in t and self.cerca.nombre in t for t in textos), textos)
+
+	def test_next_externo_se_ignora(self):
+		self.client.force_login(self.superadmin)
+		respuesta = self.client.post(self._url_renovar(self.sub_cerca), {'next': 'https://malo.example.com/'})
+		self.assertEqual(respuesta.status_code, 302)
+		self.assertNotIn('malo.example.com', respuesta['Location'])
+
+	def test_renovar_sin_next_conserva_el_destino_anterior(self):
+		self.client.force_login(self.superadmin)
+		respuesta = self.client.post(self._url_renovar(self.sub_cerca))
+		self.assertEqual(
+			respuesta['Location'],
+			reverse('saas_listar_registros', args=['empresas', 'suscripcionempresa']))
+
+	def test_renovar_fuera_de_ventana_desde_la_lista_no_cambia_nada(self):
+		antes = self._fechas(self.sub_lejos)
+		self.client.force_login(self.superadmin)
+		self.client.post(self._url_renovar(self.sub_lejos), {'next': reverse('saas_empresas')})
+		self.assertEqual(self._fechas(self.sub_lejos), antes)

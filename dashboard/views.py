@@ -27,6 +27,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from clientes.models import Cliente
@@ -806,6 +807,16 @@ def saas_listar_registros(request, app_label, model_name):
     return render(request, 'dashboard/saas_generic_list.html', context)
 
 
+def _volver_de_renovar(request):
+    """Vuelve a la lista de donde salió el formulario (`next`), solo si es una ruta propia."""
+    destino = request.POST.get('next', '')
+    if destino and url_has_allowed_host_and_scheme(
+        destino, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        return redirect(destino)
+    return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+
+
 @login_required
 def saas_renovar_suscripcion(request, subscription_id):
     """Renueva una suscripción desde el Control Panel SaaS."""
@@ -818,10 +829,10 @@ def saas_renovar_suscripcion(request, subscription_id):
     )
     if not suscripcion.plan:
         messages.error(request, f"{suscripcion.empresa.nombre} no tiene un plan asignado.")
-        return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+        return _volver_de_renovar(request)
     if not suscripcion.puede_renovarse:
         messages.error(request, suscripcion.mensaje_fuera_de_ventana())
-        return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+        return _volver_de_renovar(request)
 
     suscripcion.renovar()
     empresa = suscripcion.empresa
@@ -838,7 +849,7 @@ def saas_renovar_suscripcion(request, subscription_id):
     elif empresa.suspension_manual:
         mensaje += " La suspensión administrativa se mantiene."
     messages.success(request, mensaje)
-    return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
+    return _volver_de_renovar(request)
 
 
 @login_required
