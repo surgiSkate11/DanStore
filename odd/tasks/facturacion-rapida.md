@@ -26,7 +26,7 @@ Versiones 3.1.0–3.7.0 (minor por tarea, patch por commit). Pruebas: `ADMIN_URL
 | T5 | S6, S9 (y S4 en pantalla) | 3.5.0 | worker, TDD | hecha | 3470d33 |
 | T5b | S9 | 3.5.2 | inline, TDD, Risk 2 (XSS) | hecha | 3c7ea2a |
 | T6 | S7, S8, S9 | 3.6.0–3.6.4 | worker, TDD | hecha (falta prueba manual en navegador) | 52485fa, 6ec94ea, 3f81854, ce193fc |
-| T7 | S8, S9 | 3.7.0 | worker | pendiente | |
+| T7 | S7, S8, S9 | 3.7.0–3.7.2 | worker + inline, TDD | hecha (falta prueba manual en navegador) | 5c73150, 2073687 |
 
 ## Log
 
@@ -60,3 +60,7 @@ Versiones 3.1.0–3.7.0 (minor por tarea, patch por commit). Pruebas: `ADMIN_URL
   - Sin prueba automática (probar a mano en el navegador): debounce, Enter y Escape del buscador; − / + / cantidad escrita con tope de stock; F9 con y sin productos o cliente; editar una venta y ver los totales en vivo; imprimir sin abrir pestaña en una impresora real; Enter y N en el panel; "Imprimir al guardar" sin reimprimir al recargar; Compartir.
   - Decisiones abiertas: `Producto` no tiene código/SKU (la búsqueda usa `texto_busqueda`); un reenvío duplicado redirige sin `?nueva=1` y no muestra el panel.
   - Para T7 (sugerencias de GGA): `productos_cliente_ids|safe` → `json_script`; escapar `cliente.compras`; quitar los `console.log` de depuración que muestran precios.
+- **L15 (T7):**
+  - 3.7.0 (5c73150): sugerencias de GGA de L14: `productos_cliente_ids` con `json_script`, `cliente.compras` escapado y sin `console.log` que mostraban precios.
+  - 3.7.1 (2073687): si el guardado vuelve con un error, la pantalla recupera lo cargado (S7: "evitar que se pierda accidentalmente"). Antes de enviar, el JS guarda en `sessionStorage` (`danstore.venta.borrador`) productos con cantidad, cliente o consumidor final, descuento, envío, otros gastos y notas; la plantilla marca `data-venta-error="1"` solo si hay un mensaje de nivel error y no es edición; con la marca se restaura y avisa "Recuperamos los datos de la venta que no se pudo guardar."; sin la marca se borra el borrador (cubre "Nueva venta" y ventas ya guardadas). Sin dependencias ni cambios de servidor. El worker se colgó (probable GGA) antes de commitear; la sesión 2 lo verificó: RED 3 de 6 fallos sin la plantilla, GREEN 6/6, suite 255 OK, GGA aprobó.
+  - Sin prueba automática (a mano en el navegador): provocar un error (descuento mayor al subtotal) y comprobar que vuelven productos, cantidades, cliente y gastos; que "Nueva venta" no recupera nada; que la cantidad restaurada respeta el stock.

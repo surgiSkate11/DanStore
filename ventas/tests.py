@@ -1800,3 +1800,93 @@ class PanelPosteriorVentaTests(GastosVentaBase):
         respuesta = self.client.get(reverse('api_buscar_productos'), {'q': 'camisa'})
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual(respuesta.json(), [])
+
+
+class LimpiezaPantallaVentaTests(GastosVentaBase):
+    """T7 (3.7.0): ids de productos del cliente como JSON seguro y buscador sin promesas falsas."""
+
+    def pagina(self, **parametros):
+        respuesta = self.client.get(reverse('crear_venta'), parametros)
+        self.assertEqual(respuesta.status_code, 200)
+        return respuesta.content.decode()
+
+    def test_los_ids_de_productos_del_cliente_van_como_json_en_su_elemento(self):
+        otro = Producto.objects.create(
+            empresa=self.empresa, nombre='Falda', precio=Decimal('10.00'), stock=1,
+            estado='disponible', vendido_a='Ana García',
+        )
+        Producto.objects.filter(pk=self.producto.pk).update(vendido_a='Ana García')
+        html = self.pagina(cliente='Ana García')
+        bloque = re.search(
+            r'<script id="productos-cliente-ids" type="application/json">(.*?)</script>', html, re.S,
+        )
+        self.assertIsNotNone(bloque)
+        self.assertEqual(sorted(json.loads(bloque.group(1))), sorted([self.producto.id, otro.id]))
+
+    def test_sin_cliente_preseleccionado_la_lista_de_ids_es_un_json_vacio(self):
+        html = self.pagina()
+        bloque = re.search(
+            r'<script id="productos-cliente-ids" type="application/json">(.*?)</script>', html, re.S,
+        )
+        self.assertIsNotNone(bloque)
+        self.assertEqual(json.loads(bloque.group(1)), [])
+
+    def test_el_buscador_no_promete_buscar_por_codigo(self):
+        html = self.pagina()
+        buscador = re.search(r'<input[^>]*id="searchProductos"[^>]*>', html, re.S).group(0)
+        self.assertIn('placeholder="Buscar producto por nombre (Enter agrega el primero)"', buscador)
+        self.assertNotIn('código', buscador)
+
+    def test_la_pantalla_no_deja_console_log_de_depuracion(self):
+        self.assertNotIn('console.log(', self.pagina())
+
+    def test_las_compras_del_cliente_se_escapan_al_insertarlas_en_el_buscador(self):
+        self.assertIn('${escaparHtml(cliente.compras)} compras', self.pagina())
+
+
+class BorradorVentaTests(GastosVentaBase):
+    """T7 (3.7.1): tras un error de validación la pantalla avisa al JS para recuperar la venta.
+
+    La restauración en sí (sessionStorage) solo se prueba a mano en el navegador.
+    """
+
+    MARCA = 'data-venta-error="1"'
+
+    def test_un_envio_invalido_redirige_a_una_pantalla_que_marca_el_error(self):
+        respuesta = self.client.post(reverse('crear_venta'), self.datos(descuento='abc'), follow=True)
+        self.assertEqual(respuesta.redirect_chain, [(reverse('crear_venta'), 302)])
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, self.MARCA, count=1)
+        self.assertEqual(Venta.objects.count(), 0)
+
+    def test_sin_error_la_pantalla_no_marca_nada(self):
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertNotContains(respuesta, self.MARCA)
+
+    def test_un_aviso_que_no_es_error_no_activa_la_recuperacion(self):
+        # Un token de envío inválido solo registra una advertencia y la venta se crea.
+        respuesta = self.client.post(
+            reverse('crear_venta'), self.datos(token_envio='no-es-un-uuid'), follow=True,
+        )
+        self.assertEqual(Venta.objects.count(), 1)
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertNotContains(respuesta, self.MARCA)
+
+    def test_la_pantalla_de_edicion_no_marca_errores(self):
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        respuesta = self.client.post(
+            reverse('editar_venta', args=[venta.id]), {'descuento': 'abc', 'envio': '0', 'otros_gastos': '0'},
+            follow=True,
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotContains(respuesta, self.MARCA)
+
+    def test_la_pantalla_de_venta_trae_la_clave_del_borrador_y_el_aviso(self):
+        html = self.client.get(reverse('crear_venta')).content.decode()
+        self.assertIn("'danstore.venta.borrador'", html)
+        self.assertIn('Recuperamos los datos de la venta que no se pudo guardar.', html)
+
+    def test_sin_error_la_pantalla_descarta_el_borrador_viejo(self):
+        html = self.client.get(reverse('crear_venta')).content.decode()
+        self.assertIn('sessionStorage.removeItem(CLAVE_BORRADOR)', html)
