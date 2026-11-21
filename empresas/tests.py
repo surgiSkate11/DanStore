@@ -112,3 +112,59 @@ class SuscripcionEmpresaTests(TestCase):
 		self.assertTrue(suscripcion.puede_renovarse)
 
 # Create your tests here.
+
+
+class PorcentajeConsumidoTests(TestCase):
+	"""S1: la barra se calcula con segundos y marca 100 % al vencer."""
+
+	def setUp(self):
+		self.empresa = Empresa.objects.create(nombre='Barra', slug='barra')
+		self.inicio = timezone.now().replace(microsecond=0)
+		self.vencimiento = self.inicio + timedelta(days=30)
+		self.suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa,
+			fecha_inicio=self.inicio,
+			fecha_vencimiento=self.vencimiento,
+		)
+
+	def _porcentaje_en(self, ahora):
+		with mock.patch('empresas.models.timezone.now', return_value=ahora):
+			return self.suscripcion.porcentaje_consumido()
+
+	def test_ultima_hora_antes_de_vencer_marca_99_o_mas(self):
+		porcentaje = self._porcentaje_en(self.vencimiento - timedelta(hours=1))
+		self.assertGreaterEqual(porcentaje, 99)
+		self.assertLess(porcentaje, 100)
+
+	def test_ultimo_segundo_antes_de_vencer_no_llega_a_100_antes_de_tiempo(self):
+		self.assertEqual(self._porcentaje_en(self.vencimiento - timedelta(seconds=1)), 99)
+
+	def test_mitad_del_periodo_marca_50(self):
+		self.assertEqual(self._porcentaje_en(self.inicio + timedelta(days=15)), 50)
+
+	def test_un_dia_y_medio_consumido_usa_segundos_no_dias_enteros(self):
+		# 36 h de 720 h = 5 %; con días truncados serían 1/30 = 3 %.
+		self.assertEqual(self._porcentaje_en(self.inicio + timedelta(hours=36)), 5)
+
+	def test_al_iniciar_marca_0(self):
+		self.assertEqual(self._porcentaje_en(self.inicio), 0)
+
+	def test_vencida_marca_100(self):
+		self.assertEqual(self._porcentaje_en(self.vencimiento), 100)
+		self.assertEqual(self._porcentaje_en(self.vencimiento + timedelta(days=5)), 100)
+
+	def test_quedando_cero_dias_marca_100(self):
+		with mock.patch('empresas.models.timezone.now', return_value=self.vencimiento):
+			self.assertEqual(self.suscripcion.dias_restantes(), 0)
+			self.assertEqual(self.suscripcion.porcentaje_consumido(), 100)
+
+	def test_periodo_sin_duracion_marca_100(self):
+		self.suscripcion.fecha_vencimiento = self.inicio
+		self.assertEqual(self._porcentaje_en(self.inicio - timedelta(hours=1)), 100)
+
+	def test_color_de_la_barra_sigue_los_umbrales(self):
+		with mock.patch('empresas.models.timezone.now', return_value=self.vencimiento - timedelta(hours=1)):
+			self.assertEqual(self.suscripcion.estado_color(), 'danger')
+		with mock.patch('empresas.models.timezone.now', return_value=self.inicio + timedelta(days=15)):
+			self.assertEqual(self.suscripcion.estado_color(), 'success')
+

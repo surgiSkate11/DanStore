@@ -17,7 +17,7 @@ Rama `fix/suscripcion-renovacion` desde `main` (después de fusionar la facturac
 
 | ID | Specs | Versión | Ruta | Estado | Commit |
 | --- | --- | --- | --- | --- | --- |
-| T1 | S1 | 3.9.1 | worker, TDD | pendiente | |
+| T1 | S1 | 3.9.1 | worker, TDD | hecha | (hash: ver commit 3.9.1; se anota en el siguiente) |
 | T2 | S3, S4, S5 | 3.9.2 | worker, TDD, Risk 2 (cobro y acceso) | pendiente | |
 | T3 | S2, S5 | 3.9.3 | worker, TDD | pendiente | |
 | T4 | S6 | 3.9.4 | worker, TDD | pendiente | |
@@ -43,3 +43,4 @@ Rama `fix/suscripcion-renovacion` desde `main` (después de fusionar la facturac
   - Cambio no pedido: `toggle_estado_empresa` ya no regala 1 día de gracia al reactivar una empresa vencida (queda bloqueada hasta renovar). Coincide con S7 (sin acceso gratis), pero es una decisión del usuario.
   - Pruebas: 2 nuevas (`dias_restantes` con 1 h y 100 % al vencer); ninguna de middleware ni del toggle.
 - **L9 (decisiones del usuario, 2026-11-21):** día de gracia: "Dejarlo así" (reactivar una empresa vencida no regala tiempo). Rama: "Desde feat/facturacion-rapida" (22ad3b9 = main + T7), porque main todavía no tiene T7.
+- **L10 (T1, 3.9.1, S1):** `porcentaje_consumido` calcula con `total_seconds()` (total y consumido), devuelve 100 si venció o si el período no tiene duración, y trunca con `int()` para no marcar 100 antes de vencer. RED (9 pruebas nuevas en `PorcentajeConsumidoTests`, 3 fallaron): última hora `96 != >=99`, último segundo `96 != 99`, 36 h de 720 h `3 != 5`. GREEN: las 9 pasan; `manage.py test empresas dashboard` = 22 OK.

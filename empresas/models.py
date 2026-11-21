@@ -153,11 +153,14 @@ class SuscripcionEmpresa(models.Model):
         if ahora >= self.fecha_vencimiento:
             return 100
 
-        total_dias = (self.fecha_vencimiento - self.fecha_inicio).days
-        if total_dias <= 0: return 100
+        # Con segundos (no días enteros) para que la última hora no marque 96-98 %.
+        total_segundos = (self.fecha_vencimiento - self.fecha_inicio).total_seconds()
+        if total_segundos <= 0:
+            return 100
 
-        dias_consumidos = (ahora - self.fecha_inicio).days
-        porcentaje = (dias_consumidos / total_dias) * 100
+        consumidos = (ahora - self.fecha_inicio).total_seconds()
+        porcentaje = (consumidos / total_segundos) * 100
+        # int() trunca: solo se llega a 100 al vencer (ya cubierto arriba).
         return min(100, max(0, int(porcentaje)))
 
     def estado_color(self):
