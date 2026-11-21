@@ -397,6 +397,7 @@ def importar_excel(request):
                 return redirect('importar_excel')
 
             # ── PROCESAR FILAS ────────────────────────────────────────────────
+            ajustes = []  # stock ajustado según el estado (S8, L22)
             for i, fila in enumerate(filas, start=2):
                 try:
                     # Extraer valores con defaults seguros
@@ -407,7 +408,8 @@ def importar_excel(request):
                     descripcion   = str(fila[4]).strip() if len(fila) > 4 and fila[4] else ''
                     variante      = str(fila[5]).strip() if len(fila) > 5 and fila[5] else ''
                     marca         = str(fila[6]).strip() if len(fila) > 6 and fila[6] else ''
-                    stock         = int(float(str(fila[7]))) if len(fila) > 7 and fila[7] else 1
+                    stock_dado    = len(fila) > 7 and fila[7] not in (None, '')
+                    stock         = int(float(str(fila[7]))) if stock_dado else 1
                     precio_oferta = _parsear_decimal(fila[8]) if len(fila) > 8 else None
                     color         = str(fila[9]).strip() if len(fila) > 9 and fila[9] else ''
 
@@ -436,6 +438,12 @@ def importar_excel(request):
                         if clave in estado:
                             estado_final = valor_oficial
                             break
+
+                    # Manda el estado y el stock se ajusta a la regla única (S8, L22).
+                    stock_ajustado = Producto.stock_segun_estado(estado_final, stock if stock_dado else None)
+                    if stock_dado and stock_ajustado != stock:
+                        ajustes.append(f'Fila {i}: "{nombre_prod}" está {estado_final}; su stock pasó de {stock} a {stock_ajustado}')
+                    stock = stock_ajustado
 
                     # Precio de oferta: solo se guarda si es realmente menor al
                     # precio normal (mismo criterio que valida el formulario
@@ -486,6 +494,9 @@ def importar_excel(request):
         # ── RESULTADO ─────────────────────────────────────────────────────────
         if creados or actualizados:
             messages.success(request, f'✅ {creados} productos creados, {actualizados} actualizados.')
+        if ajustes:
+            resto = f' (y {len(ajustes) - 10} más)' if len(ajustes) > 10 else ''
+            messages.warning(request, f'Se ajustó el stock de {len(ajustes)} producto(s) según su estado: ' + ' | '.join(ajustes[:10]) + resto)
         if errores:
             for error in errores[:5]:
                 messages.warning(request, error)

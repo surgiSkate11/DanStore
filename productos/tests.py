@@ -2,6 +2,7 @@ import importlib
 import os
 from decimal import Decimal
 from unittest import mock
+from django.contrib.auth.models import User
 
 from django.core.cache import cache
 from django.test import TestCase, override_settings
@@ -530,3 +531,74 @@ class EstadoSegunStockSheetsTests(TestCase):
         self.sincronizar([self.fila('Camisa N', 'Disponible')])
         producto = Producto.objects.get(empresa=self.empresa, nombre='Camisa N')
         self.assertEqual((producto.stock, producto.estado), (1, 'disponible'))
+
+
+class EstadoSegunStockExcelTests(TestCase):
+    """S8 / L22: al importar Excel o CSV manda el estado y el stock se ajusta; cada ajuste se avisa."""
+
+    def setUp(self):
+        self.empresa, self.dueno = crear_empresa_con_dueno('estado-stock-excel')
+        self.client.force_login(self.dueno)
+
+    def importar(self, *filas):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        lineas = ['Nombre,Categoria,Precio,Estado,Descripcion,Variante,Marca,Stock'] + [','.join(f) for f in filas]
+        archivo = SimpleUploadedFile('productos.csv', '\n'.join(lineas).encode('utf-8'), content_type='text/csv')
+        respuesta = self.client.post(reverse('importar_excel'), {'archivo': archivo}, follow=True)
+        return [str(m) for m in respuesta.context['messages']]
+
+    def producto(self, nombre):
+        p = Producto.objects.get(empresa=self.empresa, nombre=nombre)
+        return p.estado, p.stock
+
+    def ajustes(self, mensajes):
+        return [m for m in mensajes if 'se ajustó el stock' in m.lower()]
+
+    def test_vendido_con_stock_queda_en_cero_y_se_avisa(self):
+        mensajes = self.importar(['Camisa', 'Ropa', '10', 'Vendido', '', '', '', '3'])
+        self.assertEqual(self.producto('Camisa'), ('vendido', 0))
+        self.assertEqual(len(self.ajustes(mensajes)), 1, mensajes)
+        self.assertIn('Fila 2', self.ajustes(mensajes)[0])
+
+    def test_vendido_sin_stock_queda_en_cero_sin_aviso(self):
+        mensajes = self.importar(['Camisa', 'Ropa', '10', 'Vendido', '', '', '', ''])
+        self.assertEqual(self.producto('Camisa'), ('vendido', 0))
+        self.assertEqual(self.ajustes(mensajes), [])
+
+    def test_disponible_con_stock_cero_pasa_a_uno_y_se_avisa(self):
+        mensajes = self.importar(['Camisa', 'Ropa', '10', 'Disponible', '', '', '', '0'])
+        self.assertEqual(self.producto('Camisa'), ('disponible', 1))
+        self.assertEqual(len(self.ajustes(mensajes)), 1, mensajes)
+
+    def test_reservado_y_combinaciones_coherentes_no_cambian(self):
+        mensajes = self.importar(
+            ['Camisa', 'Ropa', '10', 'Reservado', '', '', '', '0'],
+            ['Pantalon', 'Ropa', '20', 'Disponible', '', '', '', '4'],
+        )
+        self.assertEqual(self.producto('Camisa'), ('reservado', 0))
+        self.assertEqual(self.producto('Pantalon'), ('disponible', 4))
+        self.assertEqual(self.ajustes(mensajes), [])
+
+
+class EstadoSegunStockAdminTests(TestCase):
+    """S8 / L22: el admin de Django valida la misma regla al editar el estado en la lista y en el formulario."""
+
+    def setUp(self):
+        from django.contrib import admin as admin_django
+        self.empresa, _ = crear_empresa_con_dueno('estado-stock-admin')
+        self.modelo_admin = admin_django.site._registry[Producto]
+        self.request = mock.Mock(user=User.objects.create_superuser('super_prod', 'p@example.com', 'Clave-prueba-123'))
+
+    def test_formulario_del_admin_rechaza_vendido_con_stock(self):
+        producto = Producto.objects.create(empresa=self.empresa, nombre='Camisa', precio=Decimal('10'), stock=6, estado='disponible')
+        Formulario = self.modelo_admin.get_form(self.request, producto)
+        datos = {campo: getattr(producto, campo) for campo in Formulario.base_fields if hasattr(producto, campo)}
+        datos.update({'estado': 'vendido', 'empresa': self.empresa.pk})
+        if 'tipo_producto' in datos:
+            datos['tipo_producto'] = ''
+        formulario = Formulario(datos, instance=producto)
+        self.assertFalse(formulario.is_valid())
+        self.assertIn(Producto.MENSAJE_VENDIDO_CON_STOCK, str(formulario.errors))
+
+    def test_la_lista_del_admin_no_edita_el_estado_sin_validar(self):
+        self.assertNotIn('estado', self.modelo_admin.get_list_editable(self.request) if hasattr(self.modelo_admin, 'get_list_editable') else self.modelo_admin.list_editable)
