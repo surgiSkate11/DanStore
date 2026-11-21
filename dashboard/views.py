@@ -808,6 +808,7 @@ def saas_listar_registros(request, app_label, model_name):
         'model_name': model_name,
         'campos': campos,
         'registros_data': registros_data,
+        'permite_eliminar': Modelo not in MODELOS_SIN_BORRADO,
     }
     return render(request, 'dashboard/saas_generic_list.html', context)
 
@@ -929,6 +930,11 @@ def saas_editar_registro(request, app_label, model_name, object_id):
     return render(request, 'dashboard/saas_generic_form.html', context)
 
 
+# S7: borrar una empresa arrastra todos sus datos y borrar su suscripción deja acceso gratis.
+MODELOS_SIN_BORRADO = (Empresa, SuscripcionEmpresa)
+MENSAJE_SIN_BORRADO = "Las empresas y sus suscripciones no se borran: para dar de baja una empresa, desactívala."
+
+
 @login_required
 def saas_eliminar_registro(request, app_label, model_name, object_id):
     """Fábrica de Eliminación: Borra dinámicamente un registro"""
@@ -943,6 +949,9 @@ def saas_eliminar_registro(request, app_label, model_name, object_id):
 
     instancia = get_object_or_404(Modelo, id=object_id)
     if request.method == 'POST':
+        if Modelo in MODELOS_SIN_BORRADO:
+            messages.error(request, MENSAJE_SIN_BORRADO)
+            return redirect('saas_listar_registros', app_label=app_label, model_name=model_name)
         try:
             instancia.delete()
             messages.success(request, "Registro eliminado exitosamente.")

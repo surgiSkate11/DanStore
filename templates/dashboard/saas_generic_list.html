@@ -99,6 +99,7 @@
                             </form>
                             {% endif %}
                             <a href="{% url 'saas_editar_registro' app_label model_name reg.id %}" class="btn btn-sm btn-light text-primary shadow-sm border me-1" title="Editar"><i class="bi bi-pencil-square"></i></a>
+                            {% if permite_eliminar %}
                             <form method="POST" action="{% url 'saas_eliminar_registro' app_label model_name reg.id %}" id="delete-form-{{ reg.id }}" class="d-inline">
                                 {% csrf_token %}
                             </form>
@@ -107,6 +108,7 @@
                                     data-form-id="delete-form-{{ reg.id }}" title="Eliminar">
                                 <i class="bi bi-trash3-fill"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

@@ -49,7 +49,7 @@ class RenovarSuscripcionTests(TestCase):
 	"""S3/S5: solo el superadmin renueva, por POST y dentro de la ventana de 7 días."""
 
 	def setUp(self):
-		self.empresa, self.dueno = crear_empresa_con_dueno('renueva')
+		self.empresa, self.dueno = crear_empresa_con_dueno('renueva', suscripcion=False)
 		self.plan = Plan.objects.create(nombre='Basico')
 		self.inicio = (timezone.now() - timedelta(days=27)).replace(microsecond=0)
 		self.vencimiento = (timezone.now() + timedelta(days=3)).replace(microsecond=0)
@@ -141,10 +141,10 @@ class BotonRenovarEnInquilinosTests(TestCase):
 	def setUp(self):
 		self.plan = Plan.objects.create(nombre='Basico')
 		self.superadmin = User.objects.create_superuser('super_inq', 'si@example.com', 'Clave-prueba-123')
-		self.cerca, self.dueno_cerca = crear_empresa_con_dueno('cerca')
-		self.lejos, _ = crear_empresa_con_dueno('lejos')
-		self.sin_plan, _ = crear_empresa_con_dueno('sinplan')
-		self.sin_suscripcion, _ = crear_empresa_con_dueno('sinsuscripcion')
+		self.cerca, self.dueno_cerca = crear_empresa_con_dueno('cerca', suscripcion=False)
+		self.lejos, _ = crear_empresa_con_dueno('lejos', suscripcion=False)
+		self.sin_plan, _ = crear_empresa_con_dueno('sinplan', suscripcion=False)
+		self.sin_suscripcion, _ = crear_empresa_con_dueno('sinsuscripcion', suscripcion=False)
 		ahora = timezone.now()
 		self.sub_cerca = self._suscripcion(self.cerca, self.plan, ahora + timedelta(days=3))
 		self.sub_lejos = self._suscripcion(self.lejos, self.plan, ahora + timedelta(days=20))
@@ -312,3 +312,77 @@ class FechasSuscripcionSaasTests(TestCase):
 			'fecha_inicio': '2001-01-01 00:00:00', 'fecha_vencimiento': '2099-01-01 00:00:00',
 		})
 		self.assertEqual(self._fechas(sub), antes)
+
+
+class NoSeBorranEmpresasNiSuscripcionesTests(TestCase):
+	"""S7 (L6, opción A): el módulo de base de datos no borra Empresa ni SuscripcionEmpresa."""
+
+	MENSAJE = 'Las empresas y sus suscripciones no se borran: para dar de baja una empresa, desactívala.'
+
+	def setUp(self):
+		from decimal import Decimal
+		from productos.models import Producto
+		self.superadmin = User.objects.create_superuser('super_del', 'sd@example.com', 'Clave-prueba-123')
+		self.plan = Plan.objects.create(nombre='Basico')
+		self.empresa = Empresa.objects.create(nombre='Con Datos', slug='con-datos')
+		ahora = timezone.now().replace(microsecond=0)
+		self.suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=ahora, fecha_vencimiento=ahora + timedelta(days=30))
+		self.producto = Producto.objects.create(
+			empresa=self.empresa, nombre='Pan', categoria='Panes',
+			precio=Decimal('1.00'), stock=5, estado='disponible')
+		self.client.force_login(self.superadmin)
+
+	def _eliminar(self, modelo, objeto):
+		return self.client.post(
+			reverse('saas_eliminar_registro', args=['empresas', modelo, objeto.id]), follow=True)
+
+	def _mensajes(self, respuesta):
+		return [str(m) for m in get_messages(respuesta.wsgi_request)]
+
+	def _datos_intactos(self):
+		from productos.models import Producto
+		self.assertTrue(Empresa.objects.filter(pk=self.empresa.pk).exists())
+		self.assertTrue(SuscripcionEmpresa.objects.filter(pk=self.suscripcion.pk).exists())
+		self.assertTrue(Producto.objects.filter(pk=self.producto.pk).exists())
+
+	def test_borrar_suscripcion_se_rechaza_y_no_borra_nada(self):
+		respuesta = self._eliminar('suscripcionempresa', self.suscripcion)
+		self.assertIn(self.MENSAJE, self._mensajes(respuesta))
+		self.assertNotIn('Registro eliminado exitosamente.', self._mensajes(respuesta))
+		self._datos_intactos()
+
+	def test_borrar_empresa_se_rechaza_y_no_borra_nada(self):
+		respuesta = self._eliminar('empresa', self.empresa)
+		self.assertIn(self.MENSAJE, self._mensajes(respuesta))
+		self.assertNotIn('Registro eliminado exitosamente.', self._mensajes(respuesta))
+		self._datos_intactos()
+
+	def test_el_rechazo_vuelve_a_la_lista_del_modelo(self):
+		respuesta = self.client.post(
+			reverse('saas_eliminar_registro', args=['empresas', 'empresa', self.empresa.id]))
+		self.assertRedirects(
+			respuesta, reverse('saas_listar_registros', args=['empresas', 'empresa']),
+			fetch_redirect_response=False)
+
+	def test_la_lista_de_empresas_y_suscripciones_no_muestra_boton_de_borrar(self):
+		for modelo in ('empresa', 'suscripcionempresa'):
+			html = self.client.get(reverse('saas_listar_registros', args=['empresas', modelo])).content.decode()
+			self.assertNotIn(reverse('saas_eliminar_registro', args=['empresas', modelo, self.empresa.id]), html, modelo)
+			self.assertNotIn('bi-trash3-fill', html, modelo)
+
+	def test_otro_modelo_conserva_boton_y_borrado(self):
+		sobrante = Plan.objects.create(nombre='Sobrante')
+		html = self.client.get(reverse('saas_listar_registros', args=['empresas', 'plan'])).content.decode()
+		self.assertIn(reverse('saas_eliminar_registro', args=['empresas', 'plan', sobrante.id]), html)
+		self.assertIn('bi-trash3-fill', html)
+		respuesta = self._eliminar('plan', sobrante)
+		self.assertIn('Registro eliminado exitosamente.', self._mensajes(respuesta))
+		self.assertFalse(Plan.objects.filter(pk=sobrante.pk).exists())
+
+	def test_desactivar_la_empresa_sigue_funcionando_como_baja(self):
+		respuesta = self.client.post(reverse('toggle_estado_empresa', args=[self.empresa.id]))
+		self.assertEqual(respuesta.status_code, 302)
+		self.empresa.refresh_from_db()
+		self.assertFalse(self.empresa.activa)
