@@ -101,8 +101,9 @@ class Empresa(models.Model):
 
     @property
     def acceso_activo(self):
+        # Sin suscripción se trata como suspendida (S7): no hay acceso gratis.
         suscripcion = getattr(self, 'suscripcion', None)
-        return self.activa and (suscripcion is None or not suscripcion.esta_vencida)
+        return self.activa and suscripcion is not None and not suscripcion.esta_vencida
 
 
 class SuscripcionEmpresa(models.Model):

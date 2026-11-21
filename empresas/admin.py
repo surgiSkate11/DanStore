@@ -2,8 +2,21 @@ from django.contrib import admin
 from .models import Empresa, Plan, SuscripcionEmpresa, Ticket, MensajeTicket, ConfiguracionSaaS
 
 
+class SinBorradoAdmin(admin.ModelAdmin):
+    """Empresa y SuscripcionEmpresa no se borran (S7): borrar la empresa arrastra todos sus datos
+    y borrar la suscripción dejaría acceso gratis. Dar de baja = desactivar la empresa."""
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_actions(self, request):
+        acciones = super().get_actions(request)
+        acciones.pop('delete_selected', None)
+        return acciones
+
+
 @admin.register(Empresa)
-class EmpresaAdmin(admin.ModelAdmin):
+class EmpresaAdmin(SinBorradoAdmin):
     list_display = ('nombre', 'slug', 'activa', 'fecha_creacion')
     search_fields = ('nombre', 'slug')
     list_filter = ('activa',)
@@ -16,7 +29,7 @@ class PlanAdmin(admin.ModelAdmin):
 
 
 @admin.register(SuscripcionEmpresa)
-class SuscripcionEmpresaAdmin(admin.ModelAdmin):
+class SuscripcionEmpresaAdmin(SinBorradoAdmin):
     list_display = ('empresa', 'plan', 'tipo_plan', 'fecha_inicio', 'fecha_vencimiento')
     search_fields = ('empresa__nombre', 'plan__nombre')
     list_filter = ('tipo_plan', 'plan')

@@ -599,6 +599,10 @@ def pago_exitoso(request, plan_id, tipo_plan):
         raise Http404("Tipo de plan no válido.")
     plan = get_object_or_404(Plan, id=plan_id)
     empresa = request.empresa
+    if empresa is None:
+        # Un superadmin no pertenece a ninguna empresa: no hay nada que confirmar (B2).
+        messages.info(request, "Tu usuario no pertenece a ninguna empresa, así que no hay un pago que confirmar.")
+        return redirect('dashboard_router')
 
     # Aviso para que el superadmin pueda encontrar los pagos pendientes de confirmar.
     logger.warning(

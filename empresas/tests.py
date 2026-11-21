@@ -306,7 +306,7 @@ class PagoExitosoNoRenuevaTests(TestCase):
 
 	def setUp(self):
 		from .testing import crear_empresa_con_dueno
-		self.empresa, self.dueno = crear_empresa_con_dueno('pago-exitoso')
+		self.empresa, self.dueno = crear_empresa_con_dueno('pago-exitoso', suscripcion=False)
 		self.plan = Plan.objects.create(nombre='Pro')
 		self.client.force_login(self.dueno)
 
@@ -540,3 +540,90 @@ class AccionAdminSoloSuperusuarioTests(TestCase):
 		request.user = superusuario
 		self.assertIn('renovar_suscripciones', self.modelo_admin.get_actions(request))
 
+
+
+class EmpresaSinSuscripcionTests(TestCase):
+	"""S7 (defensa): una empresa sin suscripción se trata como suspendida (no hay acceso gratis)."""
+
+	def setUp(self):
+		from .testing import crear_empresa_con_dueno
+		self.empresa, self.dueno = crear_empresa_con_dueno('sin-suscripcion', suscripcion=False)
+		self.plan = Plan.objects.create(nombre='Pro')
+
+	def _suscribir(self, vence_en):
+		ahora = timezone.now().replace(microsecond=0)
+		return SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=ahora - timedelta(days=5), fecha_vencimiento=ahora + vence_en,
+		)
+
+	def test_acceso_activo_es_falso_sin_suscripcion(self):
+		self.assertFalse(Empresa.objects.get(pk=self.empresa.pk).acceso_activo)
+
+	def test_acceso_activo_es_verdadero_con_suscripcion_vigente(self):
+		self._suscribir(timedelta(days=10))
+		self.assertTrue(Empresa.objects.get(pk=self.empresa.pk).acceso_activo)
+
+	def test_usuario_de_empresa_sin_suscripcion_va_a_cuenta_suspendida(self):
+		self.client.force_login(self.dueno)
+		respuesta = self.client.get(reverse('dashboard_router'))
+		self.assertRedirects(respuesta, reverse('cuenta_suspendida'), fetch_redirect_response=False)
+
+	def test_pagina_de_cuenta_suspendida_carga_sin_suscripcion(self):
+		self.client.force_login(self.dueno)
+		respuesta = self.client.get(reverse('cuenta_suspendida'))
+		self.assertEqual(respuesta.status_code, 200)
+
+	def test_usuario_de_empresa_con_suscripcion_vigente_no_es_bloqueado(self):
+		self._suscribir(timedelta(days=10))
+		self.client.force_login(self.dueno)
+		respuesta = self.client.get(reverse('dashboard_router'))
+		self.assertNotEqual(respuesta.get('Location'), reverse('cuenta_suspendida'))
+
+	def test_superadmin_no_se_ve_afectado(self):
+		superadmin = User.objects.create_superuser('super_sin_sub', 'ss@example.com', 'Clave-prueba-123')
+		self.client.force_login(superadmin)
+		respuesta = self.client.get(reverse('dashboard_router'))
+		self.assertRedirects(respuesta, reverse('dashboard_saas'), fetch_redirect_response=False)
+
+
+class PagoExitosoSuperadminTests(TestCase):
+	"""B2 (L15): un superadmin sin empresa que abre `pago_exitoso` no debe dar 500."""
+
+	def test_superadmin_sin_empresa_vuelve_al_router_con_mensaje(self):
+		from django.contrib.messages import get_messages
+		plan = Plan.objects.create(nombre='Pro')
+		superadmin = User.objects.create_superuser('super_pago', 'sp@example.com', 'Clave-prueba-123')
+		self.client.force_login(superadmin)
+		respuesta = self.client.get(reverse('pago_exitoso', args=[plan.id, 'mensual']))
+		self.assertRedirects(respuesta, reverse('dashboard_router'), fetch_redirect_response=False)
+		mensajes = [str(m) for m in get_messages(respuesta.wsgi_request)]
+		self.assertTrue(any('empresa' in m.lower() for m in mensajes), mensajes)
+
+
+class AdminNoBorraEmpresasNiSuscripcionesTests(TestCase):
+	"""S7: el admin de Django no permite borrar Empresa ni SuscripcionEmpresa.
+
+	El sitio admin exige OTP, así que se prueban los ModelAdmin directamente.
+	"""
+
+	def setUp(self):
+		self.superusuario = User.objects.create_superuser('super_adm_del', 'sad@example.com', 'Clave-prueba-123')
+		self.request = RequestFactory().get('/')
+		self.request.user = self.superusuario
+
+	def test_has_delete_permission_es_falso_para_empresa_y_suscripcion(self):
+		for modelo in (Empresa, SuscripcionEmpresa):
+			modelo_admin = admin.site._registry[modelo]
+			self.assertFalse(modelo_admin.has_delete_permission(self.request), modelo.__name__)
+			self.assertFalse(modelo_admin.has_delete_permission(self.request, obj=modelo()), modelo.__name__)
+
+	def test_no_se_ofrece_la_accion_de_borrado_masivo(self):
+		for modelo in (Empresa, SuscripcionEmpresa):
+			acciones = admin.site._registry[modelo].get_actions(self.request)
+			self.assertNotIn('delete_selected', acciones, modelo.__name__)
+
+	def test_otros_modelos_conservan_el_borrado(self):
+		modelo_admin = admin.site._registry[Plan]
+		self.assertTrue(modelo_admin.has_delete_permission(self.request))
+		self.assertIn('delete_selected', modelo_admin.get_actions(self.request))

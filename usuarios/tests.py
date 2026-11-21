@@ -16,7 +16,7 @@ from django.utils import timezone
 from django_otp.oath import totp
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
-from empresas.models import ConfiguracionSaaS
+from empresas.models import ConfiguracionSaaS, SuscripcionEmpresa
 from empresas.testing import crear_empresa_con_dueno
 from .backends import EmailOrUsernameModelBackend
 from .models import LoginSecurityAttempt
@@ -113,7 +113,7 @@ class PanelAdminOcultoTests(TestCase):
 
 class PanelAdminCuentaSuspendidaTests(TestCase):
     def test_cuenta_suspendida_puede_abrir_el_login_de_admin_url(self):
-        empresa, dueno = crear_empresa_con_dueno('vencida')
+        empresa, dueno = crear_empresa_con_dueno('vencida', suscripcion=False)
         empresa.activa = False
         empresa.save()
         self.client.force_login(dueno)
@@ -141,7 +141,11 @@ class PaginasDeErrorTests(TestCase):
         self.assertContains(respuesta, 'Página no encontrada', status_code=404)
 
     def test_pagina_404_propia_con_sesion_iniciada(self):
-        _, dueno = crear_empresa_con_dueno('panaderia')
+        empresa, dueno = crear_empresa_con_dueno('panaderia', suscripcion=False)
+        # Una empresa sin suscripción se trata como suspendida (S7): se le da una vigente.
+        ahora = timezone.now()
+        SuscripcionEmpresa.objects.create(
+            empresa=empresa, tipo_plan='mensual', fecha_inicio=ahora, fecha_vencimiento=ahora + timedelta(days=30))
         self.client.force_login(dueno)
         respuesta = self.client.get('/esta-ruta-no-existe/')
         self.assertContains(respuesta, 'Página no encontrada', status_code=404)
