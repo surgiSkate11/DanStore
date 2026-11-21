@@ -5,11 +5,11 @@ Rama: `feat/sprint-1-pedidos` desde `main` con el Sprint 0 fusionado. Entrega: `
 
 ## Specs
 
-- **S1 (formato de commit):** se mantiene el formato del Sprint 0, "los commits llevaran el 2.x.x - Description" con "Minor por corrección, patch por commit". Confirmado por el usuario (L9): "Sí, el Sprint 1 usa 3.x.x: minor por tarea, patch por commit." 3.1.0 para T1, 3.2.0 para T2…, y 3.1.1 si una tarea lleva varios commits.
+- **S1 (formato de commit):** se mantiene el formato del Sprint 0, "los commits llevaran el 2.x.x - Description" con "Minor por corrección, patch por commit". Confirmado por el usuario (L9): "Sí, el Sprint 1 usa 3.x.x: minor por tarea, patch por commit." Como la facturación rápida y la suscripción ocuparon 3.1–3.9 (L10, L11), los pedidos empiezan en 3.10.0: 3.10.0 para T1, 3.11.0 para T2… hasta 3.17.0 para T8, y 3.10.1 si una tarea lleva varios commits.
 - **S2 (historia 1, pedido):** "Como cliente quiero hacer un pedido desde la tienda online, elegir retiro o entrega y la hora, para no tener que llamar."
   - El carrito de `templates/dashboard/tienda_publica.html` hoy arma un mensaje `wa.me` y no guarda nada en el servidor. Ahora envía el pedido por POST a una ruta pública nueva (`tienda/<slug>/pedido/`) que crea la `Venta`.
   - Precios, IVA y total se calculan en el servidor desde `Producto`. Nunca se acepta un precio enviado por el navegador.
-  - Respuesta del usuario (L6): "Sí, los precios que ve el cliente ya incluyen IVA." El total del pedido es la suma de los precios publicados (más envío, menos descuento), y el IVA se desglosa hacia atrás: `subtotal = suma / (1 + porcentaje_iva / 100)`, `iva = suma - subtotal`, ambos redondeados a 0,01. Un pedido de $5,00 se cobra $5,00. Se implementa en un método nuevo de `Venta` para pedidos de la tienda; `calcular_total()` no se modifica (ver L7).
+  - Corrección del usuario (L10, reemplaza a L6): "no incluyen ya q ello va al final al facturar". Los precios de `Producto` NO incluyen IVA. El pedido se calcula igual que una venta de mostrador desde 3.3.0: subtotal = suma de los precios de `Producto`; IVA = (subtotal − descuento) × el porcentaje de IVA guardado en la venta al crearla, redondeado a 0,01 con ROUND_HALF_UP; envío y otros gastos sin IVA; total = subtotal − descuento + IVA + envío. Se reutiliza el cálculo que ya usa el mostrador (`calcular_total()` y el IVA guardado por venta), sin un método nuevo. La tienda muestra el desglose (subtotal, IVA y total) antes de confirmar el pedido.
   - Se valida stock al crear el pedido. Un producto agotado o inexistente devuelve un error claro y no crea nada.
   - `DetalleVenta` guarda una fila por unidad (convención actual del proyecto, ver L3): 3 panes son 3 filas.
   - Campos nuevos en `Venta`: `tipo_entrega` (retiro, domicilio), `hora_entrega`, `canal` (mostrador, tienda, whatsapp; las ventas existentes quedan en `mostrador`), `telefono_contacto`, `direccion_entrega` (solo domicilio) y `token` (UUID, para la página del pedido).
@@ -52,14 +52,14 @@ Rama: `feat/sprint-1-pedidos` desde `main` con el Sprint 0 fusionado. Entrega: `
 
 | ID | Specs | Versión | Ruta | Estado | Commit |
 | --- | --- | --- | --- | --- | --- |
-| T1 | S2, S3, S4 | 3.1.0 | inline, TDD, Risk 1 (migración de `Venta`) | pendiente | |
-| T2 | S5, S9 | 3.2.0 | inline, TDD | pendiente | |
-| T3 | S2, S4, S10, S14 | 3.3.0 | inline, TDD, Risk 2 (ruta pública nueva) | pendiente | |
-| T4 | S5, S6, S9, S10 | 3.4.0 | inline, TDD, Risk 2 (subida de archivos) | pendiente | |
-| T5 | S7, S8, S9, S14 | 3.5.0 | inline, TDD, Risk 1 y 4 (stock con bloqueo) | pendiente | |
-| T6 | S11 | 3.6.0 | inline, Risk 5 (dependencia nueva, requiere aprobación) | pendiente | |
-| T7 | S12 | 3.7.0 | inline | pendiente | |
-| T8 | S13 | 3.8.0 | inline: README, guía y demo en staging | pendiente | |
+| T1 | S2, S3, S4 | 3.10.0 | inline, TDD, Risk 1 (migración de `Venta`) | pendiente | |
+| T2 | S5, S9 | 3.11.0 | inline, TDD | pendiente | |
+| T3 | S2, S4, S10, S14 | 3.12.0 | inline, TDD, Risk 2 (ruta pública nueva) | pendiente | |
+| T4 | S5, S6, S9, S10 | 3.13.0 | inline, TDD, Risk 2 (subida de archivos) | pendiente | |
+| T5 | S7, S8, S9, S14 | 3.14.0 | inline, TDD, Risk 1 y 4 (stock con bloqueo) | pendiente | |
+| T6 | S11 | 3.15.0 | inline, Risk 5 (dependencia nueva, requiere aprobación) | pendiente | |
+| T7 | S12 | 3.16.0 | inline | pendiente | |
+| T8 | S13 | 3.17.0 | inline: README, guía y demo en staging | pendiente | |
 
 Orden: T1 → T2 → T3 → T4 → T5 (cada una necesita la anterior). T6 y T7 son independientes y pueden ir en cualquier momento después de T3.
 
@@ -83,3 +83,4 @@ Orden: T1 → T2 → T3 → T4 → T5 (cada una necesita la anterior). T6 y T7 s
 - **L8 (respuesta del usuario, 2026-10-23):** "Sí, también acepta efectivo al retirar." Se agrega S14 y se amplía S7 con la devolución de stock al anular. Decisiones: efectivo solo con retiro (cobrar a domicilio necesita un repartidor que maneje dinero, y nadie lo pidió); el stock se descuenta cuando el dueño acepta el pedido, no cuando el cliente lo crea, para que un pedido que nadie va a retirar no bloquee productos; al anular, el stock vuelve.
 - **L9 (respuesta del usuario, 2026-10-23):** "Sí, el Sprint 1 usa 3.x.x: minor por tarea, patch por commit." Se confirma S1. Siguiente paso: crear la rama `feat/sprint-1-pedidos` desde `main` con el Sprint 0 fusionado y empezar T1.
 - **L10 (corrección del usuario, 2026-10-24, en `odd/tasks/facturacion-rapida.md` L4):** "no incluyen ya q ello va al final al facturar". Los precios de `Producto` NO incluyen IVA: S2 debe reescribirse antes de T1 (el IVA se suma al final, sobre subtotal − descuento, con el % guardado en la venta, igual que el mostrador tras 3.3.0). L7 queda descartado: el mostrador no cobra IVA dos veces. El usuario priorizó la facturación: los pedidos por transferencia empiezan en 3.8.0.
+- **L11 (pedido del usuario, 2026-11-21):** "Después, el Sprint 1 de pedidos por transferencia (odd/tasks/sprint-1-pedidos-transferencia.md, 3.10 en adelante; antes reescribí su S2, porque el IVA va al final). Reglas: yo hago los push; pruebas siempre con SQLite local, nunca contra producción; commits \"3.x.y - Descripción\". A los workers pediles solo las pruebas de las apps que tocan y que no commiteen: la suite completa y los commits los hacés vos." Hecho: S2 reescrita según L10 (IVA al final, mismo cálculo que el mostrador) y versiones movidas a 3.10.0–3.17.0 (S1). Rama `feat/sprint-1-pedidos` desde `main`. Pruebas: `ADMIN_URL=gestion-prueba/ DATABASE_URL=sqlite:///db_pruebas_p.sqlite3 env/Scripts/python.exe manage.py test <app> --noinput`. T6 (`django-csp`) sigue esperando la aprobación del usuario.
