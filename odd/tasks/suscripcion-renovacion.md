@@ -1,0 +1,45 @@
+# Suscripción: barra de progreso, renovación anticipada y bloqueo
+
+Rama `fix/suscripcion-renovacion` desde `main` (después de fusionar la facturación rápida). Versiones 3.9.x: 3.9.0 es este plan; T1–T6 son 3.9.1–3.9.6. Pruebas: `ADMIN_URL=gestion-prueba/ DATABASE_URL=sqlite:///db_pruebas_s.sqlite3 env/Scripts/python.exe manage.py test --noinput`.
+
+## Specs
+
+- **S1 (barra al 100 %):** el usuario: "cuando el plan llega al 100% en realidad en la barra de progreso solo se ve 98%". La barra debe marcar 100 % cuando el plan vence (y cuando quedan 0 días), y calcular con segundos, no con días enteros truncados.
+- **S2 (renovar desde inquilinos):** "no hay una forma de renovar el plan rápidamente desde la venta de inquilinos". La lista de inquilinos (`templates/dashboard/saas_dashboard.html`) ofrece un botón de renovar por fila que reutiliza `saas_renovar_suscripcion`.
+- **S3 (ventana de renovación):** "sí 7 días antes ya se puede renovar pero obviamente esa fecha de renovación comieza desde q term,ina el plan anterior me entiendes para no robarle días a la empresa". Se puede renovar desde 7 días antes del vencimiento (y siempre después de vencido). Si el plan sigue vigente, el período nuevo se suma desde `fecha_vencimiento`, nunca desde hoy. Una sola regla (`puede_renovarse`) la usan el modelo, la vista, el admin y las plantillas.
+- **S4 (bloqueo por falta de pago):** la empresa se bloquea recién cuando `fecha_vencimiento <= ahora`, no 24 horas antes.
+- **S5:** solo el superadmin renueva; pruebas de que un dueño no puede; las acciones son POST.
+- **S6 (fechas automáticas y protegidas):** "al elegir tipo de plan la fecha de vencimiento debe ser automática , y es seguro q en el admin no se pueda modificar la fecha de inicio ni de vencimiento? en especial cundo la suscripción ya fue creada?". Al crear una suscripción (módulo de base de datos y admin de Django) las fechas se calculan solas según `tipo_plan`; nadie puede editarlas después; cambiar plan o tipo en una suscripción existente se aplica en la próxima renovación (decisión pendiente si debe recalcular).
+- **S7 (borrar suscripción):** "q pasa si borro una suscripción?, se eliminan todos los productos existentes?". Borrar la suscripción no puede dejar a la empresa con acceso gratis ni borrar datos. Decisión del usuario (L6): opción A, "me parece perfecto vamos con la a": no se pueden borrar `SuscripcionEmpresa` ni `Empresa` (ni en el admin de Django ni en el módulo de base de datos); dar de baja = desactivar la empresa (`activa=False`). Como defensa extra, una empresa sin suscripción se trata como suspendida.
+- **S8 (estado según stock):** "el estado de un producto debe tomar en cuenta el stock por ejemplo no pueden haber 6 y que estén en estado vendido cuando aun hay stock". Con stock > 0 el estado no puede ser `vendido`; con stock 0 queda `vendido`. Aplica a la edición manual, al cambio rápido de estado, a las ventas y a Google Sheets.
+
+## Tasks
+
+| ID | Specs | Versión | Ruta | Estado | Commit |
+| --- | --- | --- | --- | --- | --- |
+| T1 | S1 | 3.9.1 | worker, TDD | pendiente | |
+| T2 | S3, S4, S5 | 3.9.2 | worker, TDD, Risk 2 (cobro y acceso) | pendiente | |
+| T3 | S2, S5 | 3.9.3 | worker, TDD | pendiente | |
+| T4 | S6 | 3.9.4 | worker, TDD | pendiente | |
+| T5 | S7 | 3.9.5 | worker, TDD, Risk 1 y 2 | pendiente | |
+| T6 | S8 | 3.9.6 | worker, TDD, Risk 1 | pendiente | |
+
+## Log
+
+- **L1 (pedido, 2026-11-20):** "he encontrado bugs en el progreso ya q cuando el plan llega al 100% en realidad en la barra de progreso solo se ve 98%, otro problema es q no hay una forma de renovar el plan rápidamente desde la venta de inquilinos, y también creo q hay un problema con las fechas ya q incluso desde el módulo de base de datos no se habilita el botón q es circular para renovar el plan, revisa esos errores dime q encuentras y donde está la falla"
+- **L2 (diagnóstico, solo lectura):** `empresas/models.py:148` `porcentaje_consumido` trunca con `.days` e `int()`: el último día marca `int((total-1)/total*100)` (96 % en 30/31 días, 98 % en 50, 99 % en 365). `saas_dashboard.html` no tiene botón de renovar; solo `saas_generic_list.html:96`. `empresas/middleware.py:81` bloquea con `dias_restantes() <= 0` (24 h antes del vencimiento) mientras `puede_renovarse` (`empresas/models.py:145`, usado en `dashboard/views.py:817`, `empresas/admin.py:39` y la plantilla) exige `fecha_vencimiento <= ahora`: el último día la empresa queda bloqueada y no se puede renovar.
+- **L3 (decisión del usuario, 2026-11-20):** "sí 7 días antes ya se puede renovar pero obviamente esa fecha de renovación comieza desde q term,ina el plan anterior me entiendes para no robarle días a la empresa, y continua con los sprints para dejar el sistema super poderoso y perfecto".
+- **L4 (preguntas del usuario, 2026-11-20):** ver S6–S8. Hallazgos: el módulo de base de datos (`dashboard/views.py:680` y `866`) excluye las fechas y al crear las calcula con `renovar()` según `tipo_plan` (correcto); el admin de Django (`empresas/admin.py:23`) las tiene de solo lectura, pero al **crear** desde ahí `fecha_vencimiento` queda vacía (sin `default` ni `save_model`) y da error. Borrar una `SuscripcionEmpresa` no borra productos (dependen de `Empresa`, `on_delete=CASCADE`), pero `empresas/middleware.py:81` usa `hasattr(empresa, 'suscripcion') and …`: sin suscripción la empresa **no se bloquea nunca** (acceso gratis). Borrar la **Empresa** sí borra en cascada productos, ventas, usuarios, sorteos y configuración. `productos/views.py:201` (cambio rápido de estado) y `productos/sheets_sync.py:345` pueden marcar `vendido` con stock > 0; `ventas/views.py:256` sí lo hace bien (vendido solo con stock 0).
+- **L5 (pregunta del usuario):** "al actualizar una suscripcion esa se mantiene o se crea otra? y q pasa si se borra, se pierden todos los datos de esa empresa?". Respuesta: `OneToOneField` con `Empresa`, `renovar()` actualiza el mismo registro (sin historial de períodos); borrar la suscripción no borra datos pero deja acceso gratis; borrar la empresa borra todo en cascada.
+- **L6 (decisión del usuario, 2026-11-20):** "me parece perfecto vamos con la a".
+- **L7 (hallazgo, 2026-11-21):** en `feat/facturacion-rapida` apareció el commit `d55886d` "fix(suscripciones): corregir vencimiento y renovación automática" (autor surgiSkate11 con Copilot; toca `empresas/models.py`, `dashboard/views.py`, `templates/dashboard/saas_empresas.html`, `empresas/tests.py`). Antes de T1–T6 de este plan: revisar ese diff contra S1–S8, quedarse con lo correcto y no duplicar. Ojo: quedó dentro de la rama de facturación; decidir si se mueve a `fix/suscripcion-renovacion`.
+- **L8 (revisión de d55886d contra S1–S8, sesión 2, 2026-11-21):**
+  - S1 parcial: marca 100 % al vencer, pero sigue truncando con `.days` e `int()`: el último día vigente aún muestra 96–99 %. T1 debe calcular con segundos.
+  - S4 resuelto de forma indirecta: `dias_restantes` ahora redondea hacia arriba, así que el middleware (`dias_restantes() <= 0`) bloquea recién al vencer. T2 debe fijarlo con una prueba de middleware (última hora vigente = acceso).
+  - S3 no hecho: `puede_renovarse` sigue exigiendo `fecha_vencimiento <= ahora` (sin ventana de 7 días). `renovar()` ya suma desde el vencimiento si está vigente.
+  - S2 parcial: botón de renovar (POST + csrf) en `saas_empresas.html`, visible solo con plan y `puede_renovarse`. Falta confirmar que `saas_empresas` es la lista de inquilinos de S2 y pruebas de S5 (dueño no puede).
+  - S6 parcial: el módulo de base de datos excluye las fechas al crear y llama `renovar()`. El admin de Django sigue sin calcular `fecha_vencimiento` al crear.
+  - S5, S7, S8: no tocados.
+  - Cambio no pedido: `toggle_estado_empresa` ya no regala 1 día de gracia al reactivar una empresa vencida (queda bloqueada hasta renovar). Coincide con S7 (sin acceso gratis), pero es una decisión del usuario.
+  - Pruebas: 2 nuevas (`dias_restantes` con 1 h y 100 % al vencer); ninguna de middleware ni del toggle.
+- **L9 (decisiones del usuario, 2026-11-21):** día de gracia: "Dejarlo así" (reactivar una empresa vencida no regala tiempo). Rama: "Desde feat/facturacion-rapida" (22ad3b9 = main + T7), porque main todavía no tiene T7.
