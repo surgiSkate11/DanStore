@@ -299,3 +299,113 @@ class AccionAdminRenovarTests(TestCase):
 		self._ejecutar_accion()
 		self.assertGreaterEqual(self._vencimiento(), antes + timedelta(days=28))
 
+
+
+class PagoExitosoNoRenuevaTests(TestCase):
+	"""T7 (L12/L13): abrir `pago_exitoso` no verifica ningún pago, así que no puede renovar."""
+
+	def setUp(self):
+		from .testing import crear_empresa_con_dueno
+		self.empresa, self.dueno = crear_empresa_con_dueno('pago-exitoso')
+		self.plan = Plan.objects.create(nombre='Pro')
+		self.client.force_login(self.dueno)
+
+	def _suscripcion(self, vence_en):
+		ahora = timezone.now().replace(microsecond=0)
+		return SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=ahora - timedelta(days=5), fecha_vencimiento=ahora + vence_en,
+		)
+
+	def _url(self, plan_id=None, tipo_plan='anual'):
+		return reverse('pago_exitoso', args=[plan_id or self.plan.id, tipo_plan])
+
+	def _estado(self):
+		suscripcion = SuscripcionEmpresa.objects.get(empresa=self.empresa)
+		self.empresa.refresh_from_db()
+		return (suscripcion.fecha_inicio, suscripcion.fecha_vencimiento, suscripcion.plan_id,
+				suscripcion.tipo_plan, self.empresa.activa)
+
+	def test_suscripcion_vigente_no_cambia_y_redirige_al_dashboard(self):
+		self._suscripcion(timedelta(days=25))
+		antes = self._estado()
+		respuesta = self.client.get(self._url(), follow=False)
+		self.assertRedirects(respuesta, reverse('dashboard_router'), fetch_redirect_response=False)
+		self.assertEqual(self._estado(), antes)
+
+	def test_suscripcion_vigente_con_otro_plan_y_tipo_no_cambia_plan_ni_tipo(self):
+		self._suscripcion(timedelta(days=25))
+		otro = Plan.objects.create(nombre='Premium')
+		antes = self._estado()
+		self.client.get(self._url(plan_id=otro.id, tipo_plan='anual'))
+		self.assertEqual(self._estado(), antes)
+
+	def test_suscripcion_vencida_sigue_bloqueada(self):
+		self._suscripcion(-timedelta(days=2))
+		antes = self._estado()
+		respuesta = self.client.get(self._url())
+		self.assertRedirects(respuesta, reverse('cuenta_suspendida'), fetch_redirect_response=False)
+		self.assertEqual(self._estado(), antes)
+		protegida = self.client.get('/productos/')
+		self.assertRedirects(protegida, reverse('cuenta_suspendida'), fetch_redirect_response=False)
+
+	def test_empresa_desactivada_sigue_desactivada(self):
+		self._suscripcion(timedelta(days=25))
+		Empresa.objects.filter(pk=self.empresa.pk).update(activa=False)
+		antes = self._estado()
+		respuesta = self.client.get(self._url())
+		self.assertRedirects(respuesta, reverse('cuenta_suspendida'), fetch_redirect_response=False)
+		self.assertEqual(self._estado(), antes)
+		self.assertFalse(self._estado()[4])
+
+	def test_sin_suscripcion_no_crea_ninguna(self):
+		respuesta = self.client.get(self._url())
+		self.assertEqual(respuesta.status_code, 302)
+		self.assertFalse(SuscripcionEmpresa.objects.filter(empresa=self.empresa).exists())
+
+	def test_muestra_mensaje_de_pago_recibido_en_espanol(self):
+		self._suscripcion(timedelta(days=25))
+		respuesta = self.client.get(self._url())
+		textos = [str(m) for m in respuesta.wsgi_request._messages]
+		self.assertEqual(len(textos), 1, textos)
+		self.assertIn('Recibimos tu pago', textos[0])
+		self.assertIn('24 horas', textos[0])
+		self.assertIn('soporte', textos[0])
+		self.assertNotIn('renovada por', textos[0])
+
+	def test_registra_advertencia_con_empresa_plan_y_tipo(self):
+		self._suscripcion(timedelta(days=25))
+		with self.assertLogs('empresas.views', level='WARNING') as capturado:
+			self.client.get(self._url(tipo_plan='mensual'))
+		linea = '\n'.join(capturado.output)
+		self.assertIn(f'empresa_id={self.empresa.id}', linea)
+		self.assertIn(f'plan_id={self.plan.id}', linea)
+		self.assertIn('tipo_plan=mensual', linea)
+
+	def test_tipo_plan_invalido_da_404_y_no_cambia_nada(self):
+		self._suscripcion(timedelta(days=25))
+		antes = self._estado()
+		respuesta = self.client.get(self._url(tipo_plan='semanal'))
+		self.assertEqual(respuesta.status_code, 404)
+		self.assertEqual(self._estado(), antes)
+
+	def test_plan_inexistente_da_404_y_no_cambia_nada(self):
+		self._suscripcion(timedelta(days=25))
+		antes = self._estado()
+		respuesta = self.client.get(self._url(plan_id=999999))
+		self.assertEqual(respuesta.status_code, 404)
+		self.assertEqual(self._estado(), antes)
+
+	def test_plan_inexistente_sin_suscripcion_no_crea_ninguna(self):
+		respuesta = self.client.get(self._url(plan_id=999999))
+		self.assertEqual(respuesta.status_code, 404)
+		self.assertFalse(SuscripcionEmpresa.objects.filter(empresa=self.empresa).exists())
+
+	def test_anonimo_es_redirigido_al_login_sin_cambios(self):
+		self._suscripcion(timedelta(days=25))
+		antes = self._estado()
+		self.client.logout()
+		respuesta = self.client.get(self._url())
+		self.assertEqual(respuesta.status_code, 302)
+		self.assertIn('login', respuesta['Location'])
+		self.assertEqual(self._estado(), antes)

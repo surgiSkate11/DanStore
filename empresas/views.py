@@ -1,4 +1,5 @@
 import json
+import logging
 import threading
 from datetime import timedelta
 
@@ -14,6 +15,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -25,6 +27,8 @@ from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
 from .mail_utils import enviar_correo_saas
 from .mixins import requiere_modulo, requiere_rol_dueño
 from .models import ConfiguracionSaaS, Empresa, MensajeTicket, Plan, SuscripcionEmpresa, Ticket
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -585,21 +589,27 @@ def procesar_pago_saas(request, metodo, plan_id, tipo_plan):
 @login_required
 @requiere_rol_dueño
 def pago_exitoso(request, plan_id, tipo_plan):
-    """Vista de retorno tras un pago exitoso. Renueva la suscripción automáticamente."""
+    """Retorno de la pasarela tras el pago.
+
+    Es un GET que cualquier dueño puede abrir sin haber pagado, así que NO renueva ni
+    reactiva nada: solo avisa que el pago quedó pendiente de confirmación. La renovación
+    la hace el superadmin desde el panel SaaS (la verificación con la pasarela es la T8).
+    """
+    if tipo_plan not in ('mensual', 'anual'):
+        raise Http404("Tipo de plan no válido.")
     plan = get_object_or_404(Plan, id=plan_id)
     empresa = request.empresa
 
-    suscripcion, created = SuscripcionEmpresa.objects.get_or_create(
-        empresa=empresa,
-        defaults={'plan': plan, 'fecha_vencimiento': timezone.now()}
+    # Aviso para que el superadmin pueda encontrar los pagos pendientes de confirmar.
+    logger.warning(
+        "Pago pendiente de confirmar: empresa_id=%s plan_id=%s tipo_plan=%s",
+        empresa.id, plan.id, tipo_plan,
     )
-
-    suscripcion.renovar(plan=plan, tipo_plan=tipo_plan)
-
-    if not empresa.suspension_manual:
-        empresa.activa = True
-        empresa.save(update_fields=['activa'])
-
-    periodo = '1 año' if tipo_plan == 'anual' else '1 mes'
-    messages.success(request, f"¡Pago procesado exitosamente! Tu suscripción al '{plan.nombre}' ha sido renovada por {periodo}.")
+    messages.info(
+        request,
+        "Recibimos tu pago. Lo confirmaremos en breve y tu plan se renovará; "
+        "si ya pasaron 24 horas, contacta a soporte.",
+    )
+    if not empresa.acceso_activo:
+        return redirect('cuenta_suspendida')
     return redirect('dashboard_router')
