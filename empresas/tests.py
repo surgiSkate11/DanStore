@@ -409,3 +409,134 @@ class PagoExitosoNoRenuevaTests(TestCase):
 		self.assertEqual(respuesta.status_code, 302)
 		self.assertIn('login', respuesta['Location'])
 		self.assertEqual(self._estado(), antes)
+
+
+class AdminSuscripcionFechasTests(TestCase):
+	"""S6: en el admin de Django las fechas se calculan solas y no se pueden editar.
+
+	El sitio admin exige OTP, así que se prueban las piezas del ModelAdmin directamente
+	(`save_model`, `get_readonly_fields`, `get_form`) desde `admin.site._registry`.
+	"""
+
+	def setUp(self):
+		self.empresa = Empresa.objects.create(nombre='Fechas', slug='fechas-admin')
+		self.plan = Plan.objects.create(nombre='Basico')
+		self.superadmin = User.objects.create_superuser('super_fechas', 'f@example.com', 'Clave-prueba-123')
+		self.modelo_admin = admin.site._registry[SuscripcionEmpresa]
+		self.request = RequestFactory().post('/')
+		self.request.user = self.superadmin
+
+	def _crear_desde_admin(self, tipo_plan):
+		obj = SuscripcionEmpresa(empresa=self.empresa, plan=self.plan, tipo_plan=tipo_plan)
+		antes = timezone.now()
+		self.modelo_admin.save_model(self.request, obj, None, change=False)
+		despues = timezone.now()
+		return SuscripcionEmpresa.objects.get(pk=obj.pk), antes, despues
+
+	def test_crear_mensual_calcula_inicio_y_vencimiento(self):
+		sub, antes, despues = self._crear_desde_admin('mensual')
+		self.assertTrue(antes <= sub.fecha_inicio <= despues)
+		self.assertTrue(timedelta(days=28) <= sub.fecha_vencimiento - sub.fecha_inicio <= timedelta(days=31))
+		self.assertEqual(sub.fecha_vencimiento.time(), sub.fecha_inicio.time())
+
+	def test_crear_anual_calcula_un_ano(self):
+		sub, antes, despues = self._crear_desde_admin('anual')
+		self.assertTrue(antes <= sub.fecha_inicio <= despues)
+		self.assertTrue(timedelta(days=365) <= sub.fecha_vencimiento - sub.fecha_inicio <= timedelta(days=366))
+		self.assertEqual(sub.fecha_vencimiento.year, sub.fecha_inicio.year + 1)
+
+	def test_crear_ignora_fechas_que_traiga_el_objeto(self):
+		obj = SuscripcionEmpresa(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=timezone.now() - timedelta(days=400),
+			fecha_vencimiento=timezone.now() - timedelta(days=370),
+		)
+		self.modelo_admin.save_model(self.request, obj, None, change=False)
+		sub = SuscripcionEmpresa.objects.get(pk=obj.pk)
+		self.assertGreater(sub.fecha_vencimiento, timezone.now() + timedelta(days=27))
+		self.assertGreater(sub.fecha_inicio, timezone.now() - timedelta(minutes=5))
+
+	def test_fechas_son_de_solo_lectura_al_agregar_y_al_cambiar(self):
+		existente = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=timezone.now(), fecha_vencimiento=timezone.now() + timedelta(days=30))
+		for obj in (None, existente):
+			with self.subTest(obj=obj):
+				solo_lectura = self.modelo_admin.get_readonly_fields(self.request, obj)
+				self.assertIn('fecha_inicio', solo_lectura)
+				self.assertIn('fecha_vencimiento', solo_lectura)
+				formulario = self.modelo_admin.get_form(self.request, obj, fields=None)
+				self.assertNotIn('fecha_inicio', formulario.base_fields)
+				self.assertNotIn('fecha_vencimiento', formulario.base_fields)
+
+	def test_cambiar_tipo_de_plan_no_recalcula_las_fechas(self):
+		sub, _, _ = self._crear_desde_admin('mensual')
+		inicio, vencimiento = sub.fecha_inicio, sub.fecha_vencimiento
+		sub.tipo_plan = 'anual'
+		self.modelo_admin.save_model(self.request, sub, None, change=True)
+		sub = SuscripcionEmpresa.objects.get(pk=sub.pk)
+		self.assertEqual(sub.tipo_plan, 'anual')
+		self.assertEqual((sub.fecha_inicio, sub.fecha_vencimiento), (inicio, vencimiento))
+
+	def test_el_admin_explica_que_el_cambio_aplica_en_la_proxima_renovacion(self):
+		descripciones = ' '.join(
+			str(opciones.get('description', ''))
+			for _, opciones in self.modelo_admin.get_fieldsets(self.request, None))
+		self.assertIn('próxima renovación', descripciones)
+		self.assertIn('automáticamente', descripciones)
+
+
+class AccionAdminSoloSuperusuarioTests(TestCase):
+	"""M1 (L15): la acción de renovar del admin solo la puede ejecutar un superusuario."""
+
+	def setUp(self):
+		self.empresa = Empresa.objects.create(nombre='M1', slug='m1-admin')
+		self.plan = Plan.objects.create(nombre='Basico')
+		self.suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=timezone.now() - timedelta(days=28),
+			fecha_vencimiento=timezone.now() + timedelta(days=2),
+		)
+		self.modelo_admin = admin.site._registry[SuscripcionEmpresa]
+
+	def _estado(self):
+		s = SuscripcionEmpresa.objects.get(pk=self.suscripcion.pk)
+		return s.fecha_inicio, s.fecha_vencimiento, s.tipo_plan, s.plan_id
+
+	def _ejecutar(self, usuario):
+		request = RequestFactory().post('/')
+		request.user = usuario
+		mensajes = []
+		with mock.patch.object(
+			self.modelo_admin, 'message_user',
+			side_effect=lambda req, texto, level=None: mensajes.append((str(texto), level)),
+		):
+			self.modelo_admin.renovar_suscripciones(
+				request, SuscripcionEmpresa.objects.filter(pk=self.suscripcion.pk))
+		return mensajes
+
+	def test_personal_sin_superusuario_recibe_error_y_no_cambia_nada(self):
+		personal = User.objects.create_user('staff_m1', 'st@example.com', 'Clave-prueba-123', is_staff=True)
+		antes = self._estado()
+		mensajes = self._ejecutar(personal)
+		self.assertEqual(self._estado(), antes)
+		self.assertEqual(len(mensajes), 1, mensajes)
+		texto, nivel = mensajes[0]
+		self.assertIn('superadministrador', texto)
+		self.assertEqual(nivel, 'ERROR')
+
+	def test_la_accion_no_se_ofrece_al_personal_sin_superusuario(self):
+		personal = User.objects.create_user('staff_m1b', 'stb@example.com', 'Clave-prueba-123', is_staff=True)
+		request = RequestFactory().get('/')
+		request.user = personal
+		self.assertNotIn('renovar_suscripciones', self.modelo_admin.get_actions(request))
+
+	def test_superusuario_si_renueva(self):
+		superusuario = User.objects.create_superuser('super_m1', 'sm@example.com', 'Clave-prueba-123')
+		antes = self._estado()
+		self._ejecutar(superusuario)
+		self.assertGreaterEqual(self._estado()[1], antes[1] + timedelta(days=28))
+		request = RequestFactory().get('/')
+		request.user = superusuario
+		self.assertIn('renovar_suscripciones', self.modelo_admin.get_actions(request))
+

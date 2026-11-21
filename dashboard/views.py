@@ -656,6 +656,13 @@ def saas_control_panel(request):
     return render(request, 'dashboard/saas_database.html', context)
 
 
+# Las fechas de la suscripción se calculan solas (S6); cambiar plan o tipo no las recalcula.
+AYUDA_SUSCRIPCION = {
+    'plan': 'Si cambias el plan, se aplica en la próxima renovación; las fechas actuales no cambian.',
+    'tipo_plan': 'Las fechas se calculan automáticamente al crear la suscripción. Un cambio de tipo se aplica en la próxima renovación.',
+}
+
+
 @login_required
 def saas_crear_registro(request, app_label, model_name):
     """Fábrica de Formularios: Crea dinámicamente el formulario para CUALQUIER modelo"""
@@ -678,7 +685,9 @@ def saas_crear_registro(request, app_label, model_name):
         campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
         FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
     elif Modelo is SuscripcionEmpresa:
-        FormularioDinamico = modelform_factory(Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'])
+        FormularioDinamico = modelform_factory(
+            Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'], help_texts=AYUDA_SUSCRIPCION,
+        )
     else:
         FormularioDinamico = modelform_factory(Modelo, exclude=[])
 
@@ -697,12 +706,8 @@ def saas_crear_registro(request, app_label, model_name):
                     if es_modelo_user:
                         instancia.set_password(password_nueva)
                     elif Modelo is SuscripcionEmpresa:
-                        ahora = timezone.now()
-                        instancia.fecha_inicio = ahora
-                        instancia.fecha_vencimiento = ahora
+                        instancia.iniciar_periodo()
                     instancia.save()
-                    if Modelo is SuscripcionEmpresa:
-                        instancia.renovar(ahora=ahora)
                     if hasattr(form, 'save_m2m'):
                         form.save_m2m()
                 messages.success(request, f"¡Registro creado exitosamente en {Modelo._meta.verbose_name.title()}!")
@@ -871,7 +876,9 @@ def saas_editar_registro(request, app_label, model_name, object_id):
         campos_user = ['username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser']
         FormularioDinamico = modelform_factory(Modelo, fields=campos_user)
     elif Modelo is SuscripcionEmpresa:
-        FormularioDinamico = modelform_factory(Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'])
+        FormularioDinamico = modelform_factory(
+            Modelo, exclude=['fecha_inicio', 'fecha_vencimiento'], help_texts=AYUDA_SUSCRIPCION,
+        )
     else:
         FormularioDinamico = modelform_factory(Modelo, exclude=[])
 

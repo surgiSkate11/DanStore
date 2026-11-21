@@ -258,3 +258,57 @@ class BotonRenovarEnInquilinosTests(TestCase):
 		self.client.force_login(self.superadmin)
 		self.client.post(self._url_renovar(self.sub_lejos), {'next': reverse('saas_empresas')})
 		self.assertEqual(self._fechas(self.sub_lejos), antes)
+
+
+class FechasSuscripcionSaasTests(TestCase):
+	"""S6: el módulo de base de datos calcula las fechas solo y no deja editarlas."""
+
+	def setUp(self):
+		self.superadmin = User.objects.create_superuser('super_fechas', 'sf@example.com', 'Clave-prueba-123')
+		self.plan = Plan.objects.create(nombre='Basico')
+		self.empresa = Empresa.objects.create(nombre='Fechas Saas', slug='fechas-saas')
+		self.client.force_login(self.superadmin)
+
+	def _url_crear(self):
+		return reverse('saas_crear_registro', args=['empresas', 'suscripcionempresa'])
+
+	def _url_editar(self, sub):
+		return reverse('saas_editar_registro', args=['empresas', 'suscripcionempresa', sub.id])
+
+	def _existente(self):
+		return SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=(timezone.now() - timedelta(days=10)).replace(microsecond=0),
+			fecha_vencimiento=(timezone.now() + timedelta(days=20)).replace(microsecond=0))
+
+	def _fechas(self, sub):
+		s = SuscripcionEmpresa.objects.get(pk=sub.pk)
+		return s.fecha_inicio, s.fecha_vencimiento
+
+	def test_crear_calcula_las_fechas_segun_tipo_plan_e_ignora_las_enviadas(self):
+		respuesta = self.client.post(self._url_crear(), {
+			'empresa': self.empresa.id, 'plan': self.plan.id, 'tipo_plan': 'anual',
+			'fecha_inicio': '2001-01-01 00:00:00', 'fecha_vencimiento': '2001-02-01 00:00:00',
+		})
+		self.assertEqual(respuesta.status_code, 302)
+		sub = SuscripcionEmpresa.objects.get(empresa=self.empresa)
+		self.assertGreater(sub.fecha_inicio, timezone.now() - timedelta(minutes=5))
+		self.assertTrue(timedelta(days=365) <= sub.fecha_vencimiento - sub.fecha_inicio <= timedelta(days=366))
+
+	def test_formulario_de_edicion_no_tiene_las_fechas_y_avisa_de_la_proxima_renovacion(self):
+		sub = self._existente()
+		respuesta = self.client.get(self._url_editar(sub))
+		campos = respuesta.context['form'].fields
+		self.assertNotIn('fecha_inicio', campos)
+		self.assertNotIn('fecha_vencimiento', campos)
+		ayuda = f"{campos['plan'].help_text} {campos['tipo_plan'].help_text}"
+		self.assertIn('próxima renovación', ayuda)
+
+	def test_editar_ignora_fechas_manipuladas(self):
+		sub = self._existente()
+		antes = self._fechas(sub)
+		self.client.post(self._url_editar(sub), {
+			'empresa': self.empresa.id, 'plan': self.plan.id, 'tipo_plan': 'mensual',
+			'fecha_inicio': '2001-01-01 00:00:00', 'fecha_vencimiento': '2099-01-01 00:00:00',
+		})
+		self.assertEqual(self._fechas(sub), antes)

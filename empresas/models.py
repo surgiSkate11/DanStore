@@ -121,22 +121,32 @@ class SuscripcionEmpresa(models.Model):
     # Desde cuántos días antes del vencimiento se puede renovar (S3).
     VENTANA_RENOVACION_DIAS = 7
 
-    def renovar(self, plan=None, tipo_plan=None, ahora=None):
-        ahora = ahora or timezone.now()
-        tipo_plan = tipo_plan or self.tipo_plan
+    @staticmethod
+    def sumar_periodo(fecha_base, tipo_plan):
+        """Fecha que resulta de sumar un mes (o un año si es anual) a fecha_base."""
         meses_a_sumar = 12 if tipo_plan == 'anual' else 1
-        estaba_vencida = self.fecha_vencimiento <= ahora
-        fecha_base = ahora if estaba_vencida else self.fecha_vencimiento
-
         mes = fecha_base.month - 1 + meses_a_sumar
         año = fecha_base.year + mes // 12
         mes = mes % 12 + 1
         dia = min(fecha_base.day, calendar.monthrange(año, mes)[1])
+        return fecha_base.replace(year=año, month=mes, day=dia)
+
+    def iniciar_periodo(self, ahora=None):
+        """Fechas de una suscripción nueva según tipo_plan (S6). No guarda."""
+        ahora = ahora or timezone.now()
+        self.fecha_inicio = ahora
+        self.fecha_vencimiento = self.sumar_periodo(ahora, self.tipo_plan)
+
+    def renovar(self, plan=None, tipo_plan=None, ahora=None):
+        ahora = ahora or timezone.now()
+        tipo_plan = tipo_plan or self.tipo_plan
+        estaba_vencida = self.fecha_vencimiento <= ahora
+        fecha_base = ahora if estaba_vencida else self.fecha_vencimiento
 
         self.plan = plan or self.plan
         self.tipo_plan = tipo_plan
         self.fecha_inicio = ahora if estaba_vencida else self.fecha_inicio
-        self.fecha_vencimiento = fecha_base.replace(year=año, month=mes, day=dia)
+        self.fecha_vencimiento = self.sumar_periodo(fecha_base, tipo_plan)
         self.save(update_fields=[
             'plan', 'tipo_plan', 'fecha_inicio', 'fecha_vencimiento'
         ])

@@ -21,10 +21,35 @@ class SuscripcionEmpresaAdmin(admin.ModelAdmin):
     search_fields = ('empresa__nombre', 'plan__nombre')
     list_filter = ('tipo_plan', 'plan')
     readonly_fields = ('fecha_inicio', 'fecha_vencimiento')
+    fieldsets = (
+        (None, {
+            'fields': ('empresa', 'plan', 'tipo_plan'),
+            'description': (
+                'Las fechas se calculan automáticamente al crear la suscripción según el tipo de plan. '
+                'Si cambias el plan o el tipo, el cambio se aplica en la próxima renovación.'
+            ),
+        }),
+        ('Periodo', {'fields': ('fecha_inicio', 'fecha_vencimiento')}),
+    )
     actions = ('renovar_suscripciones',)
+
+    def save_model(self, request, obj, form, change):
+        # Al crear, las fechas salen del tipo de plan (S6); al editar no se recalculan.
+        if not change:
+            obj.iniciar_periodo()
+        super().save_model(request, obj, form, change)
+
+    def get_actions(self, request):
+        acciones = super().get_actions(request)
+        if not request.user.is_superuser:
+            acciones.pop('renovar_suscripciones', None)
+        return acciones
 
     @admin.action(description='Renovar suscripciones según su periodo')
     def renovar_suscripciones(self, request, queryset):
+        if not request.user.is_superuser:
+            self.message_user(request, 'Solo un superadministrador puede renovar suscripciones.', level='ERROR')
+            return
         renovadas = 0
         reactivadas = 0
 
