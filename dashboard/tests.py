@@ -386,3 +386,34 @@ class NoSeBorranEmpresasNiSuscripcionesTests(TestCase):
 		self.assertEqual(respuesta.status_code, 302)
 		self.empresa.refresh_from_db()
 		self.assertFalse(self.empresa.activa)
+
+
+class TiendaPublicaSinSuscripcionTests(TestCase):
+	"""S7 (L19): la tienda pública de una empresa sin suscripción o vencida se muestra suspendida."""
+
+	def test_sin_suscripcion_se_muestra_suspendida(self):
+		empresa, _ = crear_empresa_con_dueno('tienda-sin-sub', suscripcion=False)
+		respuesta = self.client.get(reverse('tienda_publica', args=[empresa.slug]))
+		self.assertEqual(respuesta.status_code, 200)
+		self.assertTrue(respuesta.context['suspendida'])
+
+	def test_con_suscripcion_vigente_no_se_suspende(self):
+		empresa, _ = crear_empresa_con_dueno('tienda-con-sub')
+		respuesta = self.client.get(reverse('tienda_publica', args=[empresa.slug]))
+		self.assertEqual(respuesta.status_code, 200)
+		self.assertFalse(respuesta.context.get('suspendida', False))
+
+
+class BorrarPlanConSuscripcionesTests(TestCase):
+	"""L19: borrar un Plan que tiene suscripciones explica por qué no se puede, sin borrarlo."""
+
+	def test_explica_que_el_plan_esta_en_uso(self):
+		superadmin = User.objects.create_superuser('super_plan', 'sp@example.com', 'Clave-prueba-123')
+		plan = Plan.objects.create(nombre='En uso')
+		empresa, _ = crear_empresa_con_dueno('plan-en-uso', suscripcion=False)
+		ahora = timezone.now()
+		SuscripcionEmpresa.objects.create(empresa=empresa, plan=plan, fecha_inicio=ahora, fecha_vencimiento=ahora + timedelta(days=30))
+		self.client.force_login(superadmin)
+		respuesta = self.client.post(reverse('saas_eliminar_registro', args=['empresas', 'plan', plan.id]), follow=True)
+		self.assertTrue(Plan.objects.filter(pk=plan.pk).exists())
+		self.assertContains(respuesta, 'hay otros registros del sistema que dependen de este')

@@ -18,7 +18,7 @@ from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Case, Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value, When
-from django.db.models.deletion import ProtectedError
+from django.db.models.deletion import ProtectedError, RestrictedError
 from django.db.models.functions import Coalesce, TruncDate, TruncMonth
 from django.forms import modelform_factory
 from django.http import HttpResponse, JsonResponse
@@ -955,7 +955,7 @@ def saas_eliminar_registro(request, app_label, model_name, object_id):
         try:
             instancia.delete()
             messages.success(request, "Registro eliminado exitosamente.")
-        except ProtectedError:
+        except (ProtectedError, RestrictedError):
             # El modelo tiene on_delete=PROTECT/RESTRICT en alguna FK que apunta
             # a este registro (ej. un Plan con empresas todavía suscritas a él).
             # Sin este try/except, Django mostraba la página de error técnica en
@@ -1291,7 +1291,7 @@ def tienda_publica(request, slug):
     suspendida = False
     if not empresa.activa:
         suspendida = True
-    elif hasattr(empresa, 'suscripcion') and empresa.suscripcion.esta_vencida:
+    elif not empresa.acceso_activo:  # vencida o sin suscripción (S7)
         suspendida = True
         
     if suspendida:
