@@ -1084,6 +1084,8 @@
         </div>
     </div>
     
+    {# Marca para el JS: solo con un mensaje de error se recupera el borrador de la venta (3.7.1). #}
+    {% if not modo_edicion %}{% for message in messages %}{% if message.level_tag == 'error' %}<span hidden data-venta-error="1"></span>{% endif %}{% endfor %}{% endif %}
     <form method="post" id="formVenta">
         {% csrf_token %}
         {% if token_envio %}<input type="hidden" name="token_envio" value="{{ token_envio }}">{% endif %}
@@ -2032,6 +2034,7 @@ document.getElementById('formVenta').addEventListener('submit', function(e) {
         return;
     }
     this.dataset.enviando = '1';
+    if (!ES_EDICION) guardarBorrador();
     const btnGuardar = document.getElementById('btnCrearVenta');
     if (btnGuardar) {
         btnGuardar.dataset.textoOriginal = btnGuardar.innerHTML;
@@ -2055,6 +2058,29 @@ document.getElementById('formVenta').addEventListener('submit', function(e) {
         });
     }
 });
+
+// ==================== BORRADOR DE LA VENTA (sessionStorage) ====================
+// Antes de enviar se guarda lo cargado; solo se recupera si la pantalla vuelve con un error.
+const CLAVE_BORRADOR = 'danstore.venta.borrador';
+
+function guardarBorrador() {
+    try {
+        const valor = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+        const notas = document.querySelector('#formVenta [name="notas"]');
+        const borrador = {
+            productos: Array.from(carrito.values()).map(i => ({
+                id: i.id, nombre: i.nombre, categoria: i.categoria, precio: i.precio, stock: i.stock, cantidad: i.cantidad,
+            })),
+            cliente: valor('selectCliente'),
+            facturaSinDatos: !!(document.getElementById('facturaSinDatos') || {}).checked,
+            descuento: valor('inputDescuento'),
+            envio: valor('inputEnvio'),
+            otrosGastos: valor('inputOtrosGastos'),
+            notas: notas ? notas.value : '',
+        };
+        sessionStorage.setItem(CLAVE_BORRADOR, JSON.stringify(borrador));
+    } catch (e) { /* sin almacenamiento: no hay recuperación, el envío sigue igual */ }
+}
 
 // F9 guarda con las mismas guardas que el botón: si está deshabilitado (sin productos o sin cliente),
 // no hace nada; si no, el clic pasa por la validación y el bloqueo de doble envío del submit.
@@ -2349,6 +2375,85 @@ document.addEventListener('DOMContentLoaded', function() {
             calcularTotales();
         }, 500); // Dar tiempo para que se cargue el DOM
     }
+});
+</script>
+
+<!-- Recupera la venta no guardada, solo si la pantalla muestra un error (3.7.1) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (ES_EDICION) return;
+    // Sin error no se recupera nada, y un borrador viejo se descarta (cubre "Nueva venta" y las ventas ya guardadas).
+    if (!document.querySelector('[data-venta-error]')) {
+        try { sessionStorage.removeItem(CLAVE_BORRADOR); } catch (e) { /* sin almacenamiento: nada que borrar */ }
+        return;
+    }
+    let borrador = null;
+    try { borrador = JSON.parse(sessionStorage.getItem(CLAVE_BORRADOR)); } catch (e) { return; }
+    if (!borrador || typeof borrador !== 'object' || !Array.isArray(borrador.productos)) return;
+
+    const texto = v => (typeof v === 'string' ? v : '');
+    const poner = (id, valor) => { const el = document.getElementById(id); if (el) el.value = texto(valor); };
+
+    // Productos: se reutiliza agregarProducto con una tarjeta suelta; la cantidad respeta el stock guardado.
+    borrador.productos.forEach(p => {
+        if (!p || !p.id || !(p.cantidad >= 1)) return;
+        const tarjeta = document.createElement('div');
+        tarjeta.dataset.productoId = String(p.id);
+        tarjeta.dataset.titulo = texto(p.nombre);
+        tarjeta.dataset.categoria = texto(p.categoria);
+        tarjeta.dataset.precio = String(Number(p.precio) || 0);
+        tarjeta.dataset.stock = String(parseInt(p.stock, 10) || 0);
+        for (let i = 0; i < Math.floor(p.cantidad); i++) {
+            if (!agregarProducto(tarjeta)) break;
+        }
+        document.querySelectorAll(`.producto-seleccionable[data-producto-id="${CSS.escape(String(p.id))}"]`)
+            .forEach(c => c.classList.add('producto-seleccionado'));
+    });
+
+    // Cliente: consumidor final, o el cliente que estaba elegido.
+    const sinDatos = document.getElementById('facturaSinDatos');
+    if (borrador.facturaSinDatos && sinDatos) {
+        sinDatos.checked = true;
+        sinDatos.dispatchEvent(new Event('change'));
+    } else if (texto(borrador.cliente) !== '') {
+        const buscador = document.getElementById('searchClienteInput');
+        const cliente = JSON.parse(document.getElementById('clientes-data').textContent)
+            .find(c => c.nombre === borrador.cliente);
+        if (buscador) {
+            buscador.value = borrador.cliente;
+            const limpiar = document.getElementById('clearSearchBtn');
+            if (limpiar) limpiar.style.display = 'block';
+        }
+        poner('selectCliente', borrador.cliente);
+        const info = document.getElementById('infoClienteSeleccionado');
+        if (cliente && info) {
+            const fijar = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v || 'No disponible'; };
+            fijar('cedulaClienteInfo', cliente.ruc_cedula);
+            fijar('telefonoClienteInfo', cliente.telefono);
+            fijar('direccionClienteInfo', cliente.direccion);
+            info.style.display = 'block';
+        }
+    }
+
+    poner('inputDescuento', borrador.descuento);
+    poner('inputEnvio', borrador.envio);
+    poner('inputOtrosGastos', borrador.otrosGastos);
+    const notas = document.querySelector('#formVenta [name="notas"]');
+    if (notas) notas.value = texto(borrador.notas);
+    actualizarContador();
+
+    const aviso = document.createElement('div');
+    aviso.className = 'alert alert-info alert-dismissible fade show';
+    aviso.setAttribute('role', 'alert');
+    aviso.id = 'avisoBorrador';
+    aviso.textContent = 'Recuperamos los datos de la venta que no se pudo guardar.';
+    const cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'btn-close';
+    cerrar.setAttribute('data-bs-dismiss', 'alert');
+    cerrar.setAttribute('aria-label', 'Cerrar');
+    aviso.appendChild(cerrar);
+    document.getElementById('formVenta').before(aviso);
 });
 </script>
 

@@ -1842,3 +1842,51 @@ class LimpiezaPantallaVentaTests(GastosVentaBase):
 
     def test_las_compras_del_cliente_se_escapan_al_insertarlas_en_el_buscador(self):
         self.assertIn('${escaparHtml(cliente.compras)} compras', self.pagina())
+
+
+class BorradorVentaTests(GastosVentaBase):
+    """T7 (3.7.1): tras un error de validación la pantalla avisa al JS para recuperar la venta.
+
+    La restauración en sí (sessionStorage) solo se prueba a mano en el navegador.
+    """
+
+    MARCA = 'data-venta-error="1"'
+
+    def test_un_envio_invalido_redirige_a_una_pantalla_que_marca_el_error(self):
+        respuesta = self.client.post(reverse('crear_venta'), self.datos(descuento='abc'), follow=True)
+        self.assertEqual(respuesta.redirect_chain, [(reverse('crear_venta'), 302)])
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertContains(respuesta, self.MARCA, count=1)
+        self.assertEqual(Venta.objects.count(), 0)
+
+    def test_sin_error_la_pantalla_no_marca_nada(self):
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertNotContains(respuesta, self.MARCA)
+
+    def test_un_aviso_que_no_es_error_no_activa_la_recuperacion(self):
+        # Un token de envío inválido solo registra una advertencia y la venta se crea.
+        respuesta = self.client.post(
+            reverse('crear_venta'), self.datos(token_envio='no-es-un-uuid'), follow=True,
+        )
+        self.assertEqual(Venta.objects.count(), 1)
+        respuesta = self.client.get(reverse('crear_venta'))
+        self.assertNotContains(respuesta, self.MARCA)
+
+    def test_la_pantalla_de_edicion_no_marca_errores(self):
+        venta = Venta.objects.create(empresa=self.empresa, cliente=self.cliente)
+        DetalleVenta.objects.create(venta=venta, producto=self.producto, precio_unitario=Decimal('100.00'))
+        respuesta = self.client.post(
+            reverse('editar_venta', args=[venta.id]), {'descuento': 'abc', 'envio': '0', 'otros_gastos': '0'},
+            follow=True,
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertNotContains(respuesta, self.MARCA)
+
+    def test_la_pantalla_de_venta_trae_la_clave_del_borrador_y_el_aviso(self):
+        html = self.client.get(reverse('crear_venta')).content.decode()
+        self.assertIn("'danstore.venta.borrador'", html)
+        self.assertIn('Recuperamos los datos de la venta que no se pudo guardar.', html)
+
+    def test_sin_error_la_pantalla_descarta_el_borrador_viejo(self):
+        html = self.client.get(reverse('crear_venta')).content.decode()
+        self.assertIn('sessionStorage.removeItem(CLAVE_BORRADOR)', html)
