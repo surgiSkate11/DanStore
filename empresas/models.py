@@ -1,5 +1,6 @@
 import calendar
 import math
+from datetime import timedelta
 
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -101,7 +102,7 @@ class Empresa(models.Model):
     @property
     def acceso_activo(self):
         suscripcion = getattr(self, 'suscripcion', None)
-        return self.activa and (suscripcion is None or suscripcion.dias_restantes() > 0)
+        return self.activa and (suscripcion is None or not suscripcion.esta_vencida)
 
 
 class SuscripcionEmpresa(models.Model):
@@ -116,6 +117,9 @@ class SuscripcionEmpresa(models.Model):
     tipo_plan = models.CharField(max_length=20, choices=TIPO_PLAN_CHOICES, default='mensual')
     fecha_inicio = models.DateTimeField(default=timezone.now)
     fecha_vencimiento = models.DateTimeField()
+
+    # Desde cuántos días antes del vencimiento se puede renovar (S3).
+    VENTANA_RENOVACION_DIAS = 7
 
     def renovar(self, plan=None, tipo_plan=None, ahora=None):
         ahora = ahora or timezone.now()
@@ -145,8 +149,25 @@ class SuscripcionEmpresa(models.Model):
         return math.ceil(delta.total_seconds() / 86400)
 
     @property
-    def puede_renovarse(self):
+    def esta_vencida(self):
+        """Regla única de bloqueo: vence exactamente en `fecha_vencimiento` (S4)."""
         return self.fecha_vencimiento <= timezone.now()
+
+    @property
+    def puede_renovarse(self):
+        """Regla única de renovación (S3): vencida o a 7 días o menos de vencer.
+
+        La usan el modelo, la vista del panel SaaS, el admin de Django y las plantillas.
+        """
+        ventana = timedelta(days=self.VENTANA_RENOVACION_DIAS)
+        return self.fecha_vencimiento - timezone.now() <= ventana
+
+    def mensaje_fuera_de_ventana(self):
+        return (
+            f"La suscripción de {self.empresa.nombre} todavía no puede renovarse: "
+            f"solo se puede renovar desde {self.VENTANA_RENOVACION_DIAS} días antes del vencimiento "
+            f"(faltan {self.dias_restantes()} días)."
+        )
 
     def porcentaje_consumido(self):
         ahora = timezone.now()

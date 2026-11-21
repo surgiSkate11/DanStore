@@ -342,7 +342,7 @@ def toggle_estado_empresa(request, empresa_id):
     
     if empresa.activa:
         # Activar administrativamente no cambia el período contratado.
-        if hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0:
+        if hasattr(empresa, 'suscripcion') and empresa.suscripcion.esta_vencida:
             messages.warning(request, f"Empresa '{empresa.nombre}' activada administrativamente, pero su suscripción está vencida y requiere renovación.")
         else:
             messages.success(request, f"La empresa '{empresa.nombre}' ha sido activada con éxito.")
@@ -820,10 +820,7 @@ def saas_renovar_suscripcion(request, subscription_id):
         messages.error(request, f"{suscripcion.empresa.nombre} no tiene un plan asignado.")
         return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
     if not suscripcion.puede_renovarse:
-        messages.warning(
-            request,
-            f"La suscripción de {suscripcion.empresa.nombre} todavía está vigente y no puede renovarse nuevamente.",
-        )
+        messages.error(request, suscripcion.mensaje_fuera_de_ventana())
         return redirect('saas_listar_registros', app_label='empresas', model_name='suscripcionempresa')
 
     suscripcion.renovar()
@@ -1267,7 +1264,7 @@ def tienda_publica(request, slug):
     suspendida = False
     if not empresa.activa:
         suspendida = True
-    elif hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0:
+    elif hasattr(empresa, 'suscripcion') and empresa.suscripcion.esta_vencida:
         suspendida = True
         
     if suspendida:

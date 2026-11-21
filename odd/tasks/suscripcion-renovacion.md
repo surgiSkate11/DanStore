@@ -17,8 +17,8 @@ Rama `fix/suscripcion-renovacion` desde `main` (después de fusionar la facturac
 
 | ID | Specs | Versión | Ruta | Estado | Commit |
 | --- | --- | --- | --- | --- | --- |
-| T1 | S1 | 3.9.1 | worker, TDD | hecha | (hash: ver commit 3.9.1; se anota en el siguiente) |
-| T2 | S3, S4, S5 | 3.9.2 | worker, TDD, Risk 2 (cobro y acceso) | pendiente | |
+| T1 | S1 | 3.9.1 | worker, TDD | hecha | a49479a |
+| T2 | S3, S4, S5 | 3.9.2 | worker, TDD, Risk 2 (cobro y acceso) | hecha | (hash: ver commit 3.9.2) |
 | T3 | S2, S5 | 3.9.3 | worker, TDD | pendiente | |
 | T4 | S6 | 3.9.4 | worker, TDD | pendiente | |
 | T5 | S7 | 3.9.5 | worker, TDD, Risk 1 y 2 | pendiente | |
@@ -44,3 +44,4 @@ Rama `fix/suscripcion-renovacion` desde `main` (después de fusionar la facturac
   - Pruebas: 2 nuevas (`dias_restantes` con 1 h y 100 % al vencer); ninguna de middleware ni del toggle.
 - **L9 (decisiones del usuario, 2026-11-21):** día de gracia: "Dejarlo así" (reactivar una empresa vencida no regala tiempo). Rama: "Desde feat/facturacion-rapida" (22ad3b9 = main + T7), porque main todavía no tiene T7.
 - **L10 (T1, 3.9.1, S1):** `porcentaje_consumido` calcula con `total_seconds()` (total y consumido), devuelve 100 si venció o si el período no tiene duración, y trunca con `int()` para no marcar 100 antes de vencer. RED (9 pruebas nuevas en `PorcentajeConsumidoTests`, 3 fallaron): última hora `96 != >=99`, último segundo `96 != 99`, 36 h de 720 h `3 != 5`. GREEN: las 9 pasan; `manage.py test empresas dashboard` = 22 OK.
+- **L11 (T2, 3.9.2, S3/S4/S5):** regla única `SuscripcionEmpresa.puede_renovarse` = vencida o `fecha_vencimiento - ahora <= 7 días` (`VENTANA_RENOVACION_DIAS`); `esta_vencida` (`fecha_vencimiento <= ahora`) es la regla de bloqueo y la usan `Empresa.acceso_activo`, el middleware y `dashboard/views.py` (2 sitios). La vista `saas_renovar_suscripcion`, la acción del admin de Django y la plantilla `saas_generic_list.html` usan `puede_renovarse`; fuera de ventana se rechaza con `mensaje_fuera_de_ventana()` ("…todavía no puede renovarse: solo se puede renovar desde 7 días antes del vencimiento (faltan N días).") y no cambia nada. `renovar()` no se tocó (ya suma desde el vencimiento con plan vigente y conserva `fecha_inicio`; se fijó con prueba). RED: 5 fallas de comportamiento (3 y 7 días `puede_renovarse` False; vista: 3 días no renovaba, dentro de ventana no renovaba, mensaje de 8 días sin '7 días'); las pruebas de S4 (1 h = acceso, vencida hace 1 s = `cuenta_suspendida`), S5 (dueño no renueva, GET 403, anónimo) y de `renovar()` ya pasaban gracias a d55886d y quedan como pruebas de fijación. Se actualizó la aserción de d55886d que esperaba `puede_renovarse` False con 1 h restante (ahora True por S3). Las pruebas de la acción del admin llaman a la acción directamente porque el sitio admin exige OTP; su RED real no se observó (el primer intento por cliente falló por OTP). GREEN: `manage.py test empresas dashboard` = 42 OK. Fuera de alcance, sin tocar: `empresas/views.py:597` (pago del dueño) llama a `renovar()` sin ventana, y `empresas/views.py:203` usa `dias_restantes() > 0` (equivalente a `not esta_vencida`).

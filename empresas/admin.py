@@ -39,7 +39,7 @@ class SuscripcionEmpresaAdmin(admin.ModelAdmin):
             if not suscripcion.puede_renovarse:
                 self.message_user(
                     request,
-                    f"{suscripcion.empresa.nombre} todavía está vigente y no fue renovada.",
+                    suscripcion.mensaje_fuera_de_ventana(),
                     level='WARNING',
                 )
                 continue

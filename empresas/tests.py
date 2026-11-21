@@ -4,6 +4,7 @@ from unittest import mock
 from django.test import TestCase
 
 from django.contrib.auth.models import User
+from django.contrib import admin
 from django.contrib.sessions.backends.db import SessionStore
 from django.core.cache import cache
 from django.db import DatabaseError
@@ -13,7 +14,7 @@ from django.utils import timezone
 
 from usuarios.models import UserProfile
 from .middleware import TenantMiddleware, _obtener_session_timeout_minutos
-from .models import ConfiguracionSaaS, Empresa, SuscripcionEmpresa
+from .models import ConfiguracionSaaS, Empresa, Plan, SuscripcionEmpresa
 
 
 class SessionTimeoutTests(TestCase):
@@ -99,7 +100,8 @@ class SuscripcionEmpresaTests(TestCase):
 		)
 
 		self.assertEqual(suscripcion.dias_restantes(), 1)
-		self.assertFalse(suscripcion.puede_renovarse)
+		# Con 1 h restante ya está dentro de la ventana de 7 días (S3).
+		self.assertTrue(suscripcion.puede_renovarse)
 
 	def test_suscripcion_vencida_muestra_cien_por_ciento(self):
 		suscripcion = SuscripcionEmpresa.objects.create(
@@ -167,4 +169,133 @@ class PorcentajeConsumidoTests(TestCase):
 			self.assertEqual(self.suscripcion.estado_color(), 'danger')
 		with mock.patch('empresas.models.timezone.now', return_value=self.inicio + timedelta(days=15)):
 			self.assertEqual(self.suscripcion.estado_color(), 'success')
+
+
+class VentanaRenovacionTests(TestCase):
+	"""S3: una sola regla `puede_renovarse` (vencida o a 7 días o menos de vencer)."""
+
+	def setUp(self):
+		self.empresa = Empresa.objects.create(nombre='Ventana', slug='ventana')
+		self.ahora = timezone.now().replace(microsecond=0)
+		self.plan = Plan.objects.create(nombre='Basico')
+
+	def _suscripcion(self, vence_en, tipo_plan='mensual'):
+		return SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan=tipo_plan,
+			fecha_inicio=self.ahora - timedelta(days=23),
+			fecha_vencimiento=self.ahora + vence_en,
+		)
+
+	def _puede(self, suscripcion):
+		with mock.patch('empresas.models.timezone.now', return_value=self.ahora):
+			return suscripcion.puede_renovarse
+
+	def test_faltando_8_dias_no_se_puede_renovar(self):
+		self.assertFalse(self._puede(self._suscripcion(timedelta(days=8))))
+
+	def test_faltando_mas_de_7_dias_por_un_segundo_no_se_puede_renovar(self):
+		self.assertFalse(self._puede(self._suscripcion(timedelta(days=7, seconds=1))))
+
+	def test_faltando_exactamente_7_dias_se_puede_renovar(self):
+		self.assertTrue(self._puede(self._suscripcion(timedelta(days=7))))
+
+	def test_faltando_3_dias_se_puede_renovar(self):
+		self.assertTrue(self._puede(self._suscripcion(timedelta(days=3))))
+
+	def test_vencida_se_puede_renovar(self):
+		suscripcion = self._suscripcion(-timedelta(seconds=1))
+		self.assertTrue(self._puede(suscripcion))
+		suscripcion.fecha_vencimiento = self.ahora - timedelta(days=40)
+		self.assertTrue(self._puede(suscripcion))
+
+	def test_renovar_vigente_suma_el_periodo_desde_el_vencimiento_sin_tocar_el_inicio(self):
+		from datetime import datetime, timezone as tz
+		vencimiento = datetime(2027, 3, 10, 15, 30, tzinfo=tz.utc)
+		inicio = datetime(2027, 2, 10, 15, 30, tzinfo=tz.utc)
+		ahora = vencimiento - timedelta(days=3)
+		suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=inicio, fecha_vencimiento=vencimiento,
+		)
+		with mock.patch('empresas.models.timezone.now', return_value=ahora):
+			estaba_vencida = suscripcion.renovar()
+		suscripcion.refresh_from_db()
+		self.assertFalse(estaba_vencida)
+		self.assertEqual(suscripcion.fecha_vencimiento, datetime(2027, 4, 10, 15, 30, tzinfo=tz.utc))
+		self.assertEqual(suscripcion.fecha_inicio, inicio)
+
+
+class BloqueoPorVencimientoTests(TestCase):
+	"""S4: se bloquea solo cuando fecha_vencimiento <= ahora."""
+
+	def _usuario_con_vencimiento(self, delta):
+		empresa = Empresa.objects.create(nombre='Bloqueo', slug='bloqueo')
+		SuscripcionEmpresa.objects.create(empresa=empresa, fecha_vencimiento=timezone.now() + delta)
+		usuario = User.objects.create_user(username='owner_bloqueo', password='Correcta-123!')
+		UserProfile.objects.create(user=usuario, empresa=empresa, rol='owner')
+		self.client.force_login(usuario)
+		return empresa
+
+	def test_con_una_hora_restante_conserva_el_acceso(self):
+		self._usuario_con_vencimiento(timedelta(hours=1))
+		respuesta = self.client.get('/productos/')
+		self.assertNotEqual(respuesta.status_code, 302, respuesta.get('Location'))
+		self.assertEqual(respuesta.status_code, 200)
+
+	def test_vencida_hace_un_segundo_es_redirigida_a_cuenta_suspendida(self):
+		self._usuario_con_vencimiento(-timedelta(seconds=1))
+		respuesta = self.client.get('/productos/')
+		self.assertRedirects(respuesta, reverse('cuenta_suspendida'), fetch_redirect_response=False)
+
+	def test_acceso_activo_de_la_empresa_sigue_la_misma_regla(self):
+		empresa = self._usuario_con_vencimiento(timedelta(hours=1))
+		self.assertTrue(empresa.acceso_activo)
+		SuscripcionEmpresa.objects.filter(empresa=empresa).update(
+			fecha_vencimiento=timezone.now() - timedelta(seconds=1))
+		empresa = Empresa.objects.get(pk=empresa.pk)
+		self.assertFalse(empresa.acceso_activo)
+
+
+class AccionAdminRenovarTests(TestCase):
+	"""S3: la acción del admin de Django usa la misma regla que la vista y el modelo."""
+
+	def setUp(self):
+		self.empresa = Empresa.objects.create(nombre='Admin', slug='admin-renueva')
+		self.plan = Plan.objects.create(nombre='Basico')
+		self.suscripcion = SuscripcionEmpresa.objects.create(
+			empresa=self.empresa, plan=self.plan, tipo_plan='mensual',
+			fecha_inicio=timezone.now() - timedelta(days=20),
+			fecha_vencimiento=timezone.now() + timedelta(days=10),
+		)
+		self.superadmin = User.objects.create_superuser('super_admin', 'a@example.com', 'Clave-prueba-123')
+
+	def _ejecutar_accion(self):
+		"""Ejecuta la acción del admin directamente (el sitio admin exige OTP)."""
+		modelo_admin = admin.site._registry[SuscripcionEmpresa]
+		request = RequestFactory().post('/')
+		request.user = self.superadmin
+		mensajes = []
+		with mock.patch.object(
+			modelo_admin, 'message_user',
+			side_effect=lambda req, texto, level=None: mensajes.append(str(texto)),
+		):
+			modelo_admin.renovar_suscripciones(
+				request, SuscripcionEmpresa.objects.filter(pk=self.suscripcion.pk))
+		return mensajes
+
+	def _vencimiento(self):
+		return SuscripcionEmpresa.objects.get(pk=self.suscripcion.pk).fecha_vencimiento
+
+	def test_fuera_de_la_ventana_no_renueva(self):
+		antes = self._vencimiento()
+		textos = self._ejecutar_accion()
+		self.assertEqual(self._vencimiento(), antes)
+		self.assertTrue(any('7 días' in t and 'no puede renovarse' in t for t in textos), textos)
+
+	def test_dentro_de_la_ventana_renueva_desde_el_vencimiento(self):
+		SuscripcionEmpresa.objects.filter(pk=self.suscripcion.pk).update(
+			fecha_vencimiento=timezone.now() + timedelta(days=3))
+		antes = self._vencimiento()
+		self._ejecutar_accion()
+		self.assertGreaterEqual(self._vencimiento(), antes + timedelta(days=28))
 

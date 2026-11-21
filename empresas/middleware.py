@@ -78,7 +78,7 @@ class TenantMiddleware(MiddlewareMixin):
             request.empresa = empresa
 
             suspendida_admin = not empresa.activa
-            suspendida_pago = hasattr(empresa, 'suscripcion') and empresa.suscripcion.dias_restantes() <= 0
+            suspendida_pago = hasattr(empresa, 'suscripcion') and empresa.suscripcion.esta_vencida
 
             if suspendida_admin or suspendida_pago:
                 try:
