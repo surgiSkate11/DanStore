@@ -18,7 +18,7 @@ Rama `fix/suscripcion-renovacion` desde `main` (después de fusionar la facturac
 | ID | Specs | Versión | Ruta | Estado | Commit |
 | --- | --- | --- | --- | --- | --- |
 | T1 | S1 | 3.9.1 | worker, TDD | hecha | a49479a |
-| T2 | S3, S4, S5 | 3.9.2 | worker, TDD, Risk 2 (cobro y acceso) | hecha | (hash: ver commit 3.9.2) |
+| T2 | S3, S4, S5 | 3.9.2 | worker, TDD, Risk 2 (cobro y acceso) | hecha | f690f64 |
 | T3 | S2, S5 | 3.9.3 | worker, TDD | pendiente | |
 | T4 | S6 | 3.9.4 | worker, TDD | pendiente | |
 | T5 | S7 | 3.9.5 | worker, TDD, Risk 1 y 2 | pendiente | |
