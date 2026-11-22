@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Panel de Control | {{ app_name|default:"Tiendita SaaS" }}{% endblock %}
 
@@ -6,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
 <style>
     /* UI V2 Design System */
     .ui-v2 {
@@ -328,7 +330,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ui-v2 container-fluid py-4 px-xl-5">
+<div class="ui-v2 ds container-fluid py-4 px-xl-5">
 
     <!-- Header -->
     <div class="saas-card saas-header">
@@ -348,69 +350,52 @@
     </div>
 
     <!-- KPIs -->
-    <div class="row g-4 mb-4">
+    <div class="row g-3 g-xl-4 mb-4">
         <div class="col-md-4">
-            <div class="saas-card kpi-inner" style="border-top: 4px solid var(--saas-success);">
-                <div class="kpi-top">
-                    <span class="kpi-label">MRR Estimado</span>
-                    <div class="kpi-icon" style="background: var(--saas-success-light); color: var(--saas-success);">
-                        <i class="bi bi-graph-up-arrow"></i>
-                    </div>
-                </div>
-                <div class="kpi-value">${{ mrr_estimado|floatformat:2 }}</div>
-                <div class="kpi-footer">
-                    <span class="trend-badge trend-up"><i class="bi bi-arrow-up-short"></i> Estable</span>
-                    Facturación recurrente
-                </div>
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">MRR estimado</span><span class="ds-kpi-icon ic-profit"><i class="bi bi-graph-up-arrow"></i></span></div>
+                <div class="ds-kpi-value">${{ mrr_estimado|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=mrr_variacion %} <span>vs. mes anterior</span></div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="saas-card kpi-inner" style="border-top: 4px solid var(--saas-primary);">
-                <div class="kpi-top">
-                    <span class="kpi-label">Empresas Totales</span>
-                    <div class="kpi-icon" style="background: var(--saas-primary-light); color: var(--saas-primary);">
-                        <i class="bi bi-buildings-fill"></i>
-                    </div>
-                </div>
-                <div class="kpi-value">{{ total_empresas }}</div>
-                <div class="kpi-footer">
-                    Inquilinos registrados en la plataforma
-                </div>
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Empresas totales</span><span class="ds-kpi-icon ic-brand"><i class="bi bi-buildings-fill"></i></span></div>
+                <div class="ds-kpi-value">{{ total_empresas }}</div>
+                <div class="ds-kpi-foot"><span>Inquilinos registrados en la plataforma</span></div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="saas-card kpi-inner" style="border-top: 4px solid var(--saas-info);">
-                <div class="kpi-top">
-                    <span class="kpi-label">Empresas Activas</span>
-                    <div class="kpi-icon" style="background: var(--saas-info-light); color: var(--saas-info);">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                </div>
-                <div class="kpi-value">{{ empresas_activas }}</div>
-                <div class="kpi-footer">
-                    <span class="trend-badge trend-info">En línea</span>
-                    Operando sin restricciones
-                </div>
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Empresas activas</span><span class="ds-kpi-icon ic-sky"><i class="bi bi-check-circle-fill"></i></span></div>
+                <div class="ds-kpi-value">{{ empresas_activas }}</div>
+                <div class="ds-kpi-foot"><span>Operando sin restricciones</span></div>
             </div>
         </div>
     </div>
 
     <!-- Charts -->
-    <div class="row g-4 mb-4">
+    <div class="row g-3 g-xl-4 mb-4">
         <div class="col-lg-8">
-            <div class="saas-card h-100" style="padding: 2rem;">
-                <h3 class="section-title mb-4">
-                    <i class="bi bi-activity text-success"></i> Crecimiento de Ingresos (MRR)
-                </h3>
-                <div id="mrrChart" style="min-height: 280px;"></div>
+            <div class="ds-card h-100">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-activity text-success"></i> Evolución del MRR</h3>
+                        <p class="ds-section-hint">MRR estimado según suscripciones vigentes · últimos 12 meses</p>
+                    </div>
+                </div>
+                <div id="mrrChart" style="min-height: 300px;"></div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="saas-card h-100" style="padding: 2rem;">
-                <h3 class="section-title mb-4">
-                    <i class="bi bi-pie-chart-fill text-primary"></i> Distribución de Planes
-                </h3>
-                <div id="planesChart" class="d-flex justify-content-center align-items-center" style="min-height: 280px;"></div>
+            <div class="ds-card h-100">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-pie-chart-fill text-primary"></i> Distribución de planes</h3>
+                        <p class="ds-section-hint">Empresas activas por plan</p>
+                    </div>
+                </div>
+                <div id="planesChart" style="min-height: 300px;"></div>
             </div>
         </div>
     </div>
@@ -489,81 +474,43 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+{{ mrr_historico|json_script:"mrr-data" }}
+{{ planes_labels|json_script:"planes-labels" }}
+{{ planes_series|json_script:"planes-series" }}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const fontFamily = 'Inter, sans-serif';
-    const muted = '#64748b';
-    const gridColor = '#e2e8f0';
-
-    // MRR Chart
-    new ApexCharts(document.querySelector("#mrrChart"), {
-        series: [{ name: 'MRR ($)', data: [120, 250, 450, 600, 850, 1100, {{ mrr_estimado|floatformat:0 }}] }],
-        chart: {
-            type: 'area', height: 280,
-            toolbar: { show: false },
-            fontFamily, parentHeightOffset: 0,
-            animations: { enabled: true, easing: 'easeinout', speed: 600 }
-        },
-        colors: ['#10b981'], // Emerald 500
-        fill: {
-            type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.0, stops: [0, 100] }
-        },
-        dataLabels: { enabled: false },
+document.addEventListener('DOMContentLoaded', function () {
+    // Evolución del MRR (estimado según suscripciones vigentes)
+    var mrr = DS.data('mrr-data');
+    DS.render('#mrrChart', {
+        chart: { type: 'area', height: 300 },
+        series: [{ name: 'MRR estimado', data: mrr.valores }],
+        colors: [DS.color.profit],
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.0, stops: [0, 100] } },
         stroke: { curve: 'smooth', width: 3 },
-        xaxis: {
-            categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Actual'],
-            axisBorder: { show: false }, axisTicks: { show: false },
-            labels: { style: { colors: muted, fontSize: '13px', fontWeight: 500 } }
-        },
-        yaxis: {
-            labels: {
-                formatter: v => "$" + v,
-                style: { colors: muted, fontSize: '13px', fontWeight: 500 }
-            }
-        },
-        grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 8, right: 0 } },
-        tooltip: {
-            theme: 'light',
-            y: { formatter: v => "$" + v.toLocaleString() },
-            style: { fontFamily }
-        }
-    }).render();
+        legend: { show: false },
+        xaxis: { categories: mrr.labels },
+        yaxis: { min: 0, labels: { formatter: DS.moneyShort } },
+        tooltip: { y: { formatter: DS.money } }
+    }, 'Aún no hay suscripciones con plan para estimar el MRR');
 
-    // Plans Donut
-    new ApexCharts(document.querySelector("#planesChart"), {
-        series: {{ planes_series|safe }},
-        chart: { type: 'donut', height: 280, fontFamily },
-        labels: {{ planes_labels|safe }},
-        colors: ['#4f46e5', '#6366f1', '#10b981', '#f59e0b'],
-        plotOptions: {
-            pie: {
-                donut: {
-                    size: '75%',
-                    labels: {
-                        show: true,
-                        name: { fontSize: '0.875rem', color: muted, fontFamily, fontWeight: 500 },
-                        value: { fontSize: '2rem', fontWeight: 800, color: '#0f172a', fontFamily },
-                        total: {
-                            show: true, label: 'Total Activos',
-                            fontSize: '0.875rem', color: muted, fontFamily, fontWeight: 500,
-                            formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
-                        }
-                    }
-                }
-            }
-        },
-        dataLabels: { enabled: false },
-        legend: {
-            position: 'bottom',
-            fontSize: '13px', fontWeight: 500, fontFamily,
-            markers: { radius: 12, width: 12, height: 12 },
-            itemMargin: { horizontal: 10, vertical: 4 }
-        },
-        stroke: { show: true, colors: ['#fff'], width: 2 }
-    }).render();
+    // Distribución de planes
+    var labels = DS.data('planes-labels');
+    var series = DS.data('planes-series');
+    DS.render('#planesChart', {
+        chart: { type: 'donut', height: 300 },
+        series: series,
+        labels: labels,
+        colors: DS.palette,
+        legend: { position: 'bottom' },
+        stroke: { width: 2, colors: ['#fff'] },
+        plotOptions: { pie: { donut: { size: '72%', labels: { show: true,
+            total: { show: true, label: 'Empresas activas', formatter: function (w) {
+                return DS.int(w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0));
+            } } } } } },
+        tooltip: { y: { formatter: function (v) { return DS.int(v) + ' empresa' + (v === 1 ? '' : 's'); } } }
+    }, 'Aún no hay empresas con plan asignado');
 });
 </script>
 {% endblock %}

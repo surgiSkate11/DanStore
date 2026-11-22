@@ -269,26 +269,44 @@ def dashboard_saas(request):
     total_empresas = Empresa.objects.count()
     empresas_activas = Empresa.objects.filter(activa=True).count()
     
+    ahora = timezone.now()
     suscripciones = SuscripcionEmpresa.objects.select_related('empresa', 'plan').all()
-    mrr_estimado = suscripciones.aggregate(total=Sum('plan__precio_mensual'))['total'] or 0
-    
-    # --- DATOS REALES PARA GRÁFICAS SaaS ---
-    # Distribución real de empresas activas por plan
-    planes_stats = Plan.objects.annotate(
-        num_suscripciones=Count('suscripciones', filter=Q(suscripciones__empresa__activa=True))
-    ).values('nombre', 'num_suscripciones')
-    
-    planes_labels = [p['nombre'] for p in planes_stats] if planes_stats else ['Sin Planes']
-    planes_series = [p['num_suscripciones'] for p in planes_stats] if planes_stats else [1]
-    # ----------------------------------------
+    # MRR de hoy: solo suscripciones con plan, de empresas activas y no vencidas.
+    # Las anuales aportan 1/12 de su precio por mes (misma regla que el historial).
+    mrr_estimado = sum(
+        (est.mrr_suscripcion(s.plan.precio_mensual, s.plan.precio_anual, s.tipo_plan)
+         for s in suscripciones.filter(
+             plan__isnull=False, empresa__activa=True, fecha_vencimiento__gte=ahora)),
+        Decimal('0'),
+    )
+
+    # Historial de MRR (estimado según suscripciones vigentes en cada mes)
+    mrr_historico = est.mrr_historico(12)
+    valores_mrr = mrr_historico['valores']
+    mrr_variacion = est.variacion_pct(valores_mrr[-1], valores_mrr[-2]) if len(valores_mrr) >= 2 else None
+
+    # Distribución real de empresas activas por plan. Sin suscripciones, listas
+    # vacías: la plantilla muestra el estado vacío en vez de un dato inventado.
+    planes_stats = list(
+        Plan.objects.annotate(
+            num_suscripciones=Count('suscripciones', filter=Q(suscripciones__empresa__activa=True))
+        ).values('nombre', 'num_suscripciones')
+    )
+    if any(p['num_suscripciones'] for p in planes_stats):
+        planes_labels = [p['nombre'] for p in planes_stats]
+        planes_series = [p['num_suscripciones'] for p in planes_stats]
+    else:
+        planes_labels, planes_series = [], []
 
     context = {
         'total_empresas': total_empresas,
         'empresas_activas': empresas_activas,
         'suscripciones': suscripciones,
         'mrr_estimado': mrr_estimado,
-        'planes_labels': json.dumps(planes_labels),
-        'planes_series': json.dumps(planes_series),
+        'mrr_historico': mrr_historico,
+        'mrr_variacion': mrr_variacion,
+        'planes_labels': planes_labels,
+        'planes_series': planes_series,
     }
     return render(request, 'dashboard/saas_dashboard.html', context)
 

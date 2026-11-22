@@ -201,6 +201,10 @@ class MrrHistoricoTests(TestCase):
         SuscripcionEmpresa.objects.create(empresa=e2, plan=mensual, tipo_plan='anual',
                                           fecha_vencimiento=local(2027, 2, 10))
 
+        suspendida = Empresa.objects.create(nombre='E3', slug='e3', activa=False)
+        SuscripcionEmpresa.objects.create(empresa=suspendida, plan=mensual, tipo_plan='mensual',
+                                          fecha_vencimiento=local(2026, 4, 1))
+
         h = est.mrr_historico(meses=4, ahora=AHORA)
 
         self.assertEqual(h['labels'], ['Dic 2025', 'Ene 2026', 'Feb 2026', 'Mar 2026'])

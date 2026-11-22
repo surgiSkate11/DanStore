@@ -350,14 +350,14 @@ def mrr_suscripcion(precio_mensual, precio_anual, tipo_plan):
 def mrr_historico(meses=12, ahora=None):
     """MRR estimado mes a mes según las suscripciones vigentes en cada mes.
 
-    Una suscripción cuenta en un mes si la empresa ya existía al cierre del mes
-    y su vencimiento es posterior al inicio del mes. Es una estimación: el
+    Una suscripción cuenta en un mes si la empresa está activa, ya existía al
+    cierre del mes y su vencimiento es posterior al inicio del mes. Es una estimación: el
     sistema guarda solo el período vigente de cada empresa, no su historial.
     """
     ahora = timezone.localtime(ahora or timezone.now())
     inicio_mes_actual = _inicio_dia(ahora).replace(day=1)
     subs = list(
-        SuscripcionEmpresa.objects.filter(plan__isnull=False)
+        SuscripcionEmpresa.objects.filter(plan__isnull=False, empresa__activa=True)
         .values('tipo_plan', 'fecha_vencimiento', 'empresa__fecha_creacion',
                 'plan__precio_mensual', 'plan__precio_anual')
     )

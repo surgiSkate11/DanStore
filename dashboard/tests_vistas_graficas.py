@@ -1,10 +1,13 @@
+from datetime import timedelta
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from clientes.models import Cliente
+from empresas.models import Plan, SuscripcionEmpresa
 from empresas.testing import crear_empresa_con_dueno
 from productos.models import Producto, TipoProducto
 from ventas.models import Venta
@@ -106,3 +109,80 @@ class ReportesTests(VistasGraficasBase):
         xls_resp = self.client.get(reverse('tenant_reportes'), {'dias': 30, 'export': 'excel'})
         self.assertEqual(xls_resp.status_code, 200)
         self.assertIn('spreadsheetml', xls_resp['Content-Type'])
+
+
+class DashboardSaasTests(VistasGraficasBase):
+    def setUp(self):
+        super().setUp()
+        self.admin = User.objects.create_superuser('root', 'root@example.com', 'Clave-prueba-123')
+
+    def entrar_como_superadmin(self):
+        self.client.force_login(self.admin)
+        return self.client.get(reverse('dashboard_saas'))
+
+    def test_dueno_de_empresa_recibe_403(self):
+        # setUp deja logueado al dueño de una empresa (no superusuario)
+        resp = self.client.get(reverse('dashboard_saas'))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_historial_mrr_de_12_meses_sin_serie_inventada(self):
+        resp = self.entrar_como_superadmin()
+
+        self.assertEqual(resp.status_code, 200)
+        historico = resp.context['mrr_historico']
+        self.assertEqual(len(historico['labels']), 12)
+        self.assertEqual(len(historico['valores']), 12)
+        self.assertNotContains(resp, '120,250,450')
+        self.assertContains(resp, 'id="mrr-data"')
+        self.assertContains(resp, 'MRR estimado según suscripciones vigentes')
+
+    def test_mrr_refleja_suscripcion_mensual_vigente(self):
+        plan = Plan.objects.create(nombre='Pro', precio_mensual=Decimal('10'), precio_anual=Decimal('100'))
+        sub = self.empresa.suscripcion
+        sub.plan = plan
+        sub.tipo_plan = 'mensual'
+        sub.save()
+
+        resp = self.entrar_como_superadmin()
+
+        self.assertEqual(resp.context['mrr_estimado'], Decimal('10'))
+        self.assertEqual(resp.context['mrr_historico']['valores'][-1], 10.0)
+        self.assertEqual(resp.context['planes_labels'], ['Pro'])
+        self.assertEqual(resp.context['planes_series'], [1])
+
+    def test_mrr_ignora_suscripciones_vencidas_o_de_empresas_suspendidas(self):
+        plan = Plan.objects.create(nombre='Pro', precio_mensual=Decimal('10'), precio_anual=Decimal('120'))
+        sub = self.empresa.suscripcion
+        sub.plan = plan
+        sub.fecha_vencimiento = timezone.now() - timedelta(days=1)
+        sub.save()
+        sub_b = self.otra.suscripcion
+        sub_b.plan = plan
+        sub_b.save()
+        self.otra.activa = False
+        self.otra.save(update_fields=['activa'])
+
+        resp = self.entrar_como_superadmin()
+
+        self.assertEqual(resp.context['mrr_estimado'], 0)
+
+    def test_mrr_anual_se_prorratea_en_12_meses(self):
+        plan = Plan.objects.create(nombre='Anual', precio_mensual=Decimal('15'), precio_anual=Decimal('120'))
+        sub = self.empresa.suscripcion
+        sub.plan = plan
+        sub.tipo_plan = 'anual'
+        sub.save()
+
+        resp = self.entrar_como_superadmin()
+
+        self.assertEqual(resp.context['mrr_estimado'], Decimal('10'))
+
+    def test_sin_planes_las_listas_van_vacias_y_no_se_inventa_un_dato(self):
+        resp = self.entrar_como_superadmin()
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['planes_labels'], [])
+        self.assertEqual(resp.context['planes_series'], [])
+        self.assertEqual(resp.context['mrr_estimado'], 0)
+        self.assertNotContains(resp, 'Sin Planes')
+
