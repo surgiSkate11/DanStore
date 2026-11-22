@@ -96,6 +96,28 @@ class ReportesTests(VistasGraficasBase):
         self.assertTrue(resp.context['serie_json']['mensual'])
         self.assertEqual(len(resp.context['serie_json']['labels']), 12)
 
+    def test_no_expone_utilidad_ni_margen_a_empleado(self):
+        from django.contrib.auth.models import User
+        from usuarios.models import ModuloSaaS, RolEmpresa, UserProfile
+
+        modulo, _ = ModuloSaaS.objects.get_or_create(codigo='reportes', defaults={'nombre': 'Reportes'})
+        cargo = RolEmpresa.objects.create(empresa=self.empresa, nombre='Cajero')
+        cargo.modulos_permitidos.add(modulo)
+        empleado = User.objects.create_user(username='cajero', password='Clave-prueba-123')
+        UserProfile.objects.update_or_create(user=empleado, defaults={
+            'empresa': self.empresa, 'rol': 'employee', 'cargo': cargo, 'onboarding_completado': True})
+        self.venta('100')
+        self.client.force_login(empleado)
+
+        resp = self.client.get(reverse('tenant_reportes'))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(sum(resp.context['serie_json']['ingresos']), 100.0)
+        self.assertNotIn('utilidad', resp.context['serie_json'])
+        self.assertNotIn('margen', resp.context['serie_json'])
+        self.assertNotContains(resp, '"utilidad"')
+        self.assertNotContains(resp, '"margen"')
+
     def test_exportaciones_siguen_funcionando(self):
         self.venta('100')
         self.venta('999', empresa=self.otra)

@@ -1211,6 +1211,12 @@ def tenant_reportes(request):
         .order_by('-total_comprado')[:10]
     )
 
+    serie = est.serie_ingresos_utilidad(empresa, dias, ahora)
+    if not es_dueno:
+        # La utilidad y el margen son solo del dueño: ni siquiera viajan en el HTML.
+        serie.pop('utilidad', None)
+        serie.pop('margen', None)
+
     context = {
         'empresa': empresa, 'dias': dias, 'periodos': PERIODOS_REPORTE, 'es_dueno': es_dueno,
         'kpis': kpis,
@@ -1222,7 +1228,7 @@ def tenant_reportes(request):
         'rentabilidad_promedio': resumen_rent.get('rentabilidad_promedio', 0),
         'top_clientes': top_clientes,
         'top_productos_rentables': metricas_rentabilidad.get('top_rentabilidad', [])[:8],
-        'serie_json': est.serie_ingresos_utilidad(empresa, dias, ahora),
+        'serie_json': serie,
         'mapa_calor': est.mapa_calor(empresa, fecha_inicio),
         'pareto': est.pareto_productos(empresa, fecha_inicio),
         'clientes_tipo': est.clientes_nuevos_vs_recurrentes(empresa, fecha_inicio),
