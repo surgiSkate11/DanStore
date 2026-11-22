@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Dashboard | {{ empresa.nombre|default:app_name }}{% endblock %}
 
@@ -323,10 +324,11 @@
         }
     }
 </style>
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="ui-v2 container-fluid py-4 px-xl-5">
+<div class="ui-v2 ds container-fluid py-4 px-xl-5">
 
     <!-- Welcome Banner -->
     <div class="welcome-banner">
@@ -338,7 +340,7 @@
                 Bienvenido, {{ user.first_name|default:user.username }}
             </h1>
             <p class="welcome-subtitle">
-                Resumen operativo de <strong>{{ empresa.nombre|default:"tu negocio" }}</strong>
+                Así va <strong>{{ empresa.nombre|default:"tu negocio" }}</strong> hoy
             </p>
         </div>
         {% if rol_usuario == 'owner' %}
@@ -350,258 +352,202 @@
         {% endif %}
     </div>
 
-    <!-- KPIs -->
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="premium-card kpi-wrapper kpi-sales">
-                <div class="kpi-header">
-                    <span class="kpi-title">Ventas del Mes</span>
-                    <div class="kpi-icon icon-brand"><i class="bi bi-currency-dollar"></i></div>
+    <!-- KPIs con comparación contra el período anterior -->
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top">
+                    <span class="ds-kpi-label">Vendido hoy</span>
+                    <span class="ds-kpi-icon ic-brand"><i class="bi bi-cash-coin"></i></span>
                 </div>
-                <div class="kpi-value">${{ ventas_mes|floatformat:2 }}</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="premium-card kpi-wrapper kpi-products">
-                <div class="kpi-header">
-                    <span class="kpi-title">Productos Activos</span>
-                    <div class="kpi-icon icon-success"><i class="bi bi-box-seam"></i></div>
-                </div>
-                <div class="kpi-value">{{ productos_activos }}</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="premium-card kpi-wrapper kpi-clients">
-                <div class="kpi-header">
-                    <span class="kpi-title">Nuevos Clientes</span>
-                    <div class="kpi-icon icon-indigo"><i class="bi bi-people"></i></div>
-                </div>
-                <div class="kpi-value">{{ nuevos_clientes }}</div>
-            </div>
-        </div>
-    </div>
-
-    {% if es_dueno %}
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="premium-card kpi-wrapper kpi-profit">
-                <div class="kpi-header">
-                    <span class="kpi-title">Rentabilidad Promedio</span>
-                    <div class="kpi-icon icon-warning"><i class="bi bi-graph-up-arrow"></i></div>
-                </div>
-                <div class="kpi-value">{{ metricas_rentabilidad.resumen.rentabilidad_promedio|default:0|floatformat:1 }}%</div>
-                <div class="text-muted small fw-semibold">Tendencia estable según ventas del período</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="premium-card kpi-wrapper kpi-profit">
-                <div class="kpi-header">
-                    <span class="kpi-title">Mayor Rentabilidad</span>
-                    <div class="kpi-icon icon-warning"><i class="bi bi-trophy-fill"></i></div>
-                </div>
-                <div class="kpi-value" style="font-size: 1.8rem;">{{ metricas_rentabilidad.producto_mayor_rentabilidad.producto__nombre|default:"Sin datos" }}</div>
-                <div class="text-muted small fw-semibold">
-                    {{ metricas_rentabilidad.producto_mayor_rentabilidad.margen_promedio|default:0|floatformat:1 }}% | Utilidad promedio ${{ metricas_rentabilidad.producto_mayor_rentabilidad.utilidad_promedio|default:0|floatformat:2 }}
+                <div class="ds-kpi-value">${{ resumen.hoy.ingresos|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">
+                    {% include 'dashboard/_delta.html' with v=resumen.var_hoy %}
+                    <span>vs. ayer a esta hora · {{ resumen.hoy.ventas }} venta{{ resumen.hoy.ventas|pluralize }}</span>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="premium-card kpi-wrapper kpi-profit">
-                <div class="kpi-header">
-                    <span class="kpi-title">Alta Rotación</span>
-                    <div class="kpi-icon icon-warning"><i class="bi bi-lightning-charge-fill"></i></div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top">
+                    <span class="ds-kpi-label">Vendido este mes</span>
+                    <span class="ds-kpi-icon ic-profit"><i class="bi bi-graph-up-arrow"></i></span>
                 </div>
-                <div class="kpi-value">{{ metricas_rentabilidad.alta_rotacion_count|default:0 }}</div>
-                <div class="text-muted small fw-semibold">Productos con mayor frecuencia de venta en el período</div>
+                <div class="ds-kpi-value">${{ resumen.mes.ingresos|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">
+                    {% include 'dashboard/_delta.html' with v=resumen.var_mes %}
+                    <span>vs. mismos días del mes pasado</span>
+                </div>
             </div>
         </div>
-    </div>
-    {% endif %}
-
-    <!-- Chart -->
-    <div class="premium-card mb-5" style="padding: 2rem;">
-        <h3 class="section-title">
-            <i class="bi bi-graph-up-arrow text-primary"></i> Mis Ingresos Recientes
-        </h3>
-        <div class="chart-shell">
-            <div id="ventasChart" style="min-height: 300px;"></div>
-            <div id="ventasChartEmpty" class="chart-empty-state d-none">
-                <div>
-                    <i class="bi bi-graph-up-arrow text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                    <h4 class="mt-3 mb-1">Aún no hay ventas para mostrar</h4>
-                    <p class="mb-0 text-muted">Cuando existan ventas, aquí verás la evolución reciente de ingresos.</p>
+        <div class="col-sm-6 col-xl-3">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top">
+                    <span class="ds-kpi-label">Ticket promedio</span>
+                    <span class="ds-kpi-icon ic-sky"><i class="bi bi-receipt"></i></span>
+                </div>
+                <div class="ds-kpi-value">${{ resumen.mes.ticket|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">
+                    {% include 'dashboard/_delta.html' with v=resumen.var_ticket %}
+                    <span>{{ resumen.mes.ventas }} venta{{ resumen.mes.ventas|pluralize }} en el mes</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top">
+                    <span class="ds-kpi-label">Por cobrar</span>
+                    <span class="ds-kpi-icon ic-warning"><i class="bi bi-hourglass-split"></i></span>
+                </div>
+                <div class="ds-kpi-value">${{ resumen.por_cobrar.monto|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">
+                    <span>{{ resumen.por_cobrar.cantidad }} venta{{ resumen.por_cobrar.cantidad|pluralize }} pendiente{{ resumen.por_cobrar.cantidad|pluralize }} de pago · no suma al ingreso</span>
                 </div>
             </div>
         </div>
     </div>
 
     {% if es_dueno %}
-    <div class="row g-4 mb-5">
-        <div class="col-lg-6">
-            <div class="premium-card" style="padding: 2rem;">
-                <h3 class="section-title"><i class="bi bi-box-seam text-primary"></i> Estado del Inventario</h3>
-                <div class="chart-shell">
-                    <div id="inventarioChart" style="min-height: 320px;"></div>
-                    <div id="inventarioChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
-                        <div>
-                            <i class="bi bi-box-seam text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Sin productos registrados</h4>
-                            <p class="mb-0 text-muted">Aquí verás cuántos productos están disponibles, reservados o vendidos.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="premium-card" style="padding: 2rem;">
-                <h3 class="section-title"><i class="bi bi-stars text-warning"></i> Productos Más Vendidos</h3>
-                <div class="chart-shell">
-                    <div id="productosVendidosChart" style="min-height: 320px;"></div>
-                    <div id="productosVendidosChartEmpty" class="chart-empty-state d-none" style="min-height: 320px;">
-                        <div>
-                            <i class="bi bi-stars text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Aún no hay productos vendidos</h4>
-                            <p class="mb-0 text-muted">Aquí verás qué productos tienen mayor salida para priorizar reposición y promoción.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="ds-insight mb-4">
+        <i class="bi bi-lightbulb-fill"></i>
+        <div>
+            Utilidad estimada del mes: <strong>${{ utilidad_mes|default:0|floatformat:2 }}</strong>.
+            Tienes <strong>{{ productos_activos }}</strong> producto{{ productos_activos|pluralize }} disponible{{ productos_activos|pluralize }}
+            y <strong>{{ nuevos_clientes }}</strong> cliente{{ nuevos_clientes|pluralize }} nuevo{{ nuevos_clientes|pluralize }} este mes.
+            {% if 'reportes' in modulos_permitidos %}<a href="{% url 'tenant_reportes' %}" class="fw-semibold">Ver análisis completo →</a>{% endif %}
         </div>
     </div>
     {% endif %}
 
-    <!-- Quick Actions -->
-    <h3 class="section-title">
-        <i class="bi bi-lightning-charge-fill text-warning"></i> Accesos Rápidos
-    </h3>
-    <div class="action-grid">
-        {% if 'ventas' in modulos_permitidos and 'crear' in permisos.ventas %}
-        <a href="{% url 'crear_venta' %}" class="action-card">
-            <div class="action-icon icon-brand"><i class="bi bi-receipt"></i></div>
-            <div class="action-content">
-                <h4>Nueva Factura</h4>
-                <p>Registra una venta y genera un comprobante al instante.</p>
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="col-xl-8">
+            <div class="ds-card">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-activity text-primary"></i> Este mes vs. el anterior</h3>
+                        <p class="ds-section-hint">Ingreso cobrado acumulado día a día</p>
+                    </div>
+                </div>
+                <div id="acumuladoChart"></div>
             </div>
-        </a>
-        {% endif %}
+        </div>
+        <div class="col-xl-4">
+            <div class="ds-card">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-diagram-3 text-primary"></i> Ventas por estado</h3>
+                        <p class="ds-section-hint">Últimos 30 días</p>
+                    </div>
+                </div>
+                <div id="estadosChart"></div>
+            </div>
+        </div>
+    </div>
 
-        {% if 'productos' in modulos_permitidos and 'crear' in permisos.productos %}
-        <a href="{% url 'crear_producto' %}" class="action-card">
-            <div class="action-icon icon-success"><i class="bi bi-bag-plus"></i></div>
-            <div class="action-content">
-                <h4>Añadir Producto</h4>
-                <p>Ingresa nueva mercancía a tu inventario fácilmente.</p>
+    <div class="row g-3 g-xl-4 mb-5">
+        <div class="col-lg-5">
+            <div class="ds-card">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-exclamation-triangle text-warning"></i> Stock por agotarse</h3>
+                        <p class="ds-section-hint">Productos con 2 unidades o menos</p>
+                    </div>
+                    {% if 'productos' in modulos_permitidos %}<a href="{% url 'lista_productos' %}" class="ds-btn">Inventario</a>{% endif %}
+                </div>
+                {% if stock_bajo %}
+                <ul class="ds-list">
+                    {% for p in stock_bajo %}
+                    <li>
+                        <span class="text-truncate">{{ p.nombre }}</span>
+                        <span class="ds-pill {% if p.stock == 0 %}ic-danger{% else %}ic-warning{% endif %}">{{ p.stock }} u.</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="ds-empty" style="min-height:140px"><i class="bi bi-check2-circle"></i><span>Todo el inventario tiene stock suficiente</span></div>
+                {% endif %}
             </div>
-        </a>
-        {% endif %}
+        </div>
+        <div class="col-lg-7">
+            <h3 class="ds-section mb-3"><i class="bi bi-lightning-charge-fill text-warning"></i> Accesos rápidos</h3>
+            <div class="action-grid">
+                {% if 'ventas' in modulos_permitidos and 'crear' in permisos.ventas %}
+                <a href="{% url 'crear_venta' %}" class="action-card">
+                    <div class="action-icon icon-brand"><i class="bi bi-receipt"></i></div>
+                    <div class="action-content">
+                        <h4>Nueva Factura</h4>
+                        <p>Registra una venta y genera un comprobante al instante.</p>
+                    </div>
+                </a>
+                {% endif %}
 
-        {% if 'reportes' in modulos_permitidos %}
-        <a href="{% url 'tenant_reportes' %}" class="action-card">
-            <div class="action-icon icon-warning"><i class="bi bi-pie-chart"></i></div>
-            <div class="action-content">
-                <h4>Ver Reportes</h4>
-                <p>Consulta estadísticas detalladas de tu negocio.</p>
+                {% if 'productos' in modulos_permitidos and 'crear' in permisos.productos %}
+                <a href="{% url 'crear_producto' %}" class="action-card">
+                    <div class="action-icon icon-success"><i class="bi bi-bag-plus"></i></div>
+                    <div class="action-content">
+                        <h4>Añadir Producto</h4>
+                        <p>Ingresa nueva mercancía a tu inventario fácilmente.</p>
+                    </div>
+                </a>
+                {% endif %}
+
+                {% if 'reportes' in modulos_permitidos %}
+                <a href="{% url 'tenant_reportes' %}" class="action-card">
+                    <div class="action-icon icon-warning"><i class="bi bi-pie-chart"></i></div>
+                    <div class="action-content">
+                        <h4>Ver Reportes</h4>
+                        <p>Tendencias, rentabilidad, horarios pico y mejores clientes.</p>
+                    </div>
+                </a>
+                {% endif %}
             </div>
-        </a>
-        {% endif %}
+        </div>
     </div>
 
 </div>
+{{ acumulado_json|json_script:"acumulado-data" }}
+{{ estados_json|json_script:"estados-data" }}
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const fontFamily = 'Inter, sans-serif';
-    const muted = '#64748b';
-    const gridColor = '#f1f5f9';
-    const ventasData = {{ totales_chart|safe }};
-    const ventasHasData = ventasData.some(value => Number(value) > 0);
+document.addEventListener('DOMContentLoaded', function () {
+    var acum = DS.data('acumulado-data');
+    DS.render('#acumuladoChart', {
+        chart: { type: 'area', height: 320 },
+        series: [
+            { name: acum.nombre_actual, data: acum.actual },
+            { name: acum.nombre_anterior, data: acum.anterior }
+        ],
+        colors: [DS.color.brand, DS.color.slate],
+        stroke: { curve: 'smooth', width: [3, 2], dashArray: [0, 6] },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: [0.35, 0], opacityTo: [0.02, 0], stops: [0, 95] } },
+        markers: { size: 0, hover: { size: 5 } },
+        xaxis: { categories: acum.labels, tickAmount: 10, title: { text: 'Día del mes', style: { fontWeight: 500 } } },
+        yaxis: { labels: { formatter: DS.moneyShort } },
+        tooltip: { shared: true, x: { formatter: function (v) { return 'Día ' + v; } }, y: { formatter: DS.money } }
+    }, 'Aún no hay ventas cobradas este mes ni el anterior');
 
-    if (!ventasHasData) {
-        document.getElementById('ventasChart').classList.add('d-none');
-        document.getElementById('ventasChartEmpty').classList.remove('d-none');
-    } else {
-        new ApexCharts(document.querySelector("#ventasChart"), {
-        series: [{ name: 'Ingresos por Ventas', data: ventasData }],
-        chart: {
-            type: 'area', height: 300,
-            fontFamily, toolbar: { show: false }, parentHeightOffset: 0,
-            animations: { enabled: true, easing: 'easeinout', speed: 600 }
-        },
-        colors: ['#2563eb'],
-        fill: {
-            type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.18, opacityTo: 0.0, stops: [0, 100] }
-        },
-        dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 2.5 },
-        xaxis: {
-            categories: {{ fechas_chart|safe }},
-            tooltip: { enabled: false },
-            axisBorder: { show: false }, axisTicks: { show: false },
-            labels: { style: { colors: muted, fontSize: '13px', fontWeight: 500 } }
-        },
-        yaxis: {
-            min: 0,
-            labels: {
-                formatter: v => "$" + v.toFixed(0),
-                style: { colors: muted, fontSize: '13px', fontWeight: 500 }
-            }
-        },
-        grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 8, right: 0 } },
-        tooltip: {
-            theme: 'light',
-            y: { formatter: val => "$" + val.toFixed(2) },
-            style: { fontFamily }
-        }
-        }).render();
-    }
-
-    {% if es_dueno %}
-    const inventarioSeries = {{ inventario_estados_json|default:"[]"|safe }};
-    const productosVendidosSeries = {{ productos_mas_vendidos_json|default:"[]"|safe }};
-    const estadoLabels = { disponible: 'Disponible', reservado: 'Reservado', vendido: 'Vendido' };
-
-    if (!inventarioSeries.length) {
-        document.getElementById('inventarioChart').classList.add('d-none');
-        document.getElementById('inventarioChartEmpty').classList.remove('d-none');
-    } else {
-        new ApexCharts(document.querySelector('#inventarioChart'), {
-            series: inventarioSeries.map(item => Number(item.cantidad || 0)),
-            chart: { type: 'donut', height: 320, fontFamily, toolbar: { show: false }, animations: { enabled: true, speed: 500 } },
-            labels: inventarioSeries.map(item => estadoLabels[item.estado] || item.estado),
-            colors: ['#2563eb', '#f59e0b', '#64748b'],
-            legend: { position: 'bottom', fontFamily },
-            dataLabels: { enabled: true },
-            tooltip: { y: { formatter: val => `${val} productos` } }
-        }).render();
-    }
-
-    if (!productosVendidosSeries.length) {
-        document.getElementById('productosVendidosChart').classList.add('d-none');
-        document.getElementById('productosVendidosChartEmpty').classList.remove('d-none');
-    } else {
-        new ApexCharts(document.querySelector('#productosVendidosChart'), {
-            series: [{ name: 'Unidades vendidas', data: productosVendidosSeries.map(item => Number(item.cantidad || 0)) }],
-            chart: { type: 'bar', height: 320, fontFamily, toolbar: { show: false }, animations: { enabled: true, speed: 500 } },
-            colors: ['#f59e0b'],
-            plotOptions: { bar: { borderRadius: 8, horizontal: true, barHeight: '55%' } },
-            dataLabels: { enabled: false },
-            xaxis: { categories: productosVendidosSeries.map(item => item.producto__nombre), labels: { style: { colors: muted } } },
-            yaxis: { labels: { style: { colors: muted } } },
-            grid: { borderColor: gridColor, strokeDashArray: 4 },
-            tooltip: {
-                y: { formatter: val => `${val} unidades` },
-                custom: function({ dataPointIndex }) {
-                    const item = productosVendidosSeries[dataPointIndex];
-                    return `<div style="padding:10px 12px"><strong>${item.producto__nombre}</strong><br>Vendidos: ${Number(item.cantidad || 0)}<br>Ingresos: $${Number(item.ingresos || 0).toFixed(2)}</div>`;
-                }
-            }
-        }).render();
-    }
-    {% endif %}
+    var estados = DS.data('estados-data');
+    var colorEstado = {
+        completada: DS.color.profit, pagado: DS.color.brand, pendiente_pago: DS.color.warning,
+        en_preparacion: DS.color.sky, listo: DS.color.violet, anulada: DS.color.danger
+    };
+    DS.render('#estadosChart', {
+        chart: { type: 'donut', height: 300 },
+        series: estados.map(function (e) { return e.cantidad; }),
+        labels: estados.map(function (e) { return e.label; }),
+        colors: estados.map(function (e) { return colorEstado[e.estado] || DS.color.slate; }),
+        legend: { position: 'bottom', horizontalAlign: 'center' },
+        stroke: { width: 2, colors: ['#fff'] },
+        plotOptions: { pie: { donut: { size: '72%', labels: { show: true,
+            total: { show: true, label: 'Ventas', formatter: function (w) {
+                return DS.int(w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0));
+            } } } } } },
+        tooltip: { y: { formatter: function (v, o) { return DS.int(v) + ' · ' + DS.money(estados[o.seriesIndex].monto); } } }
+    }, 'Sin ventas en los últimos 30 días');
 });
 </script>
 {% endblock %}

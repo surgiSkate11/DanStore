@@ -1,0 +1,98 @@
+/* Componentes de analítica compartidos: Dashboard, Reportes y panel SaaS. */
+.ds {
+    --ds-brand: #4f46e5;
+    --ds-brand-soft: #eef2ff;
+    --ds-profit: #10b981;
+    --ds-profit-soft: #ecfdf5;
+    --ds-warning: #f59e0b;
+    --ds-warning-soft: #fffbeb;
+    --ds-danger: #f43f5e;
+    --ds-danger-soft: #fff1f2;
+    --ds-sky: #0ea5e9;
+    --ds-sky-soft: #f0f9ff;
+    --ds-text: #0f172a;
+    --ds-muted: #64748b;
+    --ds-border: #e8edf3;
+    --ds-surface: #ffffff;
+    --ds-radius: 18px;
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: var(--ds-text);
+}
+
+/* Encabezado de sección */
+.ds .ds-header { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-end; margin-bottom: 1.75rem; }
+.ds .ds-eyebrow { font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ds-brand); margin-bottom: .35rem; }
+.ds .ds-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em; margin: 0; }
+.ds .ds-subtitle { color: var(--ds-muted); margin: .25rem 0 0; font-size: .95rem; }
+.ds .ds-section { font-size: 1.05rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: .5rem; }
+.ds .ds-section-hint { color: var(--ds-muted); font-size: .82rem; margin: .2rem 0 0; }
+
+/* Tarjetas */
+.ds .ds-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-radius);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 6px 18px -10px rgba(15, 23, 42, .12);
+    padding: 1.4rem 1.5rem;
+    height: 100%;
+}
+.ds .ds-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+
+/* KPIs */
+.ds .ds-kpi { display: flex; flex-direction: column; gap: .35rem; }
+.ds .ds-kpi-top { display: flex; align-items: center; justify-content: space-between; }
+.ds .ds-kpi-label { font-size: .8rem; font-weight: 600; color: var(--ds-muted); text-transform: uppercase; letter-spacing: .04em; }
+.ds .ds-kpi-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 1.1rem; }
+.ds .ds-kpi-value { font-size: 1.85rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ds .ds-kpi-foot { font-size: .8rem; color: var(--ds-muted); display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+.ds .ic-brand { background: var(--ds-brand-soft); color: var(--ds-brand); }
+.ds .ic-profit { background: var(--ds-profit-soft); color: var(--ds-profit); }
+.ds .ic-warning { background: var(--ds-warning-soft); color: var(--ds-warning); }
+.ds .ic-danger { background: var(--ds-danger-soft); color: var(--ds-danger); }
+.ds .ic-sky { background: var(--ds-sky-soft); color: var(--ds-sky); }
+
+/* Variación contra período anterior */
+.ds .ds-delta { display: inline-flex; align-items: center; gap: .2rem; font-weight: 700; font-size: .75rem; padding: .15rem .5rem; border-radius: 999px; }
+.ds .ds-delta.up { background: var(--ds-profit-soft); color: #047857; }
+.ds .ds-delta.down { background: var(--ds-danger-soft); color: #be123c; }
+.ds .ds-delta.flat { background: #f1f5f9; color: var(--ds-muted); }
+
+/* Insight destacado */
+.ds .ds-insight { display: flex; gap: .75rem; align-items: flex-start; background: var(--ds-brand-soft); border-radius: 14px; padding: .85rem 1rem; font-size: .88rem; color: #3730a3; }
+.ds .ds-insight i { font-size: 1.1rem; margin-top: .05rem; }
+.ds .ds-insight strong { color: #312e81; }
+
+/* Estado vacío de gráficas */
+.ds .ds-empty { min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; color: #94a3b8; font-size: .9rem; text-align: center; }
+.ds .ds-empty i { font-size: 2rem; opacity: .6; }
+
+/* Listas compactas (stock bajo, rankings) */
+.ds .ds-list { list-style: none; margin: 0; padding: 0; }
+.ds .ds-list li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; padding: .6rem 0; border-bottom: 1px dashed var(--ds-border); font-size: .9rem; }
+.ds .ds-list li:last-child { border-bottom: 0; }
+.ds .ds-pill { font-size: .75rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; white-space: nowrap; }
+
+/* Barras de proporción */
+.ds .ds-split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: #f1f5f9; }
+.ds .ds-split > span { display: block; height: 100%; }
+
+/* Tablas */
+.ds .ds-table { width: 100%; font-size: .88rem; }
+.ds .ds-table th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ds-muted); font-weight: 700; padding: .6rem .5rem; border-bottom: 1px solid var(--ds-border); }
+.ds .ds-table td { padding: .7rem .5rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.ds .ds-table tr:last-child td { border-bottom: 0; }
+.ds .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Selector de período */
+.ds .ds-segmented { display: inline-flex; background: #f1f5f9; border-radius: 12px; padding: 4px; gap: 2px; }
+.ds .ds-segmented a { padding: .45rem .9rem; border-radius: 9px; font-size: .85rem; font-weight: 600; color: var(--ds-muted); text-decoration: none; }
+.ds .ds-segmented a.active { background: #fff; color: var(--ds-text); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+
+.ds .ds-btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .95rem; border-radius: 11px; font-weight: 600; font-size: .85rem; border: 1px solid var(--ds-border); background: #fff; color: var(--ds-text); text-decoration: none; }
+.ds .ds-btn:hover { border-color: #c7d2fe; color: var(--ds-brand); }
+
+@media (max-width: 576px) {
+    .ds .ds-title { font-size: 1.4rem; }
+    .ds .ds-kpi-value { font-size: 1.5rem; }
+    .ds .ds-card { padding: 1.1rem; }
+}

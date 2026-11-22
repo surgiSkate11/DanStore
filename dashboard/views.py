@@ -40,6 +40,8 @@ from usuarios.models import ModuloSaaS, RolEmpresa
 from usuarios.utils import es_superadmin
 from ventas.models import Venta, DetalleVenta
 
+from dashboard import estadisticas as est
+
 logger = logging.getLogger(__name__)
 
 # Identificadores internos de roles de TENANT (Mejor mantenibilidad).
@@ -60,7 +62,7 @@ def _construir_queryset_rentabilidad(empresa, fecha_inicio):
     """Base de detalles de venta para métricas de rentabilidad y rotación."""
     return (
         DetalleVenta.objects.filter(venta__empresa=empresa, venta__fecha__gte=fecha_inicio)
-        .exclude(venta__estado='anulada')
+        .exclude(venta__estado__in=est.ESTADOS_NO_COBRADOS)
         .annotate(fecha_venta=TruncDate('venta__fecha'))
         .annotate(
             utilidad_unitaria=Case(
@@ -991,68 +993,28 @@ def dashboard_tenant(request):
         return redirect('onboarding')
 
     es_dueno = getattr(getattr(request.user, 'profile', None), 'rol', '') == ROLE_OWNER
-        
-    hoy = timezone.now()
-    inicio_mes = hoy.replace(day=1, hour=0, minute=0, second=0)
-    
-    ventas_mes = Venta.objects.filter(
-        empresa=empresa, fecha__gte=inicio_mes
-    ).exclude(estado='anulada').aggregate(Sum('total'))['total__sum'] or 0
-    productos_activos = Producto.objects.filter(empresa=empresa, estado='disponible').count()
-    nuevos_clientes = Cliente.objects.filter(empresas=empresa, creado_en__gte=inicio_mes).count()
-    
-    hace_30_dias = hoy - timedelta(days=29) # 30 días incluyendo hoy
-    ventas_diarias = Venta.objects.filter(
-        empresa=empresa, 
-        fecha__gte=hace_30_dias
-    ).exclude(estado='anulada').values('fecha__date').annotate(total_dia=Sum('total')).order_by('fecha__date')
-    
-    # Convertir a diccionario para llenado rápido
-    ventas_dict = {v['fecha__date']: float(v['total_dia']) for v in ventas_diarias}
-    
-    fechas_chart = []
-    totales_chart = []
-    
-    # Iterar los últimos 30 días garantizando que no haya huecos en la gráfica
-    for i in range(29, -1, -1):
-        fecha_iter = (hoy - timedelta(days=i)).date()
-        fechas_chart.append(fecha_iter.strftime('%d %b'))
-        totales_chart.append(ventas_dict.get(fecha_iter, 0.0))
-    # -------------------------------------------------------------
 
-    metricas_rentabilidad = _obtener_metricas_rentabilidad_seguras(
-        empresa, hoy - timedelta(days=29)
-    ) if es_dueno else {}
+    # Dashboard = "¿cómo voy hoy?": comparativas cortas y alertas operativas.
+    # El análisis profundo (tendencias, rentabilidad, rankings) vive en Reportes.
+    ahora = timezone.now()
+    resumen = est.resumen_hoy(empresa, ahora)
+    inicio_mes = timezone.localtime(ahora).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    inventario_estados = list(
-        Producto.objects.filter(empresa=empresa)
-        .values('estado')
-        .annotate(cantidad=Count('id'))
-        .order_by('estado')
-    ) if es_dueno else []
-    productos_mas_vendidos = list(
-        DetalleVenta.objects.filter(
-            venta__empresa=empresa,
-            venta__fecha__gte=hace_30_dias,
-        )
-        .exclude(venta__estado='anulada')
-        .values('producto__nombre')
-        .annotate(cantidad=Count('id'), ingresos=Sum('precio_unitario'))
-        .order_by('-cantidad', '-ingresos')[:8]
-    ) if es_dueno else []
+    utilidad_mes = None
+    if es_dueno:
+        resumen_rent = _obtener_metricas_rentabilidad_seguras(empresa, inicio_mes).get('resumen', {})
+        utilidad_mes = resumen_rent.get('utilidad_total', 0)
 
     context = {
         'empresa': empresa,
-        'ventas_mes': ventas_mes,
-        'productos_activos': productos_activos,
-        'nuevos_clientes': nuevos_clientes,
-        'fechas_chart': json.dumps(fechas_chart),
-        'totales_chart': json.dumps(totales_chart),
         'es_dueno': es_dueno,
-        'metricas_rentabilidad': metricas_rentabilidad,
-        'metricas_rentabilidad_json': _serializar_metricas_rentabilidad(metricas_rentabilidad),
-        'inventario_estados_json': json.dumps(inventario_estados),
-        'productos_mas_vendidos_json': json.dumps(productos_mas_vendidos, default=float),
+        'resumen': resumen,
+        'utilidad_mes': utilidad_mes,
+        'productos_activos': Producto.objects.filter(empresa=empresa, estado='disponible').count(),
+        'nuevos_clientes': Cliente.objects.filter(empresas=empresa, creado_en__gte=inicio_mes).count(),
+        'stock_bajo': est.productos_stock_bajo(empresa),
+        'acumulado_json': est.acumulado_mes_vs_anterior(empresa, ahora),
+        'estados_json': est.ventas_por_estado(empresa, ahora - timedelta(days=30)),
     }
     return render(request, 'dashboard/tenant_dashboard.html', context)
 
