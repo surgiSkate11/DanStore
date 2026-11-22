@@ -1,567 +1,364 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Reportes y Estadísticas | {{ empresa.nombre|default:app_name }}{% endblock %}
 
 {% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
 <style>
-    body { background-color: #f1f5f9; }
-
-    /* Header con degradé, consistente con clientes/dashboard/catálogo */
-    .reportes-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #ffffff;
-        padding: 2rem 2.25rem;
-        border-radius: 20px;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        position: relative;
-        overflow: hidden;
-    }
-    .reportes-header::after {
-        content: '';
-        position: absolute; right: 0; top: 0; width: 45%; height: 100%;
-        background: radial-gradient(circle at top right, rgba(255,255,255,0.12) 0%, transparent 60%);
-        pointer-events: none;
-    }
-    .reportes-header h2 { color: #ffffff; }
-    .reportes-header h2 i { color: #ffffff; opacity: 0.9; }
-    .reportes-header p { color: rgba(255, 255, 255, 0.85); }
-    .reportes-header p strong { color: #ffffff; }
-
-    .filter-select {
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        border-radius: 12px;
-        padding: 0.6rem 1.2rem;
-        font-weight: 700;
-        color: #4c1d95;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    /* Botones de Exportación Premium */
-    .export-btn {
-        display: inline-flex; align-items: center; gap: 8px; padding: 0.6rem 1.2rem;
-        font-weight: 700; font-size: 0.9rem; border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; text-decoration: none;
-    }
-    .export-btn.csv {
-        background: #ffffff; color: #667eea; border-color: transparent;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .export-btn.csv:hover {
-        background: #f8fafc; color: #4f46e5; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-    }
-    .export-btn.excel {
-        background: #ffffff; color: #10b981; border-color: transparent;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .export-btn.excel:hover {
-        background: #f0fdf4; color: #059669; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
-    }
-
-    .report-card {
-        background: #ffffff;
-        border-radius: 20px;
-        padding: 1.75rem;
-        box-shadow: 0 8px 22px -8px rgba(15,23,42,0.10);
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        height: 100%;
-    }
-    .kpi-report {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    .kpi-icon {
-        width: 60px; height: 60px; border-radius: 16px;
-        display: flex; align-items: center; justify-content: center; font-size: 1.8rem;
-    }
-    .table-report th { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #64748b; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem;}
-    .table-report td { padding: 1rem 0.5rem; vertical-align: middle; color: #334155; font-weight: 600; border-bottom: 1px solid #f8fafc; }
-    
-    .filter-select {
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        padding: 0.6rem 1.2rem;
-        font-weight: 700;
-        color: #475569;
-        cursor: pointer;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    }
-    
-    /* Botones de Exportación Premium */
-    .export-btn {
-        display: inline-flex; align-items: center; gap: 8px; padding: 0.6rem 1.2rem;
-        font-weight: 700; font-size: 0.9rem; border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; text-decoration: none;
-    }
-    .export-btn.csv { 
-        background: #f0f9ff; color: #3b82f6; border-color: #e0f2fe; 
-    }
-    .export-btn.csv:hover { 
-        background: #3b82f6; color: #ffffff; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.25); 
-    }
-    .export-btn.excel { 
-        background: #f0fdf4; color: #10b981; border-color: #dcfce7; 
-    }
-    .export-btn.excel:hover { 
-        background: #10b981; color: #ffffff; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.25); 
-    }
-    
-    .metric-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-radius: 999px;
-        padding: 0.35rem 0.8rem;
-        font-size: 0.8rem;
-        font-weight: 700;
-    }
-
-    .chart-shell {
-        position: relative;
-        min-height: 350px;
-    }
-
-    .chart-empty-state {
-        min-height: 350px;
-        border: 1px dashed #cbd5e1;
-        border-radius: 18px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 2rem;
-        color: #475569;
-    }
-
-    .section-kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.35rem 0.75rem;
-        border-radius: 999px;
-        background: #f8fafc;
-        color: #64748b;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-    }
-
-    .muted-title {
-        font-weight: 600;
-        color: #0f172a;
-        letter-spacing: -0.02em;
-    }
+    body { background-color: #f4f6fa; }
+    .ds .ds-export-csv:hover { color: #0f766e; border-color: #99f6e4; }
+    .ds .ds-export-xls:hover { color: #15803d; border-color: #bbf7d0; }
+    .ds .ds-rank { width: 26px; height: 26px; border-radius: 8px; display: inline-grid; place-items: center; font-size: .75rem; font-weight: 700; background: #f1f5f9; color: #475569; }
+    .ds .ds-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4 px-xl-5">
-    <!-- Header y Filtros -->
-    <div class="reportes-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+<div class="ds container-fluid py-4 px-xl-5">
+
+    <!-- Encabezado y período -->
+    <div class="ds-header">
         <div>
-            <h2 class="fw-bolder mb-1" style="letter-spacing: -0.5px;">
-                <i class="bi bi-bar-chart-fill me-2"></i> Reportes y Estadísticas
-            </h2>
-            <p class="mb-0 fs-6">Análisis detallado del rendimiento de <strong>{{ empresa.nombre }}</strong>.</p>
+            <div class="ds-eyebrow">Análisis del negocio</div>
+            <h1 class="ds-title">Reportes y estadísticas</h1>
+            <p class="ds-subtitle">Rendimiento de <strong>{{ empresa.nombre }}</strong>, comparado con el período anterior equivalente.</p>
         </div>
-        
-        <div class="d-flex gap-3 align-items-center flex-wrap">
-            <form method="GET" class="d-flex gap-2 align-items-center m-0">
-                <select name="dias" class="filter-select" onchange="this.form.submit()">
-                    <option value="7" {% if dias == 7 %}selected{% endif %}>Últimos 7 días</option>
-                    <option value="30" {% if dias == 30 %}selected{% endif %}>Últimos 30 días</option>
-                    <option value="90" {% if dias == 90 %}selected{% endif %}>Últimos 3 meses</option>
-                    <option value="365" {% if dias == 365 %}selected{% endif %}>Último Año</option>
-                </select>
-            </form>
-            <div class="d-flex gap-2">
-                <a href="?dias={{ dias }}&export=csv" class="export-btn csv">
-                    <i class="bi bi-filetype-csv fs-5"></i> CSV
-                </a>
-                <a href="?dias={{ dias }}&export=excel" class="export-btn excel">
-                    <i class="bi bi-file-earmark-excel-fill fs-5"></i> Excel
-                </a>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <nav class="ds-segmented" aria-label="Período">
+                {% for p in periodos %}
+                <a href="?dias={{ p }}" class="{% if p == dias %}active{% endif %}">{% if p == 7 %}7 días{% elif p == 30 %}30 días{% elif p == 90 %}3 meses{% else %}1 año{% endif %}</a>
+                {% endfor %}
+            </nav>
+            <a href="?dias={{ dias }}&export=csv" class="ds-btn ds-export-csv"><i class="bi bi-filetype-csv"></i> CSV</a>
+            <a href="?dias={{ dias }}&export=excel" class="ds-btn ds-export-xls"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="col-sm-6 {% if es_dueno %}col-xl-2{% else %}col-xl-3{% endif %}">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Ingresos</span><span class="ds-kpi-icon ic-brand"><i class="bi bi-cash-stack"></i></span></div>
+                <div class="ds-kpi-value">${{ kpis.ingresos|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=var_ingresos %} <span>vs. anterior</span></div>
+            </div>
+        </div>
+        {% if es_dueno %}
+        <div class="col-sm-6 col-xl-2">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Utilidad</span><span class="ds-kpi-icon ic-profit"><i class="bi bi-piggy-bank"></i></span></div>
+                <div class="ds-kpi-value">${{ utilidad_total|default:0|floatformat:2 }}</div>
+                <div class="ds-kpi-foot"><span>productos con costo cargado</span></div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Margen prom.</span><span class="ds-kpi-icon ic-warning"><i class="bi bi-percent"></i></span></div>
+                <div class="ds-kpi-value">{{ rentabilidad_promedio|default:0|floatformat:1 }}%</div>
+                <div class="ds-kpi-foot"><span>sobre el costo</span></div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="col-sm-6 {% if es_dueno %}col-xl-2{% else %}col-xl-3{% endif %}">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Ventas</span><span class="ds-kpi-icon ic-sky"><i class="bi bi-bag-check"></i></span></div>
+                <div class="ds-kpi-value">{{ kpis.ventas }}</div>
+                <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=var_ventas %} <span>vs. anterior</span></div>
+            </div>
+        </div>
+        <div class="col-sm-6 {% if es_dueno %}col-xl-2{% else %}col-xl-3{% endif %}">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Ticket prom.</span><span class="ds-kpi-icon ic-brand"><i class="bi bi-receipt"></i></span></div>
+                <div class="ds-kpi-value">${{ kpis.ticket|floatformat:2 }}</div>
+                <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=var_ticket %} <span>vs. anterior</span></div>
+            </div>
+        </div>
+        <div class="col-sm-6 {% if es_dueno %}col-xl-2{% else %}col-xl-3{% endif %}">
+            <div class="ds-card ds-kpi">
+                <div class="ds-kpi-top"><span class="ds-kpi-label">Clientes</span><span class="ds-kpi-icon ic-sky"><i class="bi bi-people"></i></span></div>
+                <div class="ds-kpi-value">{{ kpis.clientes }}</div>
+                <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=var_clientes %} <span>compraron</span></div>
             </div>
         </div>
     </div>
 
-    <!-- KPIs Resumen -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="kpi-report">
-                    <div class="kpi-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-cash-stack"></i></div>
-                    <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Ingresos Totales</p>
-                        <h3 class="fw-bolder mb-0 text-dark">${{ total_ingresos|floatformat:2 }}</h3>
-                    </div>
-                </div>
+    <!-- Ingresos + utilidad + margen -->
+    <div class="ds-card mb-4">
+        <div class="ds-card-head">
+            <div>
+                <h3 class="ds-section"><i class="bi bi-bar-chart-line text-primary"></i> {% if es_dueno %}Ingresos, utilidad y margen{% else %}Ingresos{% endif %}</h3>
+                <p class="ds-section-hint">{% if serie_json.mensual %}Por mes{% else %}Por día{% endif %} · solo ventas cobradas</p>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="kpi-report">
-                    <div class="kpi-icon bg-success bg-opacity-10 text-success"><i class="bi bi-bag-check-fill"></i></div>
+        <div id="ingresosChart"></div>
+    </div>
+
+    <!-- Mapa de calor + clientes -->
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="col-xl-8">
+            <div class="ds-card">
+                <div class="ds-card-head">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Ventas Concretadas</p>
-                        <h3 class="fw-bolder mb-0 text-dark">{{ total_ventas }}</h3>
+                        <h3 class="ds-section"><i class="bi bi-grid-3x3-gap text-primary"></i> ¿Cuándo vendes más?</h3>
+                        <p class="ds-section-hint">Número de ventas por día de la semana y hora</p>
                     </div>
                 </div>
+                {% if mapa_calor.mejor %}
+                <div class="ds-insight mb-3">
+                    <i class="bi bi-clock-history"></i>
+                    <div>Tu momento más fuerte es el <strong>{{ mapa_calor.mejor.dia }} a las {{ mapa_calor.mejor.hora }}:00</strong> ({{ mapa_calor.mejor.cantidad }} venta{{ mapa_calor.mejor.cantidad|pluralize }}). Refuerza personal, stock y promociones en esa franja.</div>
+                </div>
+                {% endif %}
+                <div id="heatmapChart"></div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="kpi-report">
-                    <div class="kpi-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-receipt"></i></div>
+        <div class="col-xl-4">
+            <div class="ds-card">
+                <div class="ds-card-head">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Ticket Promedio</p>
-                        <h3 class="fw-bolder mb-0 text-dark">${{ ticket_promedio|floatformat:2 }}</h3>
+                        <h3 class="ds-section"><i class="bi bi-arrow-repeat text-primary"></i> Clientes nuevos vs. recurrentes</h3>
+                        <p class="ds-section-hint">Clientes identificados que compraron en el período</p>
                     </div>
                 </div>
+                {% if clientes_tipo.total %}
+                <div class="d-flex align-items-baseline gap-2 mb-1">
+                    <span class="ds-kpi-value">{{ clientes_tipo.tasa_recompra|floatformat:1 }}%</span>
+                    <span class="text-muted small fw-semibold">volvió a comprar en el período</span>
+                </div>
+                <div id="clientesChart"></div>
+                <ul class="ds-list mt-2">
+                    <li><span><span class="ds-legend-dot" style="background:#4f46e5"></span> Recurrentes · {{ clientes_tipo.recurrentes.clientes }}</span><strong>${{ clientes_tipo.recurrentes.monto|floatformat:2 }}</strong></li>
+                    <li><span><span class="ds-legend-dot" style="background:#10b981"></span> Nuevos · {{ clientes_tipo.nuevos.clientes }}</span><strong>${{ clientes_tipo.nuevos.monto|floatformat:2 }}</strong></li>
+                </ul>
+                {% else %}
+                <div class="ds-empty"><i class="bi bi-people"></i><span>Sin compras de clientes identificados en este período</span></div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    {% if es_dueno %}
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="kpi-report">
-                    <div class="kpi-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-graph-up-arrow"></i></div>
+    <!-- Pareto + categorías -->
+    <div class="row g-3 g-xl-4 mb-4">
+        <div class="{% if es_dueno %}col-xl-8{% else %}col-12{% endif %}">
+            <div class="ds-card">
+                <div class="ds-card-head">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Rentabilidad Promedio</p>
-                        <h3 class="fw-bolder mb-0 text-dark">{{ rentabilidad_promedio|floatformat:1 }}%</h3>
+                        <h3 class="ds-section"><i class="bi bi-trophy text-warning"></i> Productos que mueven tu negocio (80/20)</h3>
+                        <p class="ds-section-hint">Ingreso por producto y % acumulado del total</p>
                     </div>
                 </div>
+                {% if pareto.productos_80 %}
+                <div class="ds-insight mb-3">
+                    <i class="bi bi-bullseye"></i>
+                    <div><strong>{{ pareto.productos_80 }} producto{{ pareto.productos_80|pluralize }}</strong> ({{ pareto.pct_catalogo_80|floatformat:1 }}% de los {{ pareto.total_productos }} vendidos) generan el 80% de tus ingresos. Que nunca les falte stock.</div>
+                </div>
+                {% endif %}
+                <div id="paretoChart"></div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="kpi-report">
-                    <div class="kpi-icon bg-success bg-opacity-10 text-success"><i class="bi bi-currency-dollar"></i></div>
+        {% if es_dueno %}
+        <div class="col-xl-4">
+            <div class="ds-card">
+                <div class="ds-card-head">
                     <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Utilidad Total</p>
-                        <h3 class="fw-bolder mb-0 text-dark">${{ utilidad_total|floatformat:2 }}</h3>
+                        <h3 class="ds-section"><i class="bi bi-tags text-primary"></i> Utilidad por categoría</h3>
+                        <p class="ds-section-hint">Qué líneas dejan más ganancia</p>
                     </div>
                 </div>
+                <div id="categoriasChart"></div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="report-card">
-                <div class="kpi-report">
-                    <div class="kpi-icon bg-info bg-opacity-10 text-info"><i class="bi bi-lightning-charge-fill"></i></div>
-                    <div>
-                        <p class="text-muted fw-bold mb-1 text-uppercase small">Alta Rotación</p>
-                        <h3 class="fw-bolder mb-0 text-dark">{{ alta_rotacion_count }}</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Gráfica Interactiva -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="report-card">
-                <div class="section-kicker"><i class="bi bi-graph-up-arrow"></i> Evolución financiera</div>
-                <h5 class="muted-title mb-4">Tendencia de Ingresos</h5>
-                <div class="chart-shell">
-                    <div id="ingresosChart" style="min-height: 350px;"></div>
-                    <div id="ingresosChartEmpty" class="chart-empty-state d-none">
-                        <div>
-                            <i class="bi bi-graph-up-arrow text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Aún no hay ingresos registrados</h4>
-                            <p class="mb-0 text-muted">La gráfica mantendrá su estructura y se activará automáticamente cuando existan ventas.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {% endif %}
     </div>
 
-    {% if es_dueno %}
-    <div class="row g-4 mb-4">
-        <div class="col-lg-6">
-            <div class="report-card">
-                <div class="section-kicker"><i class="bi bi-bar-chart-fill"></i> Rentabilidad del catálogo</div>
-                <h5 class="muted-title mb-4">Top Productos con Mayor Rentabilidad</h5>
-                <div class="chart-shell">
-                    <div id="rentabilidadReportChart" style="min-height: 350px;"></div>
-                    <div id="rentabilidadReportChartEmpty" class="chart-empty-state d-none">
-                        <div>
-                            <i class="bi bi-bar-chart-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">No hay datos de rentabilidad</h4>
-                            <p class="mb-0 text-muted">Se mostrará el ranking cuando existan ventas con costo registrado.</p>
-                        </div>
+    <!-- Tablas -->
+    <div class="row g-3 g-xl-4 mb-5">
+        {% if es_dueno %}
+        <div class="col-xl-6">
+            <div class="ds-card">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-gem text-primary"></i> Productos más rentables</h3>
+                        <p class="ds-section-hint">Mayor margen sobre el costo</p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="report-card">
-                <div class="section-kicker"><i class="bi bi-lightning-charge-fill"></i> Rotación del inventario</div>
-                <h5 class="muted-title mb-4">Top Productos de Alta Rotación</h5>
-                <div class="chart-shell">
-                    <div id="rotacionReportChart" style="min-height: 350px;"></div>
-                    <div id="rotacionReportChartEmpty" class="chart-empty-state d-none">
-                        <div>
-                            <i class="bi bi-lightning-charge-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">No hay datos de rotación</h4>
-                            <p class="mb-0 text-muted">Aquí verás qué productos salen más rápido cuando el período tenga ventas.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="report-card">
-                <div class="section-kicker"><i class="bi bi-pie-chart-fill"></i> Mix rentable</div>
-                <h5 class="muted-title mb-4">Categorías Más Rentables</h5>
-                <div class="chart-shell">
-                    <div id="categoriasRentablesReportChart" style="min-height: 350px;"></div>
-                    <div id="categoriasRentablesReportChartEmpty" class="chart-empty-state d-none">
-                        <div>
-                            <i class="bi bi-pie-chart-fill text-muted" style="font-size: 3rem; opacity: 0.45;"></i>
-                            <h4 class="mt-3 mb-1">Sin categorías rentables aún</h4>
-                            <p class="mb-0 text-muted">La distribución por categoría se generará automáticamente cuando haya costo y ventas.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Tablas Avanzadas -->
-    <div class="row g-4">
-        <div class="col-lg-6">
-            <div class="report-card p-0 overflow-hidden d-flex flex-column">
-                <div class="p-4 border-bottom bg-light">
-                    <h5 class="fw-bolder text-dark mb-0"><i class="bi bi-star-fill text-warning me-2"></i>Top Productos Más Vendidos</h5>
-                </div>
-                <div class="table-responsive flex-grow-1 p-0">
-                    <table class="table table-hover table-report mb-0 w-100">
-                        <thead class="bg-white">
-                            <tr>
-                                <th class="ps-4">Producto</th>
-                                <th class="text-center">Cantidad</th>
-                                <th class="text-end pe-4">Ingresos Generados</th>
-                            </tr>
-                        </thead>
+                {% if top_productos_rentables %}
+                <div class="table-responsive">
+                    <table class="ds-table">
+                        <thead><tr><th>Producto</th><th class="num">Margen</th><th class="num">Utilidad</th><th class="num">Unid.</th></tr></thead>
                         <tbody>
-                            {% for item in top_productos %}
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold text-dark">{{ item.producto__nombre }}</div>
-                                    <div class="small text-muted">{{ item.producto__tipo_producto__nombre|default:"General" }}</div>
-                                </td>
-                                <td class="text-center"><span class="badge bg-primary bg-opacity-10 text-primary px-3 py-1 rounded-pill">{{ item.cantidad_vendida }}</span></td>
-                                <td class="text-end pe-4 fw-bolder text-success">${{ item.ingresos|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center py-4 text-muted">No hay datos suficientes para este período.</td></tr>
-                            {% endfor %}
+                        {% for p in top_productos_rentables %}
+                        <tr>
+                            <td><span class="ds-rank me-2">{{ forloop.counter }}</span>{{ p.producto__nombre }}</td>
+                            <td class="num"><span class="ds-pill ic-profit">{{ p.margen_promedio|floatformat:1 }}%</span></td>
+                            <td class="num">${{ p.utilidad_total|default:0|floatformat:2 }}</td>
+                            <td class="num">{{ p.unidades_vendidas }}</td>
+                        </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <div class="ds-empty"><i class="bi bi-gem"></i><span>Carga el precio de costo de tus productos para ver su rentabilidad</span></div>
+                {% endif %}
             </div>
         </div>
-
-        <div class="col-lg-6">
-            <div class="report-card p-0 overflow-hidden d-flex flex-column">
-                <div class="p-4 border-bottom bg-light">
-                    <h5 class="fw-bolder text-dark mb-0"><i class="bi bi-award-fill text-primary me-2"></i>Top Mejores Clientes</h5>
+        {% endif %}
+        <div class="{% if es_dueno %}col-xl-6{% else %}col-12{% endif %}">
+            <div class="ds-card">
+                <div class="ds-card-head">
+                    <div>
+                        <h3 class="ds-section"><i class="bi bi-star text-warning"></i> Mejores clientes</h3>
+                        <p class="ds-section-hint">Por monto comprado en el período</p>
+                    </div>
                 </div>
-                <div class="table-responsive flex-grow-1 p-0">
-                    <table class="table table-hover table-report mb-0 w-100">
-                        <thead class="bg-white">
-                            <tr>
-                                <th class="ps-4">Cliente</th>
-                                <th class="text-center">Ventas</th>
-                                <th class="text-end pe-4">Total Gastado</th>
-                            </tr>
-                        </thead>
+                {% if top_clientes %}
+                <div class="table-responsive">
+                    <table class="ds-table">
+                        <thead><tr><th>Cliente</th><th class="num">Compras</th><th class="num">Total</th></tr></thead>
                         <tbody>
-                            {% for cliente in top_clientes %}
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold text-dark">{{ cliente.cliente__nombre }}</div>
-                                    <div class="small text-muted">{{ cliente.cliente__ruc_cedula|default:"Sin Cédula" }}</div>
-                                </td>
-                                <td class="text-center"><span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-1 rounded-pill">{{ cliente.num_compras }}</span></td>
-                                <td class="text-end pe-4 fw-bolder text-primary">${{ cliente.total_comprado|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center py-4 text-muted">No hay datos suficientes para este período.</td></tr>
-                            {% endfor %}
+                        {% for c in top_clientes %}
+                        <tr>
+                            <td><span class="ds-rank me-2">{{ forloop.counter }}</span>{{ c.cliente__nombre }}<div class="text-muted small ms-5">{{ c.cliente__ruc_cedula }}</div></td>
+                            <td class="num">{{ c.num_compras }}</td>
+                            <td class="num fw-semibold">${{ c.total_comprado|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <div class="ds-empty"><i class="bi bi-person"></i><span>Sin compras de clientes identificados en este período</span></div>
+                {% endif %}
             </div>
         </div>
     </div>
-
-    {% if es_dueno %}
-    <div class="row g-4 mt-1">
-        <div class="col-lg-6">
-            <div class="report-card p-0 overflow-hidden d-flex flex-column">
-                <div class="p-4 border-bottom bg-light">
-                    <h5 class="fw-bolder text-dark mb-0"><i class="bi bi-bag-heart-fill text-warning me-2"></i>Detalle Top Rentabilidad</h5>
-                </div>
-                <div class="table-responsive flex-grow-1 p-0">
-                    <table class="table table-hover table-report mb-0 w-100">
-                        <thead class="bg-white">
-                            <tr>
-                                <th class="ps-4">Producto</th>
-                                <th class="text-center">Margen %</th>
-                                <th class="text-end pe-4">Utilidad Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in top_productos_rentables %}
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold text-dark">{{ item.producto__nombre }}</div>
-                                    <div class="small text-muted">{{ item.producto__tipo_producto__nombre|default:"General" }}</div>
-                                </td>
-                                <td class="text-center"><span class="metric-badge bg-warning bg-opacity-10 text-warning">{{ item.margen_promedio|floatformat:1 }}%</span></td>
-                                <td class="text-end pe-4 fw-bolder text-success">${{ item.utilidad_total|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center py-4 text-muted">No hay datos suficientes para este período.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="report-card p-0 overflow-hidden d-flex flex-column">
-                <div class="p-4 border-bottom bg-light">
-                    <h5 class="fw-bolder text-dark mb-0"><i class="bi bi-lightning-fill text-success me-2"></i>Detalle Alta Rotación</h5>
-                </div>
-                <div class="table-responsive flex-grow-1 p-0">
-                    <table class="table table-hover table-report mb-0 w-100">
-                        <thead class="bg-white">
-                            <tr>
-                                <th class="ps-4">Producto</th>
-                                <th class="text-center">Ventas</th>
-                                <th class="text-end pe-4">Rotación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in top_productos_rotacion %}
-                            <tr>
-                                <td class="ps-4">
-                                    <div class="fw-bold text-dark">{{ item.producto__nombre }}</div>
-                                    <div class="small text-muted">{{ item.producto__tipo_producto__nombre|default:"General" }}</div>
-                                </td>
-                                <td class="text-center"><span class="metric-badge bg-success bg-opacity-10 text-success">{{ item.ventas_count }}</span></td>
-                                <td class="text-end pe-4 fw-bolder text-primary">{{ item.rotacion_score|floatformat:2 }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr><td colspan="3" class="text-center py-4 text-muted">No hay datos suficientes para este período.</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
+{{ serie_json|json_script:"serie-data" }}
+{{ mapa_calor.series|json_script:"heatmap-data" }}
+{{ pareto.productos|json_script:"pareto-data" }}
+{{ clientes_tipo|json_script:"clientes-data" }}
+{{ categorias_json|json_script:"categorias-data" }}
+{{ es_dueno|json_script:"es-dueno" }}
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+<script src="{% static 'js/analytics.js' %}"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const ingresosData = {{ totales_chart|safe }};
-        const ingresosHasData = ingresosData.some(value => Number(value) > 0);
-        var optionsIngresos = {
-            series: [{ name: 'Ingresos ($)', data: ingresosData }],
-            chart: { type: 'bar', height: 350, fontFamily: 'Plus Jakarta Sans, sans-serif', toolbar: { show: false } },
-            colors: ['#2563eb'],
-            plotOptions: { bar: { borderRadius: 6, columnWidth: '58%' } },
-            dataLabels: { enabled: false },
-            xaxis: { 
-                categories: {{ fechas_chart|safe }},
-                axisBorder: { show: false }, axisTicks: { show: false },
-                labels: { style: { colors: '#64748b' } }
-            },
-            yaxis: { min: 0, labels: { formatter: function (value) { return "$" + value.toFixed(2); }, style: { colors: '#64748b' } } },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
-            tooltip: { theme: 'light', y: { formatter: function (val) { return "$" + val.toFixed(2); } } }
-        };
-        if (ingresosHasData) {
-            new ApexCharts(document.querySelector("#ingresosChart"), optionsIngresos).render();
-        } else {
-            document.getElementById('ingresosChart').classList.add('d-none');
-            document.getElementById('ingresosChartEmpty').classList.remove('d-none');
-        }
+document.addEventListener('DOMContentLoaded', function () {
+    var esDueno = DS.data('es-dueno');
 
-        {% if es_dueno %}
-        const metricasRentabilidad = {{ metricas_rentabilidad_json|default:"{}"|safe }};
-        const rentabilidadReportSeries = metricasRentabilidad.top_rentabilidad || [];
-        const rotacionReportSeries = metricasRentabilidad.top_rotacion || [];
-        const categoriasRentablesSeries = metricasRentabilidad.categorias_rentables || [];
+    // Ingresos + utilidad (barras) y margen % (línea, eje derecho)
+    var s = DS.data('serie-data');
+    var series = [{ name: 'Ingresos', type: 'column', data: s.ingresos }];
+    var yaxis = [{ seriesName: 'Ingresos', labels: { formatter: DS.moneyShort } }];
+    if (esDueno) {
+        series.push({ name: 'Utilidad', type: 'column', data: s.utilidad });
+        series.push({ name: 'Margen', type: 'line', data: s.margen });
+        yaxis.push({ seriesName: 'Ingresos', show: false, labels: { formatter: DS.moneyShort } });
+        yaxis.push({ seriesName: 'Margen', opposite: true, min: 0, labels: { formatter: function (v) { return v === null ? '' : Math.round(v) + '%'; } } });
+    }
+    DS.render('#ingresosChart', {
+        chart: { type: 'line', height: 360, stacked: false },
+        series: series,
+        colors: [DS.color.brand, DS.color.profit, DS.color.warning],
+        stroke: { width: [0, 0, 3], curve: 'smooth' },
+        plotOptions: { bar: { columnWidth: s.labels.length > 40 ? '80%' : '55%', borderRadius: 4, borderRadiusApplication: 'end' } },
+        markers: { size: [0, 0, 4], strokeWidth: 0, hover: { size: 6 } },
+        xaxis: { categories: s.labels, tickAmount: Math.min(s.labels.length, 12), labels: { rotate: 0, hideOverlappingLabels: true } },
+        yaxis: yaxis,
+        tooltip: { shared: true, intersect: false, y: { formatter: function (v, o) {
+            return o.seriesIndex === 2 ? DS.pct(v) : DS.money(v);
+        } } }
+    }, 'Aún no hay ventas cobradas en este período');
 
-        if (rentabilidadReportSeries.length > 0) {
-            new ApexCharts(document.querySelector("#rentabilidadReportChart"), {
-                series: [{ name: 'Margen %', data: rentabilidadReportSeries.map(item => Number(item.margen_promedio || 0)) }],
-                chart: { type: 'bar', height: 350, fontFamily: 'Plus Jakarta Sans, sans-serif', toolbar: { show: false } },
-                colors: ['#d97706'],
-                plotOptions: { bar: { borderRadius: 8, horizontal: true } },
-                dataLabels: { enabled: false },
-                xaxis: { categories: rentabilidadReportSeries.map(item => item.producto__nombre), labels: { style: { colors: '#64748b' } } },
-                yaxis: { labels: { style: { colors: '#64748b' } } },
-                tooltip: { y: { formatter: function(val) { return val.toFixed(1) + '%'; } } }
-            }).render();
-        } else {
-            document.getElementById('rentabilidadReportChart').classList.add('d-none');
-            document.getElementById('rentabilidadReportChartEmpty').classList.remove('d-none');
-        }
+    // Mapa de calor día/hora
+    var heat = DS.data('heatmap-data');
+    var maxHeat = 0;
+    heat.forEach(function (fila) { fila.data.forEach(function (c) { if (c.y > maxHeat) maxHeat = c.y; }); });
+    var paso = Math.max(1, Math.ceil(maxHeat / 4));
+    DS.render('#heatmapChart', {
+        chart: { type: 'heatmap', height: 300 },
+        series: heat,
+        stroke: { width: 3, colors: ['#fff'] },
+        plotOptions: { heatmap: { radius: 6, enableShades: false, colorScale: { ranges: [
+            { from: 0, to: 0, color: '#f1f5f9', name: 'Sin ventas' },
+            { from: 1, to: paso, color: '#c7d2fe', name: 'Baja' },
+            { from: paso + 1, to: paso * 2, color: '#818cf8', name: 'Media' },
+            { from: paso * 2 + 1, to: paso * 3, color: '#4f46e5', name: 'Alta' },
+            { from: paso * 3 + 1, to: Math.max(maxHeat, paso * 3 + 1), color: '#312e81', name: 'Pico' }
+        ] } } },
+        legend: { position: 'bottom', horizontalAlign: 'center' },
+        xaxis: { labels: { rotate: 0, hideOverlappingLabels: true } },
+        tooltip: { custom: function (o) {
+            var c = o.w.config.series[o.seriesIndex].data[o.dataPointIndex];
+            return '<div class="px-3 py-2"><strong>' + o.w.config.series[o.seriesIndex].name + ' ' + c.x + '</strong><br>' +
+                DS.int(c.y) + ' venta' + (c.y === 1 ? '' : 's') + ' · ' + DS.money(c.ingresos) + '</div>';
+        } }
+    }, 'Aún no hay ventas para detectar tus horarios pico');
 
-        if (rotacionReportSeries.length > 0) {
-            new ApexCharts(document.querySelector("#rotacionReportChart"), {
-                series: [{ name: 'Rotación', data: rotacionReportSeries.map(item => Number(item.rotacion_score || 0)) }],
-                chart: { type: 'bar', height: 350, fontFamily: 'Plus Jakarta Sans, sans-serif', toolbar: { show: false } },
-                colors: ['#059669'],
-                plotOptions: { bar: { borderRadius: 8, horizontal: true } },
-                dataLabels: { enabled: false },
-                xaxis: { categories: rotacionReportSeries.map(item => item.producto__nombre), labels: { style: { colors: '#64748b' } } },
-                yaxis: { labels: { style: { colors: '#64748b' } } },
-                tooltip: { y: { formatter: function(val) { return val.toFixed(2); } } }
-            }).render();
-        } else {
-            document.getElementById('rotacionReportChart').classList.add('d-none');
-            document.getElementById('rotacionReportChartEmpty').classList.remove('d-none');
-        }
+    // Clientes nuevos vs recurrentes
+    var cl = DS.data('clientes-data');
+    if (cl.total) {
+        DS.render('#clientesChart', {
+            chart: { type: 'donut', height: 220 },
+            series: [cl.recurrentes.clientes, cl.nuevos.clientes],
+            labels: ['Recurrentes', 'Nuevos'],
+            colors: [DS.color.brand, DS.color.profit],
+            legend: { show: false },
+            stroke: { width: 2, colors: ['#fff'] },
+            plotOptions: { pie: { donut: { size: '70%', labels: { show: true,
+                total: { show: true, label: 'Clientes', formatter: function () { return DS.int(cl.total); } } } } } },
+            tooltip: { y: { formatter: function (v) { return DS.int(v) + ' cliente' + (v === 1 ? '' : 's'); } } }
+        });
+    }
 
-        if (categoriasRentablesSeries.length > 0) {
-            new ApexCharts(document.querySelector("#categoriasRentablesReportChart"), {
-                series: categoriasRentablesSeries.map(item => Number(item.utilidad_total || 0)),
-                chart: { type: 'donut', height: 350, fontFamily: 'Plus Jakarta Sans, sans-serif', toolbar: { show: false } },
-                labels: categoriasRentablesSeries.map(item => item.producto__categoria || 'Sin categoría'),
-                colors: ['#2563eb', '#10b981', '#d97706', '#8b5cf6', '#ef4444', '#14b8a6'],
-                legend: { position: 'bottom' },
-                tooltip: { y: { formatter: function(val) { return '$' + val.toFixed(2); } } }
-            }).render();
-        } else {
-            document.getElementById('categoriasRentablesReportChart').classList.add('d-none');
-            document.getElementById('categoriasRentablesReportChartEmpty').classList.remove('d-none');
-        }
-        {% endif %}
-        
-    });
+    // Pareto: barras de ingreso + línea de % acumulado
+    var par = DS.data('pareto-data');
+    DS.render('#paretoChart', {
+        chart: { type: 'line', height: 360 },
+        series: [
+            { name: 'Ingresos', type: 'column', data: par.map(function (p) { return p.ingresos; }) },
+            { name: '% acumulado', type: 'line', data: par.map(function (p) { return p.pct_acumulado; }) }
+        ],
+        colors: [DS.color.brand, DS.color.warning],
+        stroke: { width: [0, 3], curve: 'smooth' },
+        markers: { size: [0, 4], strokeWidth: 0 },
+        plotOptions: { bar: { columnWidth: '60%', borderRadius: 4, borderRadiusApplication: 'end' } },
+        xaxis: { categories: par.map(function (p) { return p.nombre; }),
+            labels: { rotate: -35, trim: true, maxHeight: 90, style: { fontSize: '11px' } } },
+        yaxis: [
+            { labels: { formatter: DS.moneyShort } },
+            { opposite: true, min: 0, max: 100, tickAmount: 5, labels: { formatter: function (v) { return Math.round(v) + '%'; } } }
+        ],
+        annotations: { yaxis: [{ y: 80, yAxisIndex: 1, borderColor: DS.color.danger, strokeDashArray: 5,
+            label: { text: '80%', borderColor: DS.color.danger, style: { color: '#fff', background: DS.color.danger } } }] },
+        tooltip: { shared: true, intersect: false, y: { formatter: function (v, o) {
+            if (o.seriesIndex === 1) return DS.pct(v);
+            return DS.money(v) + ' · ' + DS.int(par[o.dataPointIndex].unidades) + ' u.';
+        } } }
+    }, 'Aún no hay productos vendidos en este período');
+
+    // Utilidad por categoría (barras horizontales)
+    if (esDueno) {
+        var cats = DS.data('categorias-data');
+        DS.render('#categoriasChart', {
+            chart: { type: 'bar', height: Math.max(220, cats.length * 42) },
+            series: [{ name: 'Utilidad', data: cats.map(function (c) { return Number(c.utilidad_total) || 0; }) }],
+            colors: [DS.color.profit],
+            plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 5, borderRadiusApplication: 'end' } },
+            dataLabels: { enabled: true, formatter: DS.moneyShort, style: { fontSize: '11px', colors: ['#fff'] } },
+            xaxis: { categories: cats.map(function (c) { return c.producto__categoria || 'Sin categoría'; }), labels: { formatter: DS.moneyShort } },
+            tooltip: { y: { formatter: function (v, o) {
+                return DS.money(v) + ' · margen ' + DS.pct(Number(cats[o.dataPointIndex].margen_promedio));
+            } } }
+        }, 'Carga el precio de costo de tus productos para ver la utilidad por categoría');
+    }
+});
 </script>
 {% endblock %}

@@ -19,7 +19,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Avg, Case, Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value, When
 from django.db.models.deletion import ProtectedError, RestrictedError
-from django.db.models.functions import Coalesce, TruncDate, TruncMonth
+from django.db.models.functions import Coalesce, TruncDate
 from django.forms import modelform_factory
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -49,6 +49,9 @@ logger = logging.getLogger(__name__)
 # verdad para eso — ver usuarios.utils.es_superadmin.
 ROLE_OWNER = 'owner'
 ROLE_EMPLOYEE = 'employee'
+
+# Períodos (en días) que ofrece el selector de Reportes.
+PERIODOS_REPORTE = (7, 30, 90, 365)
 
 
 DECIMAL_OUTPUT = DecimalField(max_digits=12, decimal_places=2)
@@ -1040,8 +1043,11 @@ def tenant_reportes(request):
         dias = int(request.GET.get('dias', 30))
     except ValueError:
         dias = 30
+    if dias not in PERIODOS_REPORTE:
+        dias = 30
         
-    fecha_inicio = timezone.now() - timedelta(days=dias)
+    # Desde el inicio del día, para que los KPIs coincidan con la serie diaria.
+    fecha_inicio = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=dias - 1)
     
     ventas_periodo = Venta.objects.filter(empresa=empresa, fecha__gte=fecha_inicio).select_related('cliente')
     metricas_rentabilidad = _obtener_metricas_rentabilidad_seguras(empresa, fecha_inicio) if es_dueno else {}
@@ -1174,71 +1180,35 @@ def tenant_reportes(request):
             ])
         return response
         
-    # Filtrar ventas anuladas para los cálculos financieros
-    ventas_validas = ventas_periodo.exclude(estado='anulada')
+    # Reportes = análisis del período elegido. Ingreso = solo lo cobrado.
+    ahora = timezone.now()
+    kpis = est.kpis_periodo(empresa, fecha_inicio)
+    kpis_anterior = est.kpis_periodo(empresa, fecha_inicio - timedelta(days=dias), fecha_inicio)
+    resumen_rent = metricas_rentabilidad.get('resumen', {})
 
-    # 2. KPIs Rápidos
-    total_ingresos = ventas_validas.aggregate(Sum('total'))['total__sum'] or 0
-    total_ventas = ventas_validas.count()
-    ticket_promedio = (total_ingresos / total_ventas) if total_ventas > 0 else 0
-    
-    # 3. Gráfica de Ingresos Organizados y Rellenos
-    fechas_chart, totales_chart = [], []
-    
-    hoy = timezone.now().date()
-    if dias == 365:
-        ventas_agrupadas = ventas_validas.annotate(mes=TruncMonth('fecha')).values('mes').annotate(total_mes=Sum('total')).order_by('mes')
-        datos_dict = {v['mes'].strftime('%Y-%m'): float(v['total_mes']) for v in ventas_agrupadas if v['mes']}
-        
-        meses_es = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
-        
-        for i in range(11, -1, -1):
-            m = hoy.month - i
-            y = hoy.year
-            while m <= 0:
-                m += 12
-                y -= 1
-                
-            llave = f"{y}-{m:02d}"
-            fechas_chart.append(f"{meses_es[m]} {y}")
-            totales_chart.append(datos_dict.get(llave, 0.0))
-    else:
-        ventas_diarias = ventas_validas.values('fecha__date').annotate(total_dia=Sum('total')).order_by('fecha__date')
-        fechas_dict = {v['fecha__date']: float(v['total_dia']) for v in ventas_diarias if v['fecha__date']}
-        
-        for i in range(dias - 1, -1, -1):
-            fecha_iter = hoy - timedelta(days=i)
-            fechas_chart.append(fecha_iter.strftime('%d %b'))
-            totales_chart.append(fechas_dict.get(fecha_iter, 0.0))
-        
-    # 4. Top 10 Productos Más Exitosos
-    top_productos = DetalleVenta.objects.filter(venta__empresa=empresa, venta__fecha__gte=fecha_inicio).exclude(venta__estado='anulada')\
-        .values('producto__nombre', 'producto__tipo_producto__nombre')\
-        .annotate(cantidad_vendida=Count('id'), ingresos=Sum('precio_unitario')).order_by('-cantidad_vendida')[:10]
-        
-    # 5. Top 10 Mejores Clientes
-    top_clientes = ventas_validas.filter(cliente__isnull=False)\
-        .values('cliente__nombre', 'cliente__ruc_cedula')\
-        .annotate(num_compras=Count('id'), total_comprado=Sum('total')).order_by('-total_comprado')[:10]
-
-    top_rentabilidad = metricas_rentabilidad.get('top_rentabilidad', [])
-    top_rotacion = metricas_rentabilidad.get('top_rotacion', [])
-    categorias_rentables = metricas_rentabilidad.get('categorias_rentables', [])
+    top_clientes = (
+        est.ventas_cobradas(empresa, fecha_inicio).filter(cliente__isnull=False)
+        .values('cliente__nombre', 'cliente__ruc_cedula')
+        .annotate(num_compras=Count('id'), total_comprado=Sum('total'))
+        .order_by('-total_comprado')[:10]
+    )
 
     context = {
-        'empresa': empresa, 'dias': dias, 'total_ingresos': total_ingresos, 'total_ventas': total_ventas,
-        'ticket_promedio': ticket_promedio, 'top_productos': top_productos, 'top_clientes': top_clientes,
-        'fechas_chart': json.dumps(fechas_chart), 'totales_chart': json.dumps(totales_chart),
-        'es_dueno': es_dueno,
-        'metricas_rentabilidad': metricas_rentabilidad,
-        'metricas_rentabilidad_json': _serializar_metricas_rentabilidad(metricas_rentabilidad),
-        'rentabilidad_promedio': metricas_rentabilidad.get('resumen', {}).get('rentabilidad_promedio', 0),
-        'utilidad_total': metricas_rentabilidad.get('resumen', {}).get('utilidad_total', 0),
-        'producto_mayor_rentabilidad': metricas_rentabilidad.get('producto_mayor_rentabilidad'),
-        'alta_rotacion_count': metricas_rentabilidad.get('alta_rotacion_count', 0),
-        'top_productos_rentables': top_rentabilidad,
-        'top_productos_rotacion': top_rotacion,
-        'categorias_mas_rentables': categorias_rentables,
+        'empresa': empresa, 'dias': dias, 'periodos': PERIODOS_REPORTE, 'es_dueno': es_dueno,
+        'kpis': kpis,
+        'var_ingresos': est.variacion_pct(kpis['ingresos'], kpis_anterior['ingresos']),
+        'var_ventas': est.variacion_pct(kpis['ventas'], kpis_anterior['ventas']),
+        'var_ticket': est.variacion_pct(kpis['ticket'], kpis_anterior['ticket']),
+        'var_clientes': est.variacion_pct(kpis['clientes'], kpis_anterior['clientes']),
+        'utilidad_total': resumen_rent.get('utilidad_total', 0),
+        'rentabilidad_promedio': resumen_rent.get('rentabilidad_promedio', 0),
+        'top_clientes': top_clientes,
+        'top_productos_rentables': metricas_rentabilidad.get('top_rentabilidad', [])[:8],
+        'serie_json': est.serie_ingresos_utilidad(empresa, dias, ahora),
+        'mapa_calor': est.mapa_calor(empresa, fecha_inicio),
+        'pareto': est.pareto_productos(empresa, fecha_inicio),
+        'clientes_tipo': est.clientes_nuevos_vs_recurrentes(empresa, fecha_inicio),
+        'categorias_json': metricas_rentabilidad.get('categorias_rentables', []) if es_dueno else [],
     }
     return render(request, 'dashboard/tenant_reportes.html', context)
 

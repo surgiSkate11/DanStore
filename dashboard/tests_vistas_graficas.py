@@ -51,7 +51,7 @@ class DashboardTenantTests(VistasGraficasBase):
         self.assertNotContains(resp, 'productosVendidosChart')
         self.assertNotContains(resp, 'ventasChart')
 
-    def test_alerta_de_stock_bajo_solo_de_la_empresa(self):
+    def test_alerta_de_stock_bajo_solo_de_la_empresa_dashboard(self):
         tipo = TipoProducto.objects.create(empresa=self.empresa, nombre='Ropa')
         tipo_b = TipoProducto.objects.create(empresa=self.otra, nombre='Ropa')
         Producto.objects.create(empresa=self.empresa, nombre='Camisa escasa', tipo_producto=tipo,
@@ -63,3 +63,46 @@ class DashboardTenantTests(VistasGraficasBase):
 
         self.assertContains(resp, 'Camisa escasa')
         self.assertNotContains(resp, 'Gorra ajena')
+
+
+class ReportesTests(VistasGraficasBase):
+    def test_kpis_solo_cobrado_y_de_la_empresa(self):
+        self.venta('100')
+        self.venta('40', estado='pendiente_pago')
+        self.venta('25', estado='anulada')
+        self.venta('999', empresa=self.otra)
+
+        resp = self.client.get(reverse('tenant_reportes'), {'dias': 7})
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['kpis']['ingresos'], Decimal('100'))
+        self.assertEqual(resp.context['kpis']['ventas'], 1)
+        self.assertEqual(sum(resp.context['serie_json']['ingresos']), 100.0)
+        for grafica in ('ingresosChart', 'heatmapChart', 'paretoChart', 'categoriasChart'):
+            self.assertContains(resp, f'id="{grafica}"')
+
+    def test_periodo_invalido_vuelve_a_30_dias(self):
+        for valor in ('100000', '-5', 'abc'):
+            resp = self.client.get(reverse('tenant_reportes'), {'dias': valor})
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.context['dias'], 30)
+            self.assertEqual(len(resp.context['serie_json']['labels']), 30)
+
+    def test_anio_se_agrupa_por_mes(self):
+        resp = self.client.get(reverse('tenant_reportes'), {'dias': 365})
+        self.assertTrue(resp.context['serie_json']['mensual'])
+        self.assertEqual(len(resp.context['serie_json']['labels']), 12)
+
+    def test_exportaciones_siguen_funcionando(self):
+        self.venta('100')
+        self.venta('999', empresa=self.otra)
+
+        csv_resp = self.client.get(reverse('tenant_reportes'), {'dias': 30, 'export': 'csv'})
+        self.assertEqual(csv_resp.status_code, 200)
+        contenido = csv_resp.content.decode('utf-8-sig')
+        # Las dos ventas son de Ana: debe aparecer solo la de esta empresa.
+        self.assertEqual(contenido.count('Ana'), 1)
+
+        xls_resp = self.client.get(reverse('tenant_reportes'), {'dias': 30, 'export': 'excel'})
+        self.assertEqual(xls_resp.status_code, 200)
+        self.assertIn('spreadsheetml', xls_resp['Content-Type'])
