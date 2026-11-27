@@ -49,6 +49,11 @@ class DashboardTenantTests(VistasGraficasBase):
         self.assertContains(resp, 'id="estadosChart"')
         self.assertContains(resp, 'acumulado-data')
 
+    def test_montos_con_separador_de_miles(self):
+        self.venta('1250.5')
+        resp = self.client.get(reverse('dashboard_tenant'))
+        self.assertContains(resp, '$1,250.50')
+
     def test_no_repite_graficas_de_reportes(self):
         resp = self.client.get(reverse('dashboard_tenant'))
         self.assertNotContains(resp, 'productosVendidosChart')

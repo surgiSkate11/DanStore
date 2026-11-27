@@ -43,7 +43,7 @@
         <div class="col-sm-6 {% if es_dueno %}col-xl-2{% else %}col-xl-3{% endif %}">
             <div class="ds-card ds-kpi">
                 <div class="ds-kpi-top"><span class="ds-kpi-label">Ingresos</span><span class="ds-kpi-icon ic-brand"><i class="bi bi-cash-stack"></i></span></div>
-                <div class="ds-kpi-value">${{ kpis.ingresos|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ kpis.ingresos|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=var_ingresos %} <span>vs. anterior</span></div>
             </div>
         </div>
@@ -51,7 +51,7 @@
         <div class="col-sm-6 col-xl-2">
             <div class="ds-card ds-kpi">
                 <div class="ds-kpi-top"><span class="ds-kpi-label">Utilidad</span><span class="ds-kpi-icon ic-profit"><i class="bi bi-piggy-bank"></i></span></div>
-                <div class="ds-kpi-value">${{ utilidad_total|default:0|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ utilidad_total|default:0|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot"><span>productos con costo cargado</span></div>
             </div>
         </div>
@@ -73,7 +73,7 @@
         <div class="col-sm-6 {% if es_dueno %}col-xl-2{% else %}col-xl-3{% endif %}">
             <div class="ds-card ds-kpi">
                 <div class="ds-kpi-top"><span class="ds-kpi-label">Ticket prom.</span><span class="ds-kpi-icon ic-brand"><i class="bi bi-receipt"></i></span></div>
-                <div class="ds-kpi-value">${{ kpis.ticket|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ kpis.ticket|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot">{% include 'dashboard/_delta.html' with v=var_ticket %} <span>vs. anterior</span></div>
             </div>
         </div>
@@ -91,7 +91,7 @@
         <div class="ds-card-head">
             <div>
                 <h3 class="ds-section"><i class="bi bi-bar-chart-line text-primary"></i> {% if es_dueno %}Ingresos, utilidad y margen{% else %}Ingresos{% endif %}</h3>
-                <p class="ds-section-hint">{% if serie_json.mensual %}Por mes{% else %}Por día{% endif %} · solo ventas cobradas</p>
+                <p class="ds-section-hint">{% if serie_json.mensual %}Por mes{% else %}Por día{% endif %} · solo ventas cobradas{% if es_dueno %} · margen sobre el costo{% endif %}</p>
             </div>
         </div>
         <div id="ingresosChart"></div>
@@ -131,8 +131,8 @@
                 </div>
                 <div id="clientesChart"></div>
                 <ul class="ds-list mt-2">
-                    <li><span><span class="ds-legend-dot" style="background:#4f46e5"></span> Recurrentes · {{ clientes_tipo.recurrentes.clientes }}</span><strong>${{ clientes_tipo.recurrentes.monto|floatformat:2 }}</strong></li>
-                    <li><span><span class="ds-legend-dot" style="background:#10b981"></span> Nuevos · {{ clientes_tipo.nuevos.clientes }}</span><strong>${{ clientes_tipo.nuevos.monto|floatformat:2 }}</strong></li>
+                    <li><span><span class="ds-legend-dot" style="background:#4f46e5"></span> Recurrentes · {{ clientes_tipo.recurrentes.clientes }}</span><strong>${{ clientes_tipo.recurrentes.monto|floatformat:"2g" }}</strong></li>
+                    <li><span><span class="ds-legend-dot" style="background:#10b981"></span> Nuevos · {{ clientes_tipo.nuevos.clientes }}</span><strong>${{ clientes_tipo.nuevos.monto|floatformat:"2g" }}</strong></li>
                 </ul>
                 {% else %}
                 <div class="ds-empty"><i class="bi bi-people"></i><span>Sin compras de clientes identificados en este período</span></div>
@@ -195,7 +195,7 @@
                         <tr>
                             <td><span class="ds-rank me-2">{{ forloop.counter }}</span>{{ p.producto__nombre }}</td>
                             <td class="num"><span class="ds-pill ic-profit">{{ p.margen_promedio|floatformat:1 }}%</span></td>
-                            <td class="num">${{ p.utilidad_total|default:0|floatformat:2 }}</td>
+                            <td class="num">${{ p.utilidad_total|default:0|floatformat:"2g" }}</td>
                             <td class="num">{{ p.unidades_vendidas }}</td>
                         </tr>
                         {% endfor %}
@@ -225,7 +225,7 @@
                         <tr>
                             <td><span class="ds-rank me-2">{{ forloop.counter }}</span>{{ c.cliente__nombre }}<div class="text-muted small ms-5">{{ c.cliente__ruc_cedula }}</div></td>
                             <td class="num">{{ c.num_compras }}</td>
-                            <td class="num fw-semibold">${{ c.total_comprado|floatformat:2 }}</td>
+                            <td class="num fw-semibold">${{ c.total_comprado|floatformat:"2g" }}</td>
                         </tr>
                         {% endfor %}
                         </tbody>
@@ -261,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         series.push({ name: 'Utilidad', type: 'column', data: s.utilidad });
         series.push({ name: 'Margen', type: 'line', data: s.margen });
         yaxis.push({ seriesName: 'Ingresos', show: false, labels: { formatter: DS.moneyShort } });
-        yaxis.push({ seriesName: 'Margen', opposite: true, min: 0, labels: { formatter: function (v) { return v === null ? '' : Math.round(v) + '%'; } } });
+        yaxis.push({ seriesName: 'Margen', opposite: true, labels: { formatter: function (v) { return v === null ? '' : Math.round(v) + '%'; } } });
     }
     DS.render('#ingresosChart', {
         chart: { type: 'line', height: 360, stacked: false },

@@ -118,7 +118,7 @@ class SerieIngresosUtilidadTests(EstadisticasBase):
         self.assertEqual(s['labels'][-1], '15 Mar')
         self.assertEqual(s['ingresos'][-1], 25.0)
         self.assertEqual(s['utilidad'][-1], 10.0)
-        self.assertEqual(s['margen'][-1], 50.0)
+        self.assertEqual(s['margen'][-1], 100.0)  # utilidad 10 sobre costo 10
         self.assertIsNone(s['margen'][0])
 
     def test_mensual_para_un_anio(self):
@@ -179,6 +179,20 @@ class ClientesTests(EstadisticasBase):
         self.assertEqual(c['nuevos'], {'clientes': 1, 'monto': 40.0})
         self.assertEqual(c['recurrentes'], {'clientes': 1, 'monto': 50.0})
         self.assertEqual(c['tasa_recompra'], 50.0)
+
+
+class VentasPorEstadoTests(EstadisticasBase):
+    def test_etiquetas_legibles_y_solo_de_la_empresa(self):
+        self.venta(local(2026, 3, 10, 9), '10')
+        self.venta(local(2026, 3, 10, 9), '5', estado='pendiente_pago')
+        self.venta(local(2026, 3, 10, 9), '7', empresa=self.otra)
+
+        estados = {e['estado']: e for e in est.ventas_por_estado(self.empresa, local(2026, 3, 1))}
+
+        self.assertEqual(set(estados), {'completada', 'pendiente_pago'})
+        self.assertEqual(estados['completada']['label'], 'Completada')
+        self.assertNotIn('_', estados['pendiente_pago']['label'])
+        self.assertEqual(estados['pendiente_pago']['monto'], 5.0)
 
 
 class StockBajoTests(EstadisticasBase):

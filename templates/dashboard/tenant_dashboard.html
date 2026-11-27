@@ -360,7 +360,7 @@
                     <span class="ds-kpi-label">Vendido hoy</span>
                     <span class="ds-kpi-icon ic-brand"><i class="bi bi-cash-coin"></i></span>
                 </div>
-                <div class="ds-kpi-value">${{ resumen.hoy.ingresos|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ resumen.hoy.ingresos|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot">
                     {% include 'dashboard/_delta.html' with v=resumen.var_hoy %}
                     <span>vs. ayer a esta hora · {{ resumen.hoy.ventas }} venta{{ resumen.hoy.ventas|pluralize }}</span>
@@ -373,7 +373,7 @@
                     <span class="ds-kpi-label">Vendido este mes</span>
                     <span class="ds-kpi-icon ic-profit"><i class="bi bi-graph-up-arrow"></i></span>
                 </div>
-                <div class="ds-kpi-value">${{ resumen.mes.ingresos|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ resumen.mes.ingresos|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot">
                     {% include 'dashboard/_delta.html' with v=resumen.var_mes %}
                     <span>vs. mismos días del mes pasado</span>
@@ -386,7 +386,7 @@
                     <span class="ds-kpi-label">Ticket promedio</span>
                     <span class="ds-kpi-icon ic-sky"><i class="bi bi-receipt"></i></span>
                 </div>
-                <div class="ds-kpi-value">${{ resumen.mes.ticket|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ resumen.mes.ticket|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot">
                     {% include 'dashboard/_delta.html' with v=resumen.var_ticket %}
                     <span>{{ resumen.mes.ventas }} venta{{ resumen.mes.ventas|pluralize }} en el mes</span>
@@ -399,7 +399,7 @@
                     <span class="ds-kpi-label">Por cobrar</span>
                     <span class="ds-kpi-icon ic-warning"><i class="bi bi-hourglass-split"></i></span>
                 </div>
-                <div class="ds-kpi-value">${{ resumen.por_cobrar.monto|floatformat:2 }}</div>
+                <div class="ds-kpi-value">${{ resumen.por_cobrar.monto|floatformat:"2g" }}</div>
                 <div class="ds-kpi-foot">
                     <span>{{ resumen.por_cobrar.cantidad }} venta{{ resumen.por_cobrar.cantidad|pluralize }} pendiente{{ resumen.por_cobrar.cantidad|pluralize }} de pago · no suma al ingreso</span>
                 </div>
@@ -411,7 +411,7 @@
     <div class="ds-insight mb-4">
         <i class="bi bi-lightbulb-fill"></i>
         <div>
-            Utilidad estimada del mes: <strong>${{ utilidad_mes|default:0|floatformat:2 }}</strong>.
+            Utilidad estimada del mes: <strong>${{ utilidad_mes|default:0|floatformat:"2g" }}</strong>.
             Tienes <strong>{{ productos_activos }}</strong> producto{{ productos_activos|pluralize }} disponible{{ productos_activos|pluralize }}
             y <strong>{{ nuevos_clientes }}</strong> cliente{{ nuevos_clientes|pluralize }} nuevo{{ nuevos_clientes|pluralize }} este mes.
             {% if 'reportes' in modulos_permitidos %}<a href="{% url 'tenant_reportes' %}" class="fw-semibold">Ver análisis completo →</a>{% endif %}

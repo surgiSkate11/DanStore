@@ -184,7 +184,7 @@ def ventas_por_estado(empresa, desde):
         .order_by('-cantidad')
     )
     return [
-        {'estado': f['estado'], 'label': etiquetas.get(f['estado'], f['estado']),
+        {'estado': f['estado'], 'label': etiquetas.get(f['estado'], f['estado'].replace('_', ' ').capitalize()),
          'cantidad': f['cantidad'], 'monto': _f(f['monto'])}
         for f in filas
     ]
@@ -203,7 +203,7 @@ def serie_ingresos_utilidad(empresa, dias, ahora=None):
     """Ingresos, utilidad y margen % agrupados por día (≤90 días) o por mes.
 
     La utilidad usa el costo actual del producto y solo cuenta productos con
-    costo cargado; el margen es utilidad / ventas de esos mismos productos.
+    costo cargado; el margen es utilidad / costo (igual que el KPI de margen).
     """
     ahora = timezone.localtime(ahora or timezone.now())
     hoy = _inicio_dia(ahora)
@@ -246,7 +246,8 @@ def serie_ingresos_utilidad(empresa, dias, ahora=None):
         u, vendido = utilidad.get(c, (_CERO, _CERO))
         serie_ing.append(_f(ingresos.get(c)))
         serie_util.append(_f(u))
-        serie_margen.append(round(float(u * 100 / vendido), 1) if vendido else None)
+        costo = vendido - u
+        serie_margen.append(round(float(u * 100 / costo), 1) if costo > 0 else None)
 
     return {'labels': labels, 'ingresos': serie_ing, 'utilidad': serie_util,
             'margen': serie_margen, 'mensual': mensual}

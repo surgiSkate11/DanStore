@@ -19,9 +19,9 @@
     };
     var SERIE = [PALETA.brand, PALETA.profit, PALETA.warning, PALETA.sky, PALETA.violet, PALETA.danger, '#14b8a6', '#eab308', '#6366f1', '#84cc16'];
 
-    var fmtMoneda = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-    var fmtCompacto = new Intl.NumberFormat('es-EC', { notation: 'compact', maximumFractionDigits: 1 });
-    var fmtEntero = new Intl.NumberFormat('es-EC', { maximumFractionDigits: 0 });
+    var fmtMoneda = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+    var fmtCompacto = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+    var fmtEntero = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
     function money(v) { return v === null || v === undefined ? '—' : fmtMoneda.format(v); }
     function moneyShort(v) {
