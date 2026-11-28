@@ -177,7 +177,7 @@ def acumulado_mes_vs_anterior(empresa, ahora=None):
 
 def ventas_por_estado(empresa, desde):
     """Cantidad y monto de ventas por estado desde una fecha (incluye todas)."""
-    etiquetas = dict(Venta.ESTADO_CHOICES)
+    etiquetas = {'pendiente_pago': 'Pendiente de pago', **dict(Venta.ESTADO_CHOICES)}
     filas = (
         Venta.objects.filter(empresa=empresa, fecha__gte=desde)
         .values('estado').annotate(cantidad=Count('id'), monto=Sum('total'))
@@ -203,7 +203,7 @@ def serie_ingresos_utilidad(empresa, dias, ahora=None):
     """Ingresos, utilidad y margen % agrupados por día (≤90 días) o por mes.
 
     La utilidad usa el costo actual del producto y solo cuenta productos con
-    costo cargado; el margen es utilidad / costo (igual que el KPI de margen).
+    costo cargado; el margen es utilidad / costo, ponderado por monto.
     """
     ahora = timezone.localtime(ahora or timezone.now())
     hoy = _inicio_dia(ahora)

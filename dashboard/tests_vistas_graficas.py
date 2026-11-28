@@ -89,6 +89,11 @@ class ReportesTests(VistasGraficasBase):
         for grafica in ('ingresosChart', 'heatmapChart', 'paretoChart', 'categoriasChart'):
             self.assertContains(resp, f'id="{grafica}"')
 
+    def test_montos_con_separador_de_miles_en_reportes(self):
+        self.venta('1250.5')
+        resp = self.client.get(reverse('tenant_reportes'), {'dias': 7})
+        self.assertContains(resp, '$1,250.50')
+
     def test_periodo_invalido_vuelve_a_30_dias(self):
         for valor in ('100000', '-5', 'abc'):
             resp = self.client.get(reverse('tenant_reportes'), {'dias': valor})

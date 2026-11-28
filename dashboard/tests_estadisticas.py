@@ -121,6 +121,22 @@ class SerieIngresosUtilidadTests(EstadisticasBase):
         self.assertEqual(s['margen'][-1], 100.0)  # utilidad 10 sobre costo 10
         self.assertIsNone(s['margen'][0])
 
+    def test_margen_ponderado_sobre_el_costo(self):
+        a = self.producto('A', '20', costo='10')
+        b = self.producto('B', '110', costo='100')
+        self.venta(local(2026, 3, 15, 9), '130', productos=[a, b])
+        s = est.serie_ingresos_utilidad(self.empresa, 7, ahora=AHORA)
+        self.assertEqual(s['utilidad'][-1], 20.0)
+        self.assertEqual(s['margen'][-1], 18.2)  # 20 / 110
+
+    def test_sin_costo_no_da_margen(self):
+        gratis = self.producto('Sin costo', '15', costo='0')
+        self.venta(local(2026, 3, 15, 9), '15', productos=[gratis])
+        s = est.serie_ingresos_utilidad(self.empresa, 7, ahora=AHORA)
+        self.assertEqual(s['ingresos'][-1], 15.0)
+        self.assertEqual(s['utilidad'][-1], 0.0)
+        self.assertIsNone(s['margen'][-1])
+
     def test_mensual_para_un_anio(self):
         self.venta(local(2025, 4, 5, 9), '40')
         s = est.serie_ingresos_utilidad(self.empresa, 365, ahora=AHORA)
@@ -191,7 +207,7 @@ class VentasPorEstadoTests(EstadisticasBase):
 
         self.assertEqual(set(estados), {'completada', 'pendiente_pago'})
         self.assertEqual(estados['completada']['label'], 'Completada')
-        self.assertNotIn('_', estados['pendiente_pago']['label'])
+        self.assertEqual(estados['pendiente_pago']['label'], 'Pendiente de pago')
         self.assertEqual(estados['pendiente_pago']['monto'], 5.0)
 
 

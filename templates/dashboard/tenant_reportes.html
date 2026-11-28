@@ -91,7 +91,7 @@
         <div class="ds-card-head">
             <div>
                 <h3 class="ds-section"><i class="bi bi-bar-chart-line text-primary"></i> {% if es_dueno %}Ingresos, utilidad y margen{% else %}Ingresos{% endif %}</h3>
-                <p class="ds-section-hint">{% if serie_json.mensual %}Por mes{% else %}Por día{% endif %} · solo ventas cobradas{% if es_dueno %} · margen sobre el costo{% endif %}</p>
+                <p class="ds-section-hint">{% if serie_json.mensual %}Por mes{% else %}Por día{% endif %} · solo ventas cobradas{% if es_dueno %} · margen ponderado sobre el costo{% endif %}</p>
             </div>
         </div>
         <div id="ingresosChart"></div>
